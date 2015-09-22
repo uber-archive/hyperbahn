@@ -28,6 +28,7 @@ var util = require('util');
 
 var RateLimiter = require('./rate_limiter.js');
 var Circuits = require('./circuits.js');
+var CountedReadySignal = require('ready-signal/counted');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
@@ -353,6 +354,18 @@ function removeServicePeer(serviceName, hostPort) {
     }
 
     if (!anyOtherSubChan) {
+        var connections = peer.connections;
+        var allDrained = CountedReadySignal(connections.length);
+        allDrained(onAllDrained);
+        for (var j = 0; j < connections.length; j++) {
+            connections[j].drain('closing due to unadvertisement', allDrained.signal);
+        }
+    }
+
+    function onAllDrained() {
+        self.logger.info('Peer drained and closed', self.extendLogInfo({
+            hostPort: peer.hostPort
+        }));
         peer.close(noop);
         self.channel.peers.delete(hostPort);
     }
