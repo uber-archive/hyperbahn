@@ -354,17 +354,17 @@ function removeServicePeer(serviceName, hostPort) {
     }
 
     if (!anyOtherSubChan) {
-        var connections = peer.connections;
-        var allDrained = CountedReadySignal(connections.length);
+        var allDrained = CountedReadySignal(peer.connections.length + 1);
         allDrained(onAllDrained);
-        for (var j = 0; j < connections.length; j++) {
-            connections[j].drain('closing due to unadvertisement', allDrained.signal);
+        for (var j = 0; j < peer.connections.length; j++) {
+            peer.connections[j].drain('closing due to unadvertisement', allDrained.signal);
         }
+        allDrained.signal();
     }
 
     function onAllDrained() {
-        self.logger.info('Peer drained and closed', self.extendLogInfo({
-            hostPort: peer.hostPort
+        self.logger.info('Peer drained and closed due to unadvertisement', peer.extendLogInfo({
+            serviceName: serviceName
         }));
         peer.close(noop);
         self.channel.peers.delete(hostPort);
