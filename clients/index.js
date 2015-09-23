@@ -323,6 +323,7 @@ ApplicationClients.prototype.destroy = function destroy() {
 
 ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
     var self = this;
+    self.updateLazyHandling();
     self.updateCircuitsEnabled();
     self.updateCircuitTestServiceName();
     self.updateRateLimitingEnabled();
@@ -331,6 +332,11 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateRpsLimitForServiceName();
     self.updateKValues();
     self.updateReservoir();
+};
+
+ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
+    var enabled = self.remoteConfig.get('lazy.handling.enabled', false);
+    self.tchannel.setLazyHandling(enabled);
 };
 
 ApplicationClients.prototype.updateReservoir = function updateReservoir() {
