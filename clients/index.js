@@ -335,6 +335,7 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
 };
 
 ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
+    var self = this;
     var enabled = self.remoteConfig.get('lazy.handling.enabled', false);
     self.tchannel.setLazyHandling(enabled);
 };
