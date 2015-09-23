@@ -72,6 +72,7 @@
     "cover": "npm run test-cover -s && npm run check-cover -s",
     "lint": "standard -v --reporter stylish && echo '# linter passed'",
     "shrinkwrap": "node bin/shrinkwrap.js --dev",
+    "travis": "npm run test",
     "test": "npm run check-licence && npm run check-ls -s && npm run lint -s && npm run cover && npm run check-benchmark -s",
     "test-ci": "npm run check-licence && npm run lint -s && npm run cover",
     "test-repeat": "NODE_DEBUG=autobahn node test/index.js | FORCE_COLOR=1 tap-spec; while [ $? -eq 0 ]; do NODE_DEBUG=autobahn node test/index.js | FORCE_COLOR=1 tap-spec; done;",
