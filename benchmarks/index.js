@@ -28,6 +28,7 @@ var path = require('path');
 var FakeKafkaServer = require('kafka-logger/test/lib/kafka-server');
 var FakeSentryServer = require('sentry-logger/test/lib/sentry-server');
 var setTimeout = require('timers').setTimeout;
+var console = require('console');
 
 var BenchmarkRunner = require('tchannel/benchmarks/');
 
