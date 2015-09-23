@@ -42,3 +42,4 @@ require('./time-series/requesting-a-service-with-spiky-traffic.js');
 require('./larch/');
 require('./rate-limiter.js');
 require('./sorted-index-of.js');
+require('./partial-affinity.js');
