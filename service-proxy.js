@@ -322,7 +322,7 @@ function refreshServicePeer(serviceName, hostPort) {
     var self = this;
 
     var peer = self.getServicePeer(serviceName, hostPort);
-    peer.connect(true);
+    peer.connectTo();
 
     var time = self.channel.timers.now();
     self.exitServices[serviceName] = time;
