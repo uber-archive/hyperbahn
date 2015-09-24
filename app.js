@@ -76,15 +76,13 @@ function Application(config, opts) {
     self.drainEnd = null;
 
     self.tchannel.drainExempt = function isReqDrainExempt(req) {
-        // this is app.tchannel
-        // we only drain relay requests
-        var chan = this.subChannels[req.serviceName];
-        var type = chan && chan.handler && chan.handler.type;
-        if (type === 'tchannel.relay-handler') {
-            return false;
-        } else {
+        if (req.serviceName === 'ringpop' ||
+            req.serviceName === 'autobahn'
+        ) {
             return true;
         }
+
+        return false;
     };
 
     self.isBootstrapped = false;
