@@ -25,8 +25,8 @@ var Logger = require('logtron');
 var process = require('process');
 
 var LarchLogger = require('../lib/larch/larch');
-var LogtronLogBackend = require('../lib/larch/logtron-backend');
-var ReservoirLogBackend = require('../lib/larch/reservoir-backend');
+var LogtronBackend = require('../lib/larch/logtron-backend');
+var ReservoirBackend = require('../lib/larch/reservoir-backend');
 var LevelRouterBackend = require('../lib/larch/level-router-backend');
 
 var Levels = {
@@ -95,18 +95,14 @@ function createLogger(options) {
         transforms: []
     });
 
-    var logtronLogBackend = LogtronLogBackend(logtronLogger);
-
-    var reservoirBackend = ReservoirLogBackend({
-        backend: logtronLogBackend
-    });
-
-    // debug logs to straight to Logtron; rest of logs are reservoir sampled
+    // debug logs sent to drop backend; rest of logs are reservoir sampled
     // then sent to Logtron
     var levelRouterBackend = LevelRouterBackend({
         backends: {
-            debug: logtronLogBackend,
-            default: reservoirBackend
+            debug: DropBackend(),
+            default: ReservoirBackend({
+                backend: LogtronBackend(logtronLogger)
+            })
         }
     });
 
