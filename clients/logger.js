@@ -97,7 +97,8 @@ function createLogger(options) {
     });
 
     var reservoir = ReservoirBackend({
-        backend: LogtronBackend(logtronLogger)
+        backend: LogtronBackend(logtronLogger),
+        statsd: options.statsd
     });
 
     // debug logs sent to drop backend; rest of logs are reservoir sampled
