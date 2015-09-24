@@ -16,6 +16,12 @@
     },
     {
         "key": "rateLimiting.totalRpsLimit",
-        "value": 1600
+        "value": 20000
+    },
+    {
+        "key": "rateLimiting.rpsLimitForServiceName",
+        "value": {
+            "benchmark": 20000
+        }
     }
 ]
