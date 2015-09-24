@@ -308,7 +308,6 @@ function sendRelay(opts, callback) {
                 headers: {
                     cn: self.callerName
                 },
-                retryLimit: 1,
                 parent: opts.inreq
             }), opts.endpoint, null, {
                 services: opts.services

@@ -24,11 +24,6 @@ var allocCluster = require('../lib/test-cluster.js');
 
 allocCluster.test('forwarding small timeout concurrently', {
     size: 5,
-    serviceReqDefaults: {
-        tcollector2: {
-            retryLimit: 1
-        }
-    },
     namedRemotes: ['tcollector2', 'tcollector2', 'tcollector2']
 }, function t(cluster, assert) {
     cluster.logger.whitelist('warn', 'forwarding error frame');
@@ -46,8 +41,7 @@ allocCluster.test('forwarding small timeout concurrently', {
     tcollector2.serverChannel.register('foo', foo);
 
     bob.clientChannel.request({
-        serviceName: 'tcollector2',
-        retryLimit: 1
+        serviceName: 'tcollector2'
     }).send('foo', '', '', onResponse);
 
     function onResponse(err, resp) {
