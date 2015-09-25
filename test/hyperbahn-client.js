@@ -22,9 +22,7 @@
 
 var TestCluster = require('./lib/test-cluster.js');
 
-require('./hyperbahn-client/constructor.js');
 require('./hyperbahn-client/todo.js');
-require('./hyperbahn-client/sub-channel.js');
 require('./hyperbahn-client/kill-switch.js');
 require('./hyperbahn-client/egress-nodes.js');
 
