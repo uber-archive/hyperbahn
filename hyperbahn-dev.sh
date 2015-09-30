@@ -1,8 +1,5 @@
 #!/bin/sh 
-set -ex
-
-# split-window -v 'make run-local-1' \; \
-# -d 'make run-local-0'
+set -e
 
 tmux new-session -s 'hyperbahn' -n 'hyperbahn-0' \; \
     new-window -n 'hyperbahn-1' \; \
