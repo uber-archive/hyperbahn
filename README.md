@@ -16,6 +16,36 @@ services onto a consistent hash ring topology.
 Hyperbahn and TChannel clients are currently supported 
 in Go, Python, and Node.js.
 
+## Hyperbahn Features
+
+Hyperbahn provides many scaling and fault tolerance features including:
+
+ - timeouts to transitively enforce your service’s SLA
+ - retries to eliminate transient failures within a request timeout window
+ - load balancing so that calls are spread out evenly across your service
+ - rate limiting to shield your service from excessive calls
+ - circuit breaking to prevent cascading failure
+ - circuit breaking to cut off broken clients
+
+To register a service on Hyperbahn:
+
+ - instantiate Hyperbahn client
+ - listen on an arbitrary (could be random) port
+ - connect to and advertise on Hyperbahn
+
+As a service consumer you get the following built in to TChannel/Hyperbahn 
+client libraries:
+
+ - configuration discovery: no more host/port files or configuration to manage
+ - timeouts: every request must specify a timeout, moving towards a fast failure model
+ - load balancing: outgoing requests are spread evenly over connected Hyperbahn nodes
+ - circuit breaking: fast failure at all layers of the network
+
+To use a service over Hyperbahn:
+
+ - instantiate Hyperbahn client (if you’re also a service, you re-use the one you’ve already setup and registered over)
+ - send a request to the desired service and endpoint name
+
 ## Local quickstart
 
  - `git clone git@github.com:uber/hyperbahn`
