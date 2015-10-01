@@ -64,7 +64,7 @@ To exit run `tmux kill-session -t hyperbahn` in a seperate shell.
 
 We have an open source quick start template for nodejs.
 
- - `npm install`
+ - `npm install tchannel-gen --global`
  - `cd ~/projects`
  - `tchannel-gen my-hyperbahn-app "A new hyperbahn app"`
  - `cd my-hyperbahn-app`
