@@ -4,23 +4,23 @@ Service discovery and routing solution.
 
 ## Overview
 
-Hyperbahn is a service discovery and routing network. Its aim is to simplify 
-reliably talking to any service without having to know where the service is 
+Hyperbahn is a service discovery and routing network. Its aim is to simplify
+reliably talking to any service without having to know where the service is
 running.
 
-Hyperbahn is an overlay network of routers designed to support the 
-[TChannel RPC protocol][tchannel].  Hyperbahn itself is a [ringpop][ringpop] 
+Hyperbahn is an overlay network of routers designed to support the
+[TChannel RPC protocol][tchannel]. Hyperbahn itself is a [ringpop][ringpop]
 based mesh network of router nodes that dynamically converge and gossip known
 services onto a consistent hash ring topology.
 
-Hyperbahn and TChannel clients are currently supported 
+Hyperbahn and TChannel clients are currently supported
 in Go, Python, and Node.js.
 
 ## Hyperbahn Features
 
 Hyperbahn provides many scaling and fault tolerance features including:
 
- - timeouts to transitively enforce your service’s SLA
+ - timeouts to transitively enforce your service's SLA
  - retries to eliminate transient failures within a request timeout window
  - load balancing so that calls are spread out evenly across your service
  - rate limiting to shield your service from excessive calls
@@ -33,17 +33,20 @@ To register a service on Hyperbahn:
  - listen on an arbitrary (could be random) port
  - connect to and advertise on Hyperbahn
 
-As a service consumer you get the following built in to TChannel/Hyperbahn 
+As a service consumer you get the following built in to TChannel/Hyperbahn
 client libraries:
 
  - configuration discovery: no more host/port files or configuration to manage
- - timeouts: every request must specify a timeout, moving towards a fast failure model
- - load balancing: outgoing requests are spread evenly over connected Hyperbahn nodes
+ - timeouts: every request must specify a timeout, moving towards a fast
+   failure model
+ - load balancing: outgoing requests are spread evenly over connected Hyperbahn
+   nodes
  - circuit breaking: fast failure at all layers of the network
 
 To use a service over Hyperbahn:
 
- - instantiate Hyperbahn client (if you’re also a service, you re-use the one you’ve already setup and registered over)
+ - instantiate Hyperbahn client (if you're also a service, you re-use the one
+   you've already setup and registered over)
  - send a request to the desired service and endpoint name
 
 ## Local quickstart
