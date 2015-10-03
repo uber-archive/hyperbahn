@@ -94,6 +94,7 @@ function RateLimiter(options) {
     self.exemptServices = options.exemptServices || [];
     self.serviceCounters = Object.create(null);
     self.edgeCounters = Object.create(null);
+    self.ksCounters = Object.create(null);
     self.totalRequestCounter = RateLimiterCounter({
         numOfBuckets: self.numOfBuckets,
         rpsLimit: self.totalRpsLimit
@@ -107,70 +108,77 @@ function RateLimiter(options) {
 
 RateLimiter.prototype.type = 'tchannel.rate-limiting';
 
+RateLimiter.prototype.refreshCounter =
+function refreshCounter(counter, rpsStatsName, rpsLimitStatsName, createStatsTag, tagName) {
+    var self = this;
+    if (self.cycle === self.numOfBuckets) {
+        var statsTag = createStatsTag(tagName);
+        if (rpsStatsName && counter.rps) {
+            self.channel.emitFastStat(self.channel.buildStat(
+                rpsStatsName,
+                'counter',
+                counter.rps,
+                statsTag
+            ));
+        }
+
+        if (rpsLimitStatsName) {
+            self.channel.emitFastStat(self.channel.buildStat(
+                rpsLimitStatsName,
+                'gauge',
+                counter.rpsLimit,
+                statsTag
+            ));
+        }
+    }
+    counter.refresh();
+};
+
 RateLimiter.prototype.refresh =
 function refresh() {
     var self = this;
 
-    if (self.cycle === self.numOfBuckets) {
-        if (self.totalRequestCounter.rps) {
-            self.channel.emitFastStat(self.channel.buildStat(
-                'tchannel.rate-limiting.total-rps',
-                'counter',
-                self.totalRequestCounter.rps,
-                new stat.RateLimiterEmptyTags()
-            ));
+    self.refreshCounter(self.totalRequestCounter,
+        'tchannel.rate-limiting.total-rps',
+        'tchannel.rate-limiting.total-rps-limit',
+        function createEmptyTag() {
+            return new stat.RateLimiterEmptyTags();
         }
-
-        self.channel.emitFastStat(self.channel.buildStat(
-            'tchannel.rate-limiting.total-rps-limit',
-            'gauge',
-            self.totalRequestCounter.rpsLimit,
-            new stat.RateLimiterEmptyTags()
-        ));
-    }
-
-    self.totalRequestCounter.refresh();
+    );
 
     var serviceNames = Object.keys(self.serviceCounters);
     var i;
     var counter;
     for (i = 0; i < serviceNames.length; i++) {
         counter = self.serviceCounters[serviceNames[i]];
-        if (self.cycle === self.numOfBuckets) {
-            var statsTag = new stat.RateLimiterServiceTags(serviceNames[i]);
-            if (counter.rps) {
-                self.channel.emitFastStat(self.channel.buildStat(
-                    'tchannel.rate-limiting.service-rps',
-                    'counter',
-                    counter.rps,
-                    statsTag
-                ));
-            }
+        self.refreshCounter(counter,
+            'tchannel.rate-limiting.service-rps',
+            'tchannel.rate-limiting.service-rps-limit',
+            createServiceTag,
+            serviceNames[i]
+        );
+    }
 
-            self.channel.emitFastStat(self.channel.buildStat(
-                'tchannel.rate-limiting.service-rps-limit',
-                'gauge',
-                counter.rpsLimit,
-                statsTag
-            ));
-        }
-        counter.refresh();
+    serviceNames = Object.keys(self.ksCounters);
+    for (i = 0; i < serviceNames.length; i++) {
+        counter = self.ksCounters[serviceNames[i]];
+        self.refreshCounter(counter,
+            'tchannel.rate-limiting.kill-switch.service-rps',
+            null,
+            createServiceTag,
+            serviceNames[i]
+        );
     }
 
     var edges = Object.keys(self.edgeCounters);
     for (i = 0; i < edges.length; i++) {
         counter = self.edgeCounters[edges[i]];
-        if (self.cycle === self.numOfBuckets) {
-            if (counter.rps) {
-                self.channel.emitFastStat(self.channel.buildStat(
-                    'tchannel.rate-limiting.edge-rps',
-                    'counter',
-                    counter.rps,
-                    new stat.RateLimiterEdgeTags(edges[i])
-                ));
-            }
-        }
-        counter.refresh();
+        self.refreshCounter(counter,
+            'tchannel.rate-limiting.edge-rps',
+            null,
+            createEdgeTag,
+            edges[i]
+        );
     }
 
     self.cycle--;
@@ -184,12 +192,26 @@ function refresh() {
         },
         self.refreshDelay
     );
+
+    function createServiceTag(serviceName) {
+        return new stat.RateLimiterServiceTags(serviceName);
+    }
+
+    function createEdgeTag(serviceName) {
+        return new stat.RateLimiterEdgeTags(serviceName);
+    }
 };
 
 RateLimiter.prototype.removeServiceCounter =
 function removeServiceCounter(serviceName) {
     var self = this;
     delete self.serviceCounters[serviceName];
+};
+
+RateLimiter.prototype.removeKillSwitchCounter =
+function removeKillSwitchCounter(serviceName) {
+    var self = this;
+    delete self.ksCounters[serviceName];
 };
 
 RateLimiter.prototype.updateExemptServices =
@@ -256,6 +278,12 @@ function updateServiceLimit(serviceName, limit) {
     if (counter) {
         counter.rpsLimit = limit;
     }
+
+    // update ks counter
+    counter = self.ksCounters[serviceName];
+    if (counter) {
+        counter.rpsLimit = self.ksLimitForService(serviceName);
+    }
 };
 
 RateLimiter.prototype.updateTotalLimit =
@@ -263,6 +291,13 @@ function updateTotalLimit(limit) {
     var self = this;
     self.totalRpsLimit = limit;
     self.totalRequestCounter.rpsLimit = limit;
+
+    // update ks counters
+    var serviceNames = Object.keys(self.ksCounters);
+    for (var i = 0; i < serviceNames.length; i++) {
+        var counter = self.ksCounters[serviceNames[i]];
+        counter.rpsLimit = self.ksLimitForService(serviceNames[i]);
+    }
 };
 
 RateLimiter.prototype.createServiceCounter =
@@ -294,6 +329,41 @@ function createServiceCounter(serviceName) {
     return counter;
 };
 
+RateLimiter.prototype.ksLimitForService =
+function ksLimitForService(serviceName) {
+    var self = this;
+    // allow total RPS limit to kick in first
+    var rpsLimit = self.totalRpsLimit + 5;
+    if (self.serviceCounters[serviceName] &&
+        self.serviceCounters[serviceName].rpsLimit * 2 < rpsLimit) {
+        rpsLimit = self.serviceCounters[serviceName].rpsLimit * 2;
+    }
+
+    return rpsLimit;
+};
+
+RateLimiter.prototype.createKillSwitchCounter =
+function createKillSwitchCounter(serviceName) {
+    var self = this;
+    var counter;
+
+    assert(serviceName, 'createKillSwitchCounter requires the serviceName');
+
+    if (self.exemptServices.indexOf(serviceName) !== -1) {
+        return null;
+    }
+
+    counter = self.ksCounters[serviceName];
+    if (!counter) {
+        counter = RateLimiterCounter({
+            numOfBuckets: self.numOfBuckets,
+            rpsLimit: self.ksLimitForService(serviceName)
+        });
+        self.ksCounters[serviceName] = counter;
+    }
+    return counter;
+};
+
 RateLimiter.prototype.incrementServiceCounter =
 function incrementServiceCounter(serviceName) {
     var self = this;
@@ -320,6 +390,19 @@ function incrementEdgeCounter(name) {
     counter.increment();
 };
 
+RateLimiter.prototype.incrementKillSwitchCounter =
+function incrementKillSwitchCounter(name) {
+    var self = this;
+    var counter = self.ksCounters[name];
+    if (!counter) {
+        counter = self.createKillSwitchCounter(name);
+    }
+
+    if (counter) {
+        counter.increment();
+    }
+};
+
 RateLimiter.prototype.incrementTotalCounter =
 function incrementTotalCounter(serviceName) {
     var self = this;
@@ -340,6 +423,26 @@ function shouldRateLimitService(serviceName) {
     if (result) {
         self.channel.emitFastStat(self.channel.buildStat(
             'tchannel.rate-limiting.service-busy',
+            'counter',
+            1,
+            new stat.RateLimiterServiceTags(serviceName)
+        ));
+    }
+    return result;
+};
+
+RateLimiter.prototype.shouldKillSwitchService =
+function shouldKillSwitchService(serviceName) {
+    var self = this;
+    if (self.exemptServices.indexOf(serviceName) !== -1) {
+        return false;
+    }
+    var counter = self.ksCounters[serviceName];
+    assert(counter, 'cannot find kill-switch counter for ' + serviceName);
+    var result = counter.rps > counter.rpsLimit;
+    if (result) {
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.service-kill-switched',
             'counter',
             1,
             new stat.RateLimiterServiceTags(serviceName)

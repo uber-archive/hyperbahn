@@ -172,6 +172,24 @@ function rateLimit(req, buildRes) {
     var isExitNode = self.isExitFor(req.serviceName);
     if (isExitNode) {
         self.rateLimiter.createServiceCounter(req.serviceName);
+        self.rateLimiter.createKillSwitchCounter(req.serviceName);
+    }
+
+    // apply kill switch safe guard first
+    if (isExitNode && self.rateLimiter.shouldKillSwitchService(req.serviceName)) {
+        var limit = self.rateLimiter.ksCounters[req.serviceName].rpsLimit;
+        self.logger.info('hyperbahn service is kill-switched by the rps limit',
+            self.extendLogInfo(req.extendLogInfo({
+                rpsLimit: limit,
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
+            })));
+        req.connection.ops.popInReq(req.id);
+        return true;
+    }
+
+    if (isExitNode) {
+        self.rateLimiter.incrementKillSwitchCounter(req.serviceName);
     }
 
     // apply rate limiter
@@ -305,6 +323,7 @@ function purgeServices() {
                 chan.close();
                 delete self.channel.subChannels[serviceName];
                 self.rateLimiter.removeServiceCounter(serviceName);
+                self.rateLimiter.removeKillSwitchCounter(serviceName);
             }
         }
     }
