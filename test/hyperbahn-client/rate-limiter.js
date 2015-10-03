@@ -98,6 +98,7 @@ function runTests(HyperbahnCluster) {
                         var relayChannel = app.clients.tchannel;
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 3, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.ksCounters.steve.rps, 3, 'request for steve - kill switch');
                         assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 3, 'request for bob~~steve');
                     });
                     done();
@@ -152,6 +153,7 @@ function runTests(HyperbahnCluster) {
                         var rateLimiter = relayChannel.handler.rateLimiter;
                         assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check1: total request');
                         assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'check1: request for steve');
+                        assert.equals(rateLimiter.ksCounters.steve.rps, 3, 'check1: request for steve - kill switch');
                         assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 3, 'check1: request for bob~~steve');
                     });
                     done();
@@ -165,6 +167,7 @@ function runTests(HyperbahnCluster) {
                         var rateLimiter = relayChannel.handler.rateLimiter;
                         assert.equals(rateLimiter.totalRequestCounter.rps, 2, 'check2: total request');
                         assert.equals(rateLimiter.serviceCounters.steve.rps, 2, 'check2: request for steve');
+                        assert.equals(rateLimiter.ksCounters.steve.rps, 2, 'check2: request for steve - kill switch');
                         assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 2, 'check2: request for bob~~steve');
                     });
                     done();
@@ -227,6 +230,69 @@ function runTests(HyperbahnCluster) {
                         assert.ok(err && err.type === 'tchannel.busy' &&
                             err.message === 'steve is rate-limited by the rps of 2',
                             'should be rate limited');
+                        done();
+                    });
+                }
+            ], function done() {
+                steveHyperbahnClient.destroy();
+                assert.end();
+            });
+        }
+    });
+
+    HyperbahnCluster.test('service kill switch works', {
+        size: 1,
+        kValue: 2,
+        remoteConfig: {
+            'rateLimiting.enabled': true,
+            'rateLimiting.rateLimiterBuckets': 2,
+            'rateLimiting.exemptServices': [
+                'hyperbahn',
+                'ringpop'
+            ],
+            'rateLimiting.rpsLimitForServiceName': {
+                'steve': 2
+            }
+        }
+    }, function t(cluster, assert) {
+        var steve = cluster.remotes.steve;
+        var bob = cluster.remotes.bob;
+
+        var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
+            serviceName: steve.serviceName,
+            callerName: 'forward-test',
+            hostPortList: cluster.hostPortList,
+            tchannel: steve.channel,
+            logger: DebugLogtron('hyperbahnClient')
+        });
+        steveHyperbahnClient.once('advertised', onAdvertised);
+        steveHyperbahnClient.advertise();
+
+        function onAdvertised() {
+            var opts = {
+                logger: cluster.logger,
+                bob: bob,
+                steve: steve,
+                assert: assert,
+                errOk: true
+            };
+            series([
+                send.bind(null, opts),
+                send.bind(null, opts),
+                send.bind(null, opts),
+                send.bind(null, opts),
+                send.bind(null, opts),
+                function sendError(done) {
+                    var tchannelJSON = TChannelJSON({
+                        logger: cluster.logger
+                    });
+                    tchannelJSON.send(bob.clientChannel.request({
+                        timeout: 100,
+                        serviceName: steve.serviceName
+                    }), 'echo', null, 'hello', function onResponse(err, res) {
+                        assert.ok(err && err.type === 'tchannel.request.timeout',
+                            'should be kill switched');
                         done();
                     });
                 }
