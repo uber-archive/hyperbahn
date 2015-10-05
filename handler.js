@@ -343,17 +343,16 @@ HyperbahnHandler.prototype.logError =
 function logError(err, opts, response) {
     var self = this;
 
-    var codeName = Errors.classify(err);
     var logger = self.channel.logger;
 
     var logOptions = {
         exitNode: opts.hostPort,
         services: opts.services,
         error: err,
-        codeName: codeName,
         responseBody: response && response.body
     };
 
+    var codeName = Errors.classify(err);
     if (codeName === 'NetworkError' ||
         codeName === 'Timeout'
     ) {
