@@ -352,13 +352,10 @@ function logError(err, opts, response) {
         error: err
     };
 
-    var codeName = Errors.classify(err);
-    if (codeName === 'NetworkError' ||
-        codeName === 'Timeout'
-    ) {
-        logger.warn('Relay advertise failed with expected err', logOptions);
-    } else {
+    if (Errors.isFatal(err)) {
         logger.error('Relay advertise failed with unexpected err', logOptions);
+    } else {
+        logger.warn('Relay advertise failed with expected err', logOptions);
     }
 };
 
