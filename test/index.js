@@ -59,6 +59,8 @@ require('./forward/forwarding-concurrently.js');
 require('./forward/forwarding-req-defaults.js');
 require('./forward/kill-switch.js');
 require('./forward/forwarding-huge-buffer.js');
+require('./forward/forwarding-respects-relay-flags.js');
+require('./forward/forwarding-under-membershipchange-is-non-event.js');
 
 require('./hosts/happy-path.js');
 require('./hosts/no-body.js');
@@ -81,6 +83,7 @@ require('./hyperbahn-client/rate-limiter.js')(TestCluster);
 require('./larch/errors.js');
 require('./larch/larch.js');
 require('./larch/reservoir-backend.js');
+require('./larch/level-router-backend.js');
 
 require('./register/to-connected-node.js');
 require('./register/with-ringpop-divergence.js');
