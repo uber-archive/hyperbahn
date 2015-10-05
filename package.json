@@ -33,7 +33,6 @@
     "process": "0.10.0",
     "process-reporter": "1.1.2",
     "raynos-replr": "0.2.5-port-0-support",
-    "readable-stream": "1.0.33-2",
     "ready-signal": "1.2.0",
     "ringpop": "10.5.0",
     "run-parallel": "1.0.0",
