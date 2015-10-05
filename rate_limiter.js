@@ -282,7 +282,7 @@ function updateServiceLimit(serviceName, limit) {
     // update ks counter
     counter = self.ksCounters[serviceName];
     if (counter) {
-        counter.rpsLimit = self.ksLimitForService(serviceName);
+        counter.rpsLimit = self.killSwitchLimitForService(serviceName);
     }
 };
 
@@ -296,7 +296,7 @@ function updateTotalLimit(limit) {
     var serviceNames = Object.keys(self.ksCounters);
     for (var i = 0; i < serviceNames.length; i++) {
         var counter = self.ksCounters[serviceNames[i]];
-        counter.rpsLimit = self.ksLimitForService(serviceNames[i]);
+        counter.rpsLimit = self.killSwitchLimitForService(serviceNames[i]);
     }
 };
 
@@ -329,8 +329,8 @@ function createServiceCounter(serviceName) {
     return counter;
 };
 
-RateLimiter.prototype.ksLimitForService =
-function ksLimitForService(serviceName) {
+RateLimiter.prototype.killSwitchLimitForService =
+function killSwitchLimitForService(serviceName) {
     var self = this;
     // allow total RPS limit to kick in first
     var rpsLimit = self.totalRpsLimit + 5;
@@ -357,7 +357,7 @@ function createKillSwitchCounter(serviceName) {
     if (!counter) {
         counter = RateLimiterCounter({
             numOfBuckets: self.numOfBuckets,
-            rpsLimit: self.ksLimitForService(serviceName)
+            rpsLimit: self.killSwitchLimitForService(serviceName)
         });
         self.ksCounters[serviceName] = counter;
     }
