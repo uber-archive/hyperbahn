@@ -65,10 +65,11 @@
   "scripts": {
     "add-licence": "uber-licence",
     "check-benchmark": "node benchmarks --relay -- --relay -r 10000 -p 10000 --skipPing",
+    "check-files": "bash ./scripts/verify_included.sh",
     "check-licence": "uber-licence --dry",
     "check-cover": "istanbul check-coverage || echo coverage failed",
     "check-ls": "npm ls --loglevel=http --parseable 1>/dev/null && echo '# npm is in a good state'",
-    "cover": "npm run test-cover -s && npm run check-cover -s",
+    "cover": "npm run check-files && npm run test-cover -s && npm run check-cover -s",
     "lint": "standard -v --reporter stylish && echo '# linter passed'",
     "shrinkwrap": "node bin/shrinkwrap.js --dev",
     "travis": "npm run test",
