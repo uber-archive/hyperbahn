@@ -348,8 +348,8 @@ function logError(err, opts, response) {
     var logOptions = {
         exitNode: opts.hostPort,
         services: opts.services,
-        error: err,
-        responseBody: response && response.body
+        responseBody: response && response.body,
+        error: err
     };
 
     var codeName = Errors.classify(err);
