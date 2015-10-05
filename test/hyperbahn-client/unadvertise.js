@@ -25,6 +25,7 @@ var setTimeout = require('timers').setTimeout;
 
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 var TChannelJSON = require('tchannel/as/json');
+var CountedReadySignal = require('ready-signal/counted');
 // var timers = TimeMock(Date.now());
 
 module.exports = runTests;
@@ -173,11 +174,11 @@ function runTests(HyperbahnCluster) {
             });
             peer.removeConnectionEvent.on(onRemove);
         });
+        var allRemoved = new CountedReadySignal(count);
+        allRemoved(callback);
         function onRemove(conn) {
             if (conn.direction === 'in') {
-                if (--count <= 0) {
-                    callback(null);
-                }
+                allRemoved.signal();
             }
         }
     }
