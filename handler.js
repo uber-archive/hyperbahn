@@ -343,23 +343,19 @@ HyperbahnHandler.prototype.logError =
 function logError(err, opts, response) {
     var self = this;
 
-    var codeName = Errors.classify(err);
     var logger = self.channel.logger;
 
     var logOptions = {
         exitNode: opts.hostPort,
         services: opts.services,
-        error: err,
-        codeName: codeName,
-        responseBody: response && response.body
+        responseBody: response && response.body,
+        error: err
     };
 
-    if (codeName === 'NetworkError' ||
-        codeName === 'Timeout'
-    ) {
-        logger.warn('Relay advertise failed with expected err', logOptions);
-    } else {
+    if (Errors.isFatal(err)) {
         logger.error('Relay advertise failed with unexpected err', logOptions);
+    } else {
+        logger.warn('Relay advertise failed with expected err', logOptions);
     }
 };
 
