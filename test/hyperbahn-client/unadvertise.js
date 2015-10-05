@@ -137,7 +137,7 @@ function runTests(HyperbahnCluster) {
             }
         }
 
-        function onConnClose(conn) {
+        function onConnClose() {
             if (--count <= 0) {
                 callback(null);
             }
