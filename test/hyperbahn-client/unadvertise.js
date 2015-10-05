@@ -122,20 +122,39 @@ function runTests(HyperbahnCluster) {
     function untilAllInConnsRemoved(remote, callback) {
         var peers = remote.channel.peers.values();
         var count = 0;
-        peers.forEach(function eachPeer(peer) {
-            peer.connections.forEach(function eachConn(conn) {
-                if (conn.direction === 'in') {
-                    count++;
+
+        for (var i = 0; i < peers.length; i++) {
+            var peer = peers[i];
+
+            for (var j = 0; j < peer.connections.length; j++) {
+                var conn = peer.connections[j];
+                if (conn.direction !== 'in') {
+                    continue;
                 }
-            });
-            peer.removeConnectionEvent.on(onRemove);
-        });
-        function onRemove(conn) {
-            if (conn.direction === 'in') {
-                if (--count <= 0) {
-                    callback(null);
-                }
+
+                count++;
+                waitForClose(conn, onConnClose);
             }
+        }
+
+        function onConnClose(conn) {
+            if (--count <= 0) {
+                callback(null);
+            }
+        }
+    }
+}
+
+function waitForClose(conn, listener) {
+    var done = false;
+
+    conn.errorEvent.on(onEvent);
+    conn.closeEvent.on(onEvent);
+
+    function onEvent() {
+        if (!done) {
+            done = true;
+            listener(conn);
         }
     }
 }
