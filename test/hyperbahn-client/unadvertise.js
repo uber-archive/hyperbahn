@@ -58,7 +58,6 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
-            assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
             setTimeout(function onSend() {
                 tchannelJSON.send(bob.clientChannel.request({
                     timeout: 5000,
@@ -98,24 +97,23 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.once('advertised', onAdvertised);
         steveHyperbahnClient.advertise();
 
-        var fwdreq;
-
         function onAdvertised() {
-            assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, function onSend() {
+            steveHyperbahnClient.once('unadvertised', onUnadvertised);
+            steveHyperbahnClient.unadvertise();
+        }
+
+        var fwdreq;
+        function onUnadvertised() {
+            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
+            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+
+            setTimeout(function onSend() {
                 fwdreq = bob.clientChannel.request({
                     timeout: 5000,
                     serviceName: steve.serviceName
                 });
                 tchannelJSON.send(fwdreq, 'echo', null, 'oh hi lol', onForwarded);
-            });
-            steveHyperbahnClient.once('unadvertised', onUnadvertised);
-            steveHyperbahnClient.unadvertise();
-        }
-
-        function onUnadvertised() {
-            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
-            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+            }, 100);
         }
 
         function onForwarded(err, resp) {
@@ -142,10 +140,6 @@ function runTests(HyperbahnCluster) {
 
         function onAdvertised() {
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, function readvertise() {
-                steveHyperbahnClient.once('advertised', onReadvertised);
-                steveHyperbahnClient.advertise();
-            });
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
             steveHyperbahnClient.unadvertise();
         }
@@ -153,6 +147,10 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+            setTimeout(function readvertise() {
+                steveHyperbahnClient.once('advertised', onReadvertised);
+                steveHyperbahnClient.advertise();
+            }, 100);
         }
 
         function onReadvertised() {
@@ -162,23 +160,4 @@ function runTests(HyperbahnCluster) {
         }
     });
 
-    function untilAllInConnsRemoved(remote, callback) {
-        var peers = remote.channel.peers.values();
-        var count = 0;
-        peers.forEach(function eachPeer(peer) {
-            peer.connections.forEach(function eachConn(conn) {
-                if (conn.direction === 'in') {
-                    count++;
-                }
-            });
-            peer.removeConnectionEvent.on(onRemove);
-        });
-        function onRemove(conn) {
-            if (conn.direction === 'in') {
-                if (--count <= 0) {
-                    callback(null);
-                }
-            }
-        }
-    }
 }
