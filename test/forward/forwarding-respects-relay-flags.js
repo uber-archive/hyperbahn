@@ -63,7 +63,8 @@ allocCluster.test('register and forward', {
         assert.equal(counter, 1);
 
         var logs = cluster.logger.items();
-        assert.equal(logs.length, 1);
+        assert.ok(logs.length >= 1 && logs.length <= 2);
+
         assert.equal(logs[0].levelName, 'warn');
         assert.equal(logs[0].meta.serviceName, 'mary');
         assert.equal(logs[0].meta.callerName, 'bob');
