@@ -21,7 +21,6 @@
 'use strict';
 
 var DebugLogtron = require('debug-logtron');
-var setTimeout = require('timers').setTimeout;
 
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 var TChannelJSON = require('tchannel/as/json');
@@ -34,48 +33,6 @@ if (require.main === module) {
 }
 
 function runTests(HyperbahnCluster) {
-    HyperbahnCluster.test('advertise and forward', {
-        size: 5,
-        servicePurgePeriod: 50
-    }, function t(cluster, assert) {
-        var steve = cluster.remotes.steve;
-        var bob = cluster.remotes.bob;
-
-        var tchannelJSON = TChannelJSON({
-            logger: cluster.logger
-        });
-
-        var steveHyperbahnClient = new HyperbahnClient({
-            serviceName: steve.serviceName,
-            callerName: 'forward-test',
-            hostPortList: cluster.hostPortList,
-            tchannel: steve.channel,
-            advertiseInterval: 2,
-            logger: DebugLogtron('hyperbahnClient')
-        });
-
-        steveHyperbahnClient.once('advertised', onAdvertised);
-        steveHyperbahnClient.advertise();
-
-        function onAdvertised() {
-            assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            setTimeout(function onSend() {
-                tchannelJSON.send(bob.clientChannel.request({
-                    timeout: 5000,
-                    serviceName: steve.serviceName
-                }), 'echo', null, 'oh hi lol', onForwarded);
-            }, 55);
-        }
-
-        function onForwarded(err, resp) {
-            assert.ifError(err);
-            assert.equal(String(resp.body), 'oh hi lol');
-
-            steveHyperbahnClient.destroy();
-            assert.end();
-        }
-    });
-
     HyperbahnCluster.test('advertise, unadvertise and forward', {
         size: 5,
         servicePurgePeriod: 50
@@ -165,20 +122,39 @@ function runTests(HyperbahnCluster) {
     function untilAllInConnsRemoved(remote, callback) {
         var peers = remote.channel.peers.values();
         var count = 0;
-        peers.forEach(function eachPeer(peer) {
-            peer.connections.forEach(function eachConn(conn) {
-                if (conn.direction === 'in') {
-                    count++;
+
+        for (var i = 0; i < peers.length; i++) {
+            var peer = peers[i];
+
+            for (var j = 0; j < peer.connections.length; j++) {
+                var conn = peer.connections[j];
+                if (conn.direction !== 'in') {
+                    continue;
                 }
-            });
-            peer.removeConnectionEvent.on(onRemove);
-        });
-        function onRemove(conn) {
-            if (conn.direction === 'in') {
-                if (--count <= 0) {
-                    callback(null);
-                }
+
+                count++;
+                waitForClose(conn, onConnClose);
             }
+        }
+
+        function onConnClose() {
+            if (--count <= 0) {
+                callback(null);
+            }
+        }
+    }
+}
+
+function waitForClose(conn, listener) {
+    var done = false;
+
+    conn.errorEvent.on(onEvent);
+    conn.closeEvent.on(onEvent);
+
+    function onEvent() {
+        if (!done) {
+            done = true;
+            listener(conn);
         }
     }
 }

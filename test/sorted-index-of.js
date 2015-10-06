@@ -21,6 +21,8 @@
 'use strict';
 
 var test = require('tape');
+
+var CollapsedAssert = require('./lib/collapsed-assert.js');
 var sortedIndexOf = require('../lib/sorted-index-of');
 
 test('find index of value in sorted array', function t(assert) {
@@ -32,11 +34,15 @@ test('find index of value in sorted array', function t(assert) {
         array.push(index * 2);
     }
 
+    var _assert = CollapsedAssert();
+
     // Validate
     for (index = 0; index < 100; index++) {
         var pos = sortedIndexOf(array, index * 2);
-        assert.equal(pos, index, 'value ' + (index * 2) + ' at ' + index);
+        _assert.equal(pos, index, 'value ' + (index * 2) + ' at ' + index);
     }
+
+    _assert.report(assert, 'sortedIndexOf works');
 
     assert.end();
 });
@@ -69,12 +75,16 @@ test('find point of insertion with no threshold for linear search', function t(a
     //  [0, 2, 4, 6, 8, 10, ...]
     // -1  1  3  5  7
 
+    var _assert = CollapsedAssert();
+
     // Validate
     for (index = 0; index < 33; index++) {
         var val = index * 2 - 1;
         var pos = sortedIndexOf(array, val, null);
-        assert.equal(~pos, index, 'should insert ' + val + ' at ' + ~pos);
+        _assert.equal(~pos, index, 'should insert ' + val + ' at ' + ~pos);
     }
+
+    _assert.report(assert, 'sortedIndexOf works');
 
     assert.end();
 });
@@ -90,12 +100,16 @@ test('find point of insertion with default threshold for linear search', functio
     //  [0, 2, 4, 6, 8, 10, ...]
     // -1  1  3  5  7
 
+    var _assert = CollapsedAssert();
+
     // Validate
     for (index = 0; index < 33; index++) {
         var val = index * 2 - 1;
         var pos = sortedIndexOf(array, val);
-        assert.equal(~pos, index, 'should insert ' + val + ' at ' + ~pos);
+        _assert.equal(~pos, index, 'should insert ' + val + ' at ' + ~pos);
     }
+
+    _assert.report(assert, 'sortedIndexOf works');
 
     assert.end();
 });

@@ -20,5 +20,52 @@
 
 'use strict';
 
-require('./happy-path.js');
-require('./circuits.js');
+var nodeAssert = require('assert');
+
+module.exports = CollapsedAssert;
+
+// TODO more methods
+function CollapsedAssert() {
+    if (!(this instanceof CollapsedAssert)) {
+        return new CollapsedAssert();
+    }
+
+    var self = this;
+
+    self._commands = [];
+    self._failed = false;
+}
+
+CollapsedAssert.prototype.equal = function equal(a, b, msg, extra) {
+    var self = this;
+
+    if (a !== b) {
+        self._failed = true;
+    }
+
+    self._commands.push(['equal', a, b, msg, extra]);
+};
+
+CollapsedAssert.prototype.fail = function fail(msg, extra) {
+    var self = this;
+
+    self._failed = true;
+    self._commands.push(['fail', msg, extra]);
+};
+
+CollapsedAssert.prototype.report = function report(realAssert, message) {
+    var self = this;
+
+    nodeAssert(message, 'must pass message');
+
+    if (!self._failed) {
+        return realAssert.ok(true, message);
+    }
+
+    for (var i = 0; i < self._commands; i++) {
+        var command = self._commands[i];
+
+        var method = command.shift();
+        realAssert[method].apply(realAssert, command);
+    }
+};

@@ -118,7 +118,7 @@ Application.prototype.bootstrap = function bootstrap(cb) {
     self.isBootstrapped = true;
 
     self.setupServices();
-    self.hookupSignals();
+
     self.clients.bootstrap(onClientsReady);
 
     function onClientsReady(err) {
