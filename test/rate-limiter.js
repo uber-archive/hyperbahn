@@ -60,6 +60,7 @@ test('rps counter works', function t(assert) {
     var statsd = channel.statsd;
     var rateLimiter = RateLimiter({
         numOfBuckets: 2,
+        defaultTotalKillSwitchBuffer: 5,
         channel: channel
     });
 
@@ -95,6 +96,7 @@ test('rps counter works in 1.5 seconds', function t(assert) {
     var statsd = channel.statsd;
     var rateLimiter = RateLimiter({
         numOfBuckets: 2,
+        defaultTotalKillSwitchBuffer: 5,
         channel: channel
     });
 
@@ -268,6 +270,7 @@ test('rate limit works', function t(assert) {
     var rateLimiter = RateLimiter({
         channel: channel,
         numOfBuckets: 2,
+        defaultTotalKillSwitchBuffer: 5,
         rpsLimitForServiceName: {
             steve: 2
         },
@@ -307,6 +310,7 @@ test('rate exempt service works 1', function t(assert) {
     var rateLimiter = RateLimiter({
         channel: channel,
         totalRpsLimit: 2,
+        defaultTotalKillSwitchBuffer: 5,
         exemptServices: ['steve']
     });
 
@@ -336,6 +340,7 @@ test('rate exempt service works 2', function t(assert) {
     var rateLimiter = RateLimiter({
         channel: channel,
         totalRpsLimit: 2,
+        defaultTotalKillSwitchBuffer: 5,
         rpsLimitForServiceName: {
             steve: 2,
             bob: 2

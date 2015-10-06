@@ -53,7 +53,7 @@ function send(opts, done) {
 
 function waitFor(t) {
     return function wait(done) {
-        setTimeout(done, 500);
+        setTimeout(done, t);
     };
 }
 
@@ -179,7 +179,7 @@ function runTests(HyperbahnCluster) {
         }
     });
 
-    HyperbahnCluster.test('service rate limiting works', {
+    HyperbahnCluster.test('service rate limiting works and can recover', {
         size: 1,
         kValue: 2,
         remoteConfig: {
@@ -232,7 +232,9 @@ function runTests(HyperbahnCluster) {
                             'should be rate limited');
                         done();
                     });
-                }
+                },
+                waitFor(1000),
+                send.bind(null, opts)
             ], function done() {
                 steveHyperbahnClient.destroy();
                 assert.end();
@@ -240,7 +242,7 @@ function runTests(HyperbahnCluster) {
         }
     });
 
-    HyperbahnCluster.test('service kill switch works', {
+    HyperbahnCluster.test('service kill switch works and can recover', {
         size: 1,
         kValue: 2,
         remoteConfig: {
@@ -295,7 +297,9 @@ function runTests(HyperbahnCluster) {
                             'should be kill switched');
                         done();
                     });
-                }
+                },
+                waitFor(1000),
+                send.bind(null, opts)
             ], function done() {
                 steveHyperbahnClient.destroy();
                 assert.end();
@@ -303,7 +307,7 @@ function runTests(HyperbahnCluster) {
         }
     });
 
-    HyperbahnCluster.test('total rate limiting works', {
+    HyperbahnCluster.test('total rate limiting works and can recover', {
         size: 5,
         kValue: 1,
         remoteConfig: {
@@ -355,7 +359,9 @@ function runTests(HyperbahnCluster) {
                             'should be rate limited');
                         done();
                     });
-                }
+                },
+                waitFor(1000),
+                send.bind(null, opts)
             ], function done() {
                 steveHyperbahnClient.destroy();
                 assert.end();

@@ -28,6 +28,9 @@ var DEFAULT_SERVICE_RPS_LIMIT = 100;
 var DEFAULT_TOTAL_RPS_LIMIT = 1000;
 var DEFAULT_BUCKET_NUMBER = 20;
 
+var DEFAULT_TOTAL_KILL_SWITCH_BUFFER = 200;
+var DEFAULT_SERVICE_KILL_SWITCH_FACTOR = 2;
+
 function RateLimiterCounter(options) {
     if (!(this instanceof RateLimiterCounter)) {
         return new RateLimiterCounter(options);
@@ -83,6 +86,8 @@ function RateLimiter(options) {
     self.numOfBuckets = options.numOfBuckets || DEFAULT_BUCKET_NUMBER;
     assert(self.numOfBuckets > 0 && self.numOfBuckets <= 1000, 'counter numOfBuckets should between (0 1000]');
     self.cycle = self.numOfBuckets;
+
+    self.defaultTotalKillSwitchBuffer = options.defaultTotalKillSwitchBuffer || DEFAULT_TOTAL_KILL_SWITCH_BUFFER;
 
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit || DEFAULT_SERVICE_RPS_LIMIT;
     self.defaultTotalRpsLimit = DEFAULT_TOTAL_RPS_LIMIT;
@@ -333,10 +338,10 @@ RateLimiter.prototype.killSwitchLimitForService =
 function killSwitchLimitForService(serviceName) {
     var self = this;
     // allow total RPS limit to kick in first
-    var rpsLimit = self.totalRpsLimit + 5;
+    var rpsLimit = self.totalRpsLimit + self.defaultTotalKillSwitchBuffer;
     if (self.serviceCounters[serviceName] &&
-        self.serviceCounters[serviceName].rpsLimit * 2 < rpsLimit) {
-        rpsLimit = self.serviceCounters[serviceName].rpsLimit * 2;
+        self.serviceCounters[serviceName].rpsLimit * DEFAULT_SERVICE_KILL_SWITCH_FACTOR < rpsLimit) {
+        rpsLimit = self.serviceCounters[serviceName].rpsLimit * DEFAULT_SERVICE_KILL_SWITCH_FACTOR;
     }
 
     return rpsLimit;
