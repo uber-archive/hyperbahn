@@ -30,7 +30,8 @@ allocCluster.test('request circuit state from endpoint', {
     kValue: 1,
     remoteConfig: {
         'rateLimiting.enabled': false,
-        'circuits.enabled': true
+        'circuits.enabled': true,
+        'partialAffinity.enabled': true
     },
     seedConfig: {
         'hyperbahn.circuits': {

@@ -101,3 +101,4 @@ require('./remote-config-client.js');
 require('./remote-config.js');
 require('./rate-limiter.js');
 require('./sorted-index-of.js');
+require('./partial-affinity.js');
