@@ -33,11 +33,15 @@ function increment(rateLimiter, steve, bob, done) {
     if (steve) {
         rateLimiter.incrementTotalCounter('steve');
         rateLimiter.incrementServiceCounter('steve');
+        rateLimiter.incrementKillSwitchServiceCounter('steve');
+        rateLimiter.incrementKillSwitchTotalCounter('steve');
     }
 
     if (bob) {
         rateLimiter.incrementTotalCounter('bob');
         rateLimiter.incrementServiceCounter('bob');
+        rateLimiter.incrementKillSwitchServiceCounter('bob');
+        rateLimiter.incrementKillSwitchTotalCounter('bob');
     }
 
     if (done) {
@@ -58,6 +62,7 @@ test('rps counter works', function t(assert) {
     var statsd = channel.statsd;
     var rateLimiter = RateLimiter({
         numOfBuckets: 2,
+        defaultTotalKillSwitchBuffer: 5,
         channel: channel
     });
 
@@ -66,8 +71,11 @@ test('rps counter works', function t(assert) {
     increment(rateLimiter, 'steve');
 
     assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
+    assert.equals(rateLimiter.totalKsCounter.rps, 5, 'total request - kill switch');
     assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
+    assert.equals(rateLimiter.ksCounters.steve.rps, 3, 'request for steve - kill switch');
     assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'request for bob');
+    assert.equals(rateLimiter.ksCounters.bob.rps, 2, 'request for bob - kill switch');
 
     channel.flushStats();
     assert.deepEqual(statsd._buffer._elements, [{
@@ -86,11 +94,12 @@ test('rps counter works', function t(assert) {
 test('rps counter works in 1.5 seconds', function t(assert) {
     var channel = new TChannel({
         timers: timers,
-        statsd: nullStatsd(14)
+        statsd: nullStatsd(20)
     });
     var statsd = channel.statsd;
     var rateLimiter = RateLimiter({
         numOfBuckets: 2,
+        defaultTotalKillSwitchBuffer: 5,
         channel: channel
     });
 
@@ -101,22 +110,27 @@ test('rps counter works in 1.5 seconds', function t(assert) {
         increment.bind(null, rateLimiter, 'steve', null),
         function check1(done) {
             assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'check1: total request');
+            assert.equals(rateLimiter.totalKsCounter.rps, 5, 'check1: total request - kill switch');
             assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'check1: request for steve');
+            assert.equals(rateLimiter.ksCounters.steve.rps, 3, 'check1: request for steve - kill switch');
             assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'check1: request for bob');
+            assert.equals(rateLimiter.ksCounters.bob.rps, 2, 'check1: request for bob - kill switch');
             done();
         },
         wait,
         increment.bind(null, rateLimiter, 'steve', 'bob'),
         function check2(done) {
             assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check2: total request');
+            assert.equals(rateLimiter.totalKsCounter.rps, 3, 'check2: total request - kill switch');
             assert.equals(rateLimiter.serviceCounters.steve.rps, 2, 'check2: request for steve');
+            assert.equals(rateLimiter.ksCounters.steve.rps, 2, 'check2: request for steve - kill switch');
             assert.equals(rateLimiter.serviceCounters.bob.rps, 1, 'check2: request for bob');
+            assert.equals(rateLimiter.ksCounters.bob.rps, 1, 'check2: request for bob - kill switch');
             done();
         }
     ], function done() {
         if (!rateLimiter.destroyed) {
             channel.flushStats();
-            // console.log(statsd._buffer._elements);
             assert.deepEqual(statsd._buffer._elements, [{
                 type: 'g',
                 name: 'tchannel.rate-limiting.total-rps-limit',
@@ -134,6 +148,12 @@ test('rps counter works in 1.5 seconds', function t(assert) {
                 name: 'tchannel.rate-limiting.total-rps-limit',
                 value: 1000,
                 delta: null,
+                time: null
+            }, {
+                type: 'c',
+                name: 'tchannel.rate-limiting.kill-switch.total-rps',
+                value: null,
+                delta: 5,
                 time: null
             }, {
                 type: 'c',
@@ -161,6 +181,18 @@ test('rps counter works in 1.5 seconds', function t(assert) {
                 time: null
             }, {
                 type: 'c',
+                name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
+                value: null,
+                delta: 3,
+                time: null
+            }, {
+                type: 'c',
+                name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
+                value: null,
+                delta: 2,
+                time: null
+            }, {
+                type: 'c',
                 name: 'tchannel.rate-limiting.total-rps',
                 value: null,
                 delta: 2,
@@ -170,6 +202,12 @@ test('rps counter works in 1.5 seconds', function t(assert) {
                 name: 'tchannel.rate-limiting.total-rps-limit',
                 value: 1000,
                 delta: null,
+                time: null
+            }, {
+                type: 'c',
+                name: 'tchannel.rate-limiting.kill-switch.total-rps',
+                value: null,
+                delta: 2,
                 time: null
             }, {
                 type: 'c',
@@ -195,6 +233,18 @@ test('rps counter works in 1.5 seconds', function t(assert) {
                 value: 100,
                 delta: null,
                 time: null
+            }, {
+                type: 'c',
+                name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
+                value: null,
+                delta: 1,
+                time: null
+            }, {
+                type: 'c',
+                name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
+                value: null,
+                delta: 1,
+                time: null
             }], 'stats keys/values as expected');
 
             channel.close();
@@ -218,9 +268,12 @@ test('remove counter works', function t(assert) {
     increment(rateLimiter, 'steve');
 
     rateLimiter.removeServiceCounter('steve');
+    rateLimiter.removeKillSwitchCounter('steve');
 
     assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
+    assert.equals(rateLimiter.totalKsCounter.rps, 5, 'total request - kill switch');
     assert.ok(!rateLimiter.serviceCounters.steve, 'steve should be removed');
+    assert.ok(!rateLimiter.ksCounters.steve, 'steve should be removed - kill switch');
     assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'request for bob');
 
     rateLimiter.destroy();
@@ -235,6 +288,7 @@ test('rate limit works', function t(assert) {
     var rateLimiter = RateLimiter({
         channel: channel,
         numOfBuckets: 2,
+        defaultTotalKillSwitchBuffer: 3,
         rpsLimitForServiceName: {
             steve: 2
         },
@@ -244,36 +298,55 @@ test('rate limit works', function t(assert) {
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve');
+    increment(rateLimiter, 'steve');
+    increment(rateLimiter, 'steve');
 
-    assert.equals(rateLimiter.totalRequestCounter.rps, 5, 'total request');
-    assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
+    assert.equals(rateLimiter.ksCounters.steve.rpsLimit, 4, 'kill swith limit for steve');
+    assert.equals(rateLimiter.totalKsCounter.rpsLimit, 6, 'total kill swith limit');
+
+    assert.equals(rateLimiter.totalRequestCounter.rps, 7, 'total request');
+    assert.equals(rateLimiter.totalKsCounter.rps, 7, 'total request - kill switch');
+    assert.equals(rateLimiter.serviceCounters.steve.rps, 5, 'request for steve');
+    assert.equals(rateLimiter.ksCounters.steve.rps, 5, 'request for steve - kill switch');
     assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'request for bob');
+    assert.equals(rateLimiter.ksCounters.bob.rps, 2, 'request for bob - kill switch');
 
     assert.ok(rateLimiter.shouldRateLimitTotalRequest(), 'should rate limit total request');
+    assert.ok(rateLimiter.shouldKillSwitchTotalRequest(), 'should kill switch total request');
     assert.ok(rateLimiter.shouldRateLimitService('steve'), 'should rate limit steve');
+    assert.ok(rateLimiter.shouldKillSwitchService('steve'), 'should kill switch steve');
     assert.ok(!rateLimiter.shouldRateLimitService('bob'), 'should not rate limit bob');
+    assert.ok(!rateLimiter.shouldKillSwitchService('bob'), 'should not kill switch bob');
 
     rateLimiter.destroy();
     channel.close();
     assert.end();
 });
 
-test('rate exempt service works', function t(assert) {
+test('rate exempt service works 1', function t(assert) {
     var channel = new TChannel({
         timers: timers
     });
     var rateLimiter = RateLimiter({
         channel: channel,
         totalRpsLimit: 2,
+        defaultTotalKillSwitchBuffer: 5,
         exemptServices: ['steve']
     });
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
+    increment(rateLimiter, 'steve', 'bob');
+    increment(rateLimiter, 'steve', 'bob');
+    increment(rateLimiter, 'steve', 'bob');
+    increment(rateLimiter, 'steve', 'bob');
+    increment(rateLimiter, 'steve', 'bob');
 
     assert.ok(!rateLimiter.shouldRateLimitTotalRequest('steve'), 'should not rate limit steve');
+    assert.ok(!rateLimiter.shouldKillSwitchTotalRequest('steve'), 'should not kill switch steve');
     assert.ok(!rateLimiter.shouldRateLimitService('steve'), 'should not rate limit steve');
+    assert.ok(!rateLimiter.shouldKillSwitchService('steve'), 'should not kill switch steve');
     assert.ok(rateLimiter.shouldRateLimitTotalRequest('bob'), 'should rate limit bob');
 
     rateLimiter.destroy();
@@ -281,16 +354,17 @@ test('rate exempt service works', function t(assert) {
     assert.end();
 });
 
-test('rate exempt service works', function t(assert) {
+test('rate exempt service works 2', function t(assert) {
     var channel = new TChannel({
         timers: timers
     });
     var rateLimiter = RateLimiter({
         channel: channel,
         totalRpsLimit: 2,
+        defaultTotalKillSwitchBuffer: 1,
         rpsLimitForServiceName: {
-            steve: 2,
-            bob: 2
+            steve: 1,
+            bob: 1
         }
     });
 
@@ -298,14 +372,25 @@ test('rate exempt service works', function t(assert) {
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
 
+    assert.equals(rateLimiter.ksCounters.steve.rps, 3, 'steve\'s kill switch rps as expected');
+    assert.equals(rateLimiter.ksCounters.steve.rpsLimit, 2, 'steve\'s kill switch rpsLimit as expected');
+
     assert.ok(rateLimiter.shouldRateLimitTotalRequest(), 'should rate limit total');
+    assert.ok(rateLimiter.shouldKillSwitchTotalRequest(), 'should kill switch total');
+    assert.ok(rateLimiter.shouldKillSwitchService('steve'), 'should kill switch steve');
     assert.ok(rateLimiter.shouldRateLimitService('steve'), 'should rate limit steve');
     assert.ok(rateLimiter.shouldRateLimitService('bob'), 'should rate limit bob');
+    assert.ok(rateLimiter.shouldKillSwitchService('bob'), 'should kill switch bob');
 
     rateLimiter.updateTotalLimit(10);
     rateLimiter.updateServiceLimit('steve', 10);
 
+    assert.equals(rateLimiter.ksCounters.steve.rps, 3, 'steve\'s rps as expected after change of limit');
+    assert.equals(rateLimiter.ksCounters.steve.rpsLimit, 20, 'steve\'s rpsLimit as expected after change of limit');
+    assert.equals(rateLimiter.totalKsCounter.rpsLimit, 11, 'total rpsLimit as expected after change of limit');
+
     assert.ok(!rateLimiter.shouldRateLimitTotalRequest(), 'should not rate limit total');
+    assert.ok(!rateLimiter.shouldKillSwitchTotalRequest(), 'should not kill switch total');
     assert.ok(!rateLimiter.shouldRateLimitService('steve'), 'should not rate limit steve');
     assert.ok(rateLimiter.shouldRateLimitService('bob'), 'should rate limit bob');
 

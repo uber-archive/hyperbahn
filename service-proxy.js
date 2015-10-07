@@ -76,6 +76,7 @@ function ServiceDispatchHandler(options) {
         exemptServices: options.exemptServices,
         totalRpsLimit: options.totalRpsLimit,
         defaultServiceRpsLimit: options.defaultServiceRpsLimit,
+        defaultTotalKillSwitchBuffer: options.defaultTotalKillSwitchBuffer,
         numOfBuckets: options.rateLimiterBuckets
     });
     self.rateLimiterEnabled = options.rateLimiterEnabled;
@@ -179,6 +180,19 @@ function rateLimit(req, buildRes) {
     var isExitNode = self.isExitFor(req.serviceName);
     if (isExitNode) {
         self.rateLimiter.createServiceCounter(req.serviceName);
+        self.rateLimiter.createKillSwitchServiceCounter(req.serviceName);
+    }
+
+    // apply kill switch safe guard first
+    if (self.rateLimiter.shouldKillSwitchTotalRequest(req.serviceName) ||
+        (isExitNode && self.rateLimiter.shouldKillSwitchService(req.serviceName))) {
+        req.connection.ops.popInReq(req.id);
+        return true;
+    }
+
+    self.rateLimiter.incrementKillSwitchTotalCounter(req.serviceName);
+    if (isExitNode) {
+        self.rateLimiter.incrementKillSwitchServiceCounter(req.serviceName);
     }
 
     // apply rate limiter
@@ -312,6 +326,7 @@ function purgeServices() {
                 chan.close();
                 delete self.channel.subChannels[serviceName];
                 self.rateLimiter.removeServiceCounter(serviceName);
+                self.rateLimiter.removeKillSwitchCounter(serviceName);
             }
         }
     }

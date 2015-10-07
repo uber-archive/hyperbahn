@@ -352,9 +352,9 @@ function createApplication(hostPort, cb) {
         port: port
     };
 
-    // var remoteConfigPath = path.join(__dirname, '../hyperbahn-remote-config.json');
     var rateLimiterBuckets;
     var remoteConfigFile;
+    var defaultTotalKillSwitchBuffer;
     if (self.opts.remoteConfig) {
         remoteConfigFile = RemoteConfigFile(hostPort);
         remoteConfigFile.write(self.opts.remoteConfig);
@@ -362,12 +362,14 @@ function createApplication(hostPort, cb) {
             'clients.remote-config.file': remoteConfigFile.filePath
         });
         rateLimiterBuckets = self.opts.remoteConfig['rateLimiting.rateLimiterBuckets'];
+        defaultTotalKillSwitchBuffer = self.opts.remoteConfig['rateLimiting.defaultTotalKillSwitchBuffer'];
     }
 
     localOpts.clients = localOpts.clients || {};
     localOpts.clients.logger =
         localOpts.clients.logger || self.logger;
     localOpts.rateLimiterBuckets = rateLimiterBuckets;
+    localOpts.defaultTotalKillSwitchBuffer = defaultTotalKillSwitchBuffer;
 
     // TODO throw an error if listen() fails
     // TODO add timeout to gaurd against this edge case
