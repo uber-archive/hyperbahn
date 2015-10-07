@@ -66,6 +66,7 @@ function Application(config, opts) {
         maxErrorRate: opts.maxErrorRate,
         minRequests: opts.minRequests,
         probation: opts.probation,
+        defaultTotalKillSwitchBuffer: opts.defaultTotalKillSwitchBuffer,
         rateLimiterBuckets: opts.rateLimiterBuckets
     });
     self.services = null;

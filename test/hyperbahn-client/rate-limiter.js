@@ -196,6 +196,7 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
+        cluster.logger.whitelist('info', 'hyperbahn service is rate-limited by the service rps limit');
 
         var steveHyperbahnClient = new HyperbahnClient({
             reportTracing: false,
@@ -259,6 +260,7 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
+        cluster.logger.whitelist('info', 'hyperbahn service is rate-limited by the service rps limit');
 
         var steveHyperbahnClient = new HyperbahnClient({
             reportTracing: false,
@@ -307,6 +309,70 @@ function runTests(HyperbahnCluster) {
         }
     });
 
+    HyperbahnCluster.test('total kill switch works and can recover', {
+        size: 1,
+        kValue: 2,
+        remoteConfig: {
+            'rateLimiting.enabled': true,
+            'rateLimiting.rateLimiterBuckets': 2,
+            'rateLimiting.totalRpsLimit': 1,
+            'rateLimiting.defaultTotalKillSwitchBuffer': 1,
+            'rateLimiting.exemptServices': [
+                'hyperbahn',
+                'ringpop'
+            ]
+        }
+    }, function t(cluster, assert) {
+        var steve = cluster.remotes.steve;
+        var bob = cluster.remotes.bob;
+        cluster.logger.whitelist('warn', 'forwarding error frame');
+        cluster.logger.whitelist('info', 'hyperbahn node is rate-limited by the total rps limit');
+
+        var steveHyperbahnClient = new HyperbahnClient({
+            reportTracing: false,
+            serviceName: steve.serviceName,
+            callerName: 'forward-test',
+            hostPortList: cluster.hostPortList,
+            tchannel: steve.channel,
+            logger: DebugLogtron('hyperbahnClient')
+        });
+        steveHyperbahnClient.once('advertised', onAdvertised);
+        steveHyperbahnClient.advertise();
+
+        function onAdvertised() {
+            var opts = {
+                logger: cluster.logger,
+                bob: bob,
+                steve: steve,
+                assert: assert,
+                errOk: true
+            };
+            series([
+                send.bind(null, opts),
+                send.bind(null, opts),
+                send.bind(null, opts),
+                function sendError(done) {
+                    var tchannelJSON = TChannelJSON({
+                        logger: cluster.logger
+                    });
+                    tchannelJSON.send(bob.clientChannel.request({
+                        timeout: 100,
+                        serviceName: steve.serviceName
+                    }), 'echo', null, 'hello', function onResponse(err, res) {
+                        assert.ok(err && err.type === 'tchannel.request.timeout',
+                            'should be kill switched');
+                        done();
+                    });
+                },
+                waitFor(1000),
+                send.bind(null, opts)
+            ], function done() {
+                steveHyperbahnClient.destroy();
+                assert.end();
+            });
+        }
+    });
+
     HyperbahnCluster.test('total rate limiting works and can recover', {
         size: 5,
         kValue: 1,
@@ -322,6 +388,8 @@ function runTests(HyperbahnCluster) {
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
         var bob = cluster.remotes.bob;
+        cluster.logger.whitelist('warn', 'forwarding error frame');
+        cluster.logger.whitelist('info', 'hyperbahn node is rate-limited by the total rps limit');
 
         var steveHyperbahnClient = new HyperbahnClient({
             reportTracing: false,

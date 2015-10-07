@@ -187,6 +187,7 @@ function ApplicationClients(options) {
         servicePurgePeriod: options.servicePurgePeriod,
         serviceReqDefaults: options.serviceReqDefaults,
         rateLimiterEnabled: false,
+        defaultTotalKillSwitchBuffer: options.defaultTotalKillSwitchBuffer,
         rateLimiterBuckets: options.rateLimiterBuckets,
         circuitsConfig: circuitsConfig
     };

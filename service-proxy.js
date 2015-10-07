@@ -173,17 +173,19 @@ function rateLimit(req, buildRes) {
     var isExitNode = self.isExitFor(req.serviceName);
     if (isExitNode) {
         self.rateLimiter.createServiceCounter(req.serviceName);
-        self.rateLimiter.createKillSwitchCounter(req.serviceName);
+        self.rateLimiter.createKillSwitchServiceCounter(req.serviceName);
     }
 
     // apply kill switch safe guard first
-    if (isExitNode && self.rateLimiter.shouldKillSwitchService(req.serviceName)) {
+    if (self.rateLimiter.shouldKillSwitchTotalRequest(req.serviceName) ||
+        (isExitNode && self.rateLimiter.shouldKillSwitchService(req.serviceName))) {
         req.connection.ops.popInReq(req.id);
         return true;
     }
 
+    self.rateLimiter.incrementKillSwitchTotalCounter(req.serviceName);
     if (isExitNode) {
-        self.rateLimiter.incrementKillSwitchCounter(req.serviceName);
+        self.rateLimiter.incrementKillSwitchServiceCounter(req.serviceName);
     }
 
     // apply rate limiter

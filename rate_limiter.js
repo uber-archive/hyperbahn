@@ -104,6 +104,10 @@ function RateLimiter(options) {
         numOfBuckets: self.numOfBuckets,
         rpsLimit: self.totalRpsLimit
     });
+    self.totalKsCounter = RateLimiterCounter({
+        numOfBuckets: self.numOfBuckets,
+        rpsLimit: self.totalRpsLimit + self.defaultTotalKillSwitchBuffer
+    });
 
     self.refreshDelay = 1000 / self.numOfBuckets;
     self.refresh();
@@ -146,6 +150,14 @@ function refresh() {
     self.refreshCounter(self.totalRequestCounter,
         'tchannel.rate-limiting.total-rps',
         'tchannel.rate-limiting.total-rps-limit',
+        function createEmptyTag() {
+            return new stat.RateLimiterEmptyTags();
+        }
+    );
+
+    self.refreshCounter(self.totalKsCounter,
+        'tchannel.rate-limiting.kill-switch.total-rps',
+        null,
         function createEmptyTag() {
             return new stat.RateLimiterEmptyTags();
         }
@@ -297,12 +309,8 @@ function updateTotalLimit(limit) {
     self.totalRpsLimit = limit;
     self.totalRequestCounter.rpsLimit = limit;
 
-    // update ks counters
-    var serviceNames = Object.keys(self.ksCounters);
-    for (var i = 0; i < serviceNames.length; i++) {
-        var counter = self.ksCounters[serviceNames[i]];
-        counter.rpsLimit = self.killSwitchLimitForService(serviceNames[i]);
-    }
+    // allow total RPS limit to kick in first
+    self.totalKsCounter.rpsLimit = self.totalRpsLimit + self.defaultTotalKillSwitchBuffer;
 };
 
 RateLimiter.prototype.createServiceCounter =
@@ -337,22 +345,16 @@ function createServiceCounter(serviceName) {
 RateLimiter.prototype.killSwitchLimitForService =
 function killSwitchLimitForService(serviceName) {
     var self = this;
-    // allow total RPS limit to kick in first
-    var rpsLimit = self.totalRpsLimit + self.defaultTotalKillSwitchBuffer;
-    if (self.serviceCounters[serviceName] &&
-        self.serviceCounters[serviceName].rpsLimit * DEFAULT_SERVICE_KILL_SWITCH_FACTOR < rpsLimit) {
-        rpsLimit = self.serviceCounters[serviceName].rpsLimit * DEFAULT_SERVICE_KILL_SWITCH_FACTOR;
-    }
-
-    return rpsLimit;
+    assert(self.serviceCounters[serviceName], 'Cannot find service counter for ' + serviceName);
+    return self.serviceCounters[serviceName].rpsLimit * DEFAULT_SERVICE_KILL_SWITCH_FACTOR;
 };
 
-RateLimiter.prototype.createKillSwitchCounter =
-function createKillSwitchCounter(serviceName) {
+RateLimiter.prototype.createKillSwitchServiceCounter =
+function createKillSwitchServiceCounter(serviceName) {
     var self = this;
     var counter;
 
-    assert(serviceName, 'createKillSwitchCounter requires the serviceName');
+    assert(serviceName, 'createKillSwitchServiceCounter requires the serviceName');
 
     if (self.exemptServices.indexOf(serviceName) !== -1) {
         return null;
@@ -395,12 +397,12 @@ function incrementEdgeCounter(name) {
     counter.increment();
 };
 
-RateLimiter.prototype.incrementKillSwitchCounter =
-function incrementKillSwitchCounter(name) {
+RateLimiter.prototype.incrementKillSwitchServiceCounter =
+function incrementKillSwitchServiceCounter(name) {
     var self = this;
     var counter = self.ksCounters[name];
     if (!counter) {
-        counter = self.createKillSwitchCounter(name);
+        counter = self.createKillSwitchServiceCounter(name);
     }
 
     if (counter) {
@@ -413,6 +415,14 @@ function incrementTotalCounter(serviceName) {
     var self = this;
     if (!serviceName || self.exemptServices.indexOf(serviceName) === -1) {
         self.totalRequestCounter.increment();
+    }
+};
+
+RateLimiter.prototype.incrementKillSwitchTotalCounter =
+function incrementKillSwitchTotalCounter(serviceName) {
+    var self = this;
+    if (!serviceName || self.exemptServices.indexOf(serviceName) === -1) {
+        self.totalKsCounter.increment();
     }
 };
 
@@ -469,6 +479,28 @@ function shouldRateLimitTotalRequest(serviceName) {
     if (result) {
         self.channel.emitFastStat(self.channel.buildStat(
             'tchannel.rate-limiting.total-busy',
+            'counter',
+            1,
+            new stat.RateLimiterServiceTags(serviceName)
+        ));
+    }
+
+    return result;
+};
+
+RateLimiter.prototype.shouldKillSwitchTotalRequest =
+function shouldKillSwitchTotalRequest(serviceName) {
+    var self = this;
+    var result;
+    if (!serviceName || self.exemptServices.indexOf(serviceName) === -1) {
+        result = self.totalKsCounter.rps > self.totalKsCounter.rpsLimit;
+    } else {
+        result = false;
+    }
+
+    if (result) {
+        self.channel.emitFastStat(self.channel.buildStat(
+            'tchannel.rate-limiting.total-kill-switched',
             'counter',
             1,
             new stat.RateLimiterServiceTags(serviceName)

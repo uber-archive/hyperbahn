@@ -81,6 +81,7 @@ function TestApplication(opts) {
         maxErrorRate: opts.maxErrorRate,
         minRequests: opts.minRequests,
         probation: opts.probation,
+        defaultTotalKillSwitchBuffer: opts.defaultTotalKillSwitchBuffer,
         rateLimiterBuckets: opts.rateLimiterBuckets,
         processTitle: opts.processTitle
     });
