@@ -36,7 +36,7 @@
 
     "hyperbahn.ringpop.timeouts": {
         "pingReqTimeout": 3000,
-        "pingTimeout": 100,
+        "pingTimeout": 500,
         "joinTimeout": 250
     },
     "hyperbahn.ringpop.bootstrapFile": "/etc/hyperbahn/ringpop-v2.json",
