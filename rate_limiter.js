@@ -143,6 +143,21 @@ function refreshCounter(counter, rpsStatsName, rpsLimitStatsName, createStatsTag
     counter.refresh();
 };
 
+RateLimiter.prototype.refreshEachCounter =
+function refreshEachCounter(counters, rpsStatsName, rpsLimitStatsName, createStatsTag) {
+    var self = this;
+    var serviceNames = Object.keys(counters);
+    for (var i = 0; i < serviceNames.length; i++) {
+        var counter = counters[serviceNames[i]];
+        self.refreshCounter(counter,
+            rpsStatsName,
+            rpsLimitStatsName,
+            createStatsTag,
+            serviceNames[i]
+        );
+    }
+};
+
 RateLimiter.prototype.refresh =
 function refresh() {
     var self = this;
@@ -163,40 +178,23 @@ function refresh() {
         }
     );
 
-    var serviceNames = Object.keys(self.serviceCounters);
-    var i;
-    var counter;
-    for (i = 0; i < serviceNames.length; i++) {
-        counter = self.serviceCounters[serviceNames[i]];
-        self.refreshCounter(counter,
-            'tchannel.rate-limiting.service-rps',
-            'tchannel.rate-limiting.service-rps-limit',
-            createServiceTag,
-            serviceNames[i]
-        );
-    }
+    self.refreshEachCounter(self.serviceCounters,
+        'tchannel.rate-limiting.service-rps',
+        'tchannel.rate-limiting.service-rps-limit',
+        createServiceTag
+    );
 
-    serviceNames = Object.keys(self.ksCounters);
-    for (i = 0; i < serviceNames.length; i++) {
-        counter = self.ksCounters[serviceNames[i]];
-        self.refreshCounter(counter,
-            'tchannel.rate-limiting.kill-switch.service-rps',
-            null,
-            createServiceTag,
-            serviceNames[i]
-        );
-    }
+    self.refreshEachCounter(self.ksCounters,
+        'tchannel.rate-limiting.kill-switch.service-rps',
+        null,
+        createServiceTag
+    );
 
-    var edges = Object.keys(self.edgeCounters);
-    for (i = 0; i < edges.length; i++) {
-        counter = self.edgeCounters[edges[i]];
-        self.refreshCounter(counter,
-            'tchannel.rate-limiting.edge-rps',
-            null,
-            createEdgeTag,
-            edges[i]
-        );
-    }
+    self.refreshEachCounter(self.edgeCounters,
+        'tchannel.rate-limiting.edge-rps',
+        null,
+        createEdgeTag
+    );
 
     self.cycle--;
     if (self.cycle <= 0) {
