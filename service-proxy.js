@@ -87,7 +87,7 @@ function ServiceDispatchHandler(options) {
 
     self.periodicStatsTimer = null;
     self.statsPeriod = options.statsPeriod || DEFAULT_STATS_PERIOD;
-    self.requestPeriodicStats();
+    self.emitPeriodicStats();
 
     self.destroyed = false;
 
