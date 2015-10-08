@@ -35,8 +35,9 @@ var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 var DEFAULT_MIN_PEERS_PER_WORKER = 5;
 var DEFAULT_MIN_PEERS_PER_RELAY = 5;
+var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
 
-/* eslint max-statements: [2, 32] */
+/* eslint max-statements: [2, 40] */
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
         return new ServiceDispatchHandler(options);
@@ -84,7 +85,18 @@ function ServiceDispatchHandler(options) {
     self.minPeersPerWorker = options.minPeersPerWorker || DEFAULT_MIN_PEERS_PER_WORKER;
     self.minPeersPerRelay = options.minPeersPerRelay || DEFAULT_MIN_PEERS_PER_RELAY;
 
+    self.periodicStatsTimer = null;
+    self.statsPeriod = options.statsPeriod || DEFAULT_STATS_PERIOD;
+    self.requestPeriodicStats();
+
+    self.destroyed = false;
+
     self.egressNodes.on('membershipChanged', onMembershipChanged);
+
+    self.boundEmitPeriodicStats = emitPeriodicStats;
+    function emitPeriodicStats() {
+        self.emitPeriodicStats();
+    }
 
     function onCircuitStateChange(stateChange) {
         self.onCircuitStateChange(stateChange);
@@ -626,6 +638,61 @@ function isExitFor(serviceName) {
     return chan.serviceProxyMode === 'exit';
 };
 
+ServiceDispatchHandler.prototype.emitPeriodicStats =
+function emitPeriodicStats() {
+    var self = this;
+    self.periodicStatsTimer = null;
+
+    var serviceNames = Object.keys(self.channel.subChannels);
+    for (var index = 0; index < serviceNames.length; index++) {
+        var serviceName = serviceNames[index];
+        var serviceChannel = self.channel.subChannels[serviceName];
+        self.emitPeriodicServiceStats(serviceChannel, serviceName);
+    }
+
+    self.requestPeriodicStats();
+};
+
+ServiceDispatchHandler.prototype.requestPeriodicStats =
+function requestPeriodicStats() {
+    var self = this;
+    if (self.periodicStatsTimer || self.destroyed) {
+        return;
+    }
+    self.periodicStatsTimer = self.channel.timers.setTimeout(self.boundEmitPeriodicStats, self.statsPeriod);
+};
+
+ServiceDispatchHandler.prototype.emitPeriodicServiceStats =
+function emitPeriodicServiceStats(serviceChannel, serviceName) {
+    var self = this;
+
+    var incoming = 0;
+    var outgoing = 0;
+    var anyway = 0;
+
+    var prefix = 'services.' + clean(serviceName, 'no-service') + '.';
+
+    var hostPorts = serviceChannel.peers.keys();
+    for (var i = 0; i < hostPorts.length; i++) {
+        var hostPort = hostPorts[i];
+        var peer = serviceChannel.peers.get(hostPort);
+        anyway += peer.connections.length;
+        for (var j = 0; j < peer.connections.length; j++) {
+            var connection = peer.connections[j];
+            if (connection.direction === 'in') {
+                incoming++;
+            } else if (connection.direction === 'out') {
+                outgoing++;
+            }
+        }
+    }
+
+    self.statsd.gauge(prefix + 'peers', hostPorts.length);
+    self.statsd.gauge(prefix + 'connections.in', incoming);
+    self.statsd.gauge(prefix + 'connections.out', outgoing);
+    self.statsd.gauge(prefix + 'connections.any', anyway);
+};
+
 ServiceDispatchHandler.prototype.onCircuitStateChange =
 function onCircuitStateChange(change) {
     var self = this;
@@ -680,7 +747,12 @@ function onCircuitStateChange(change) {
 ServiceDispatchHandler.prototype.destroy =
 function destroy() {
     var self = this;
+    if (self.destroyed) {
+        return;
+    }
+    self.destroyed = true;
     self.channel.timers.clearTimeout(self.servicePurgeTimer);
+    self.channel.timers.clearTimeout(self.periodicStatsTimer);
     self.rateLimiter.destroy();
 };
 
