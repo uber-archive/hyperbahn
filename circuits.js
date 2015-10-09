@@ -153,7 +153,7 @@ Circuits.prototype.getCircuitTuples = function getCircuitTuples() {
     return tuples;
 };
 
-Circuits.prototype.getCircuitForReq = function getCircuitForReq(req) {
+Circuits.prototype.getCircuitForRequest = function getCircuitForRequest(req) {
     var self = this;
 
     // Default the caller name.
