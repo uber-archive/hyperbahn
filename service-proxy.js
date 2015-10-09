@@ -711,6 +711,12 @@ function unblock(cn, serviceName) {
     }
 };
 
+ServiceDispatchHandler.prototype.unblockAll =
+function unblockAll() {
+    var self = this;
+    self.blockingTable = null;
+};
+
 ServiceDispatchHandler.prototype.isExitFor =
 function isExitFor(serviceName) {
     var self = this;

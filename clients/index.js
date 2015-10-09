@@ -334,6 +334,7 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateExemptServices();
     self.updateRpsLimitForServiceName();
     self.updateKValues();
+    self.updateKillSwitches();
     self.updateReservoir();
     self.updatePartialAffinityEnabled();
 };
@@ -415,5 +416,19 @@ ApplicationClients.prototype.updateKValues = function updateKValues() {
         var kValue = serviceKValues[serviceName];
         self.egressNodes.setKValueFor(serviceName, kValue);
         self.serviceProxy.updateServiceChannels();
+    }
+};
+
+ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches() {
+    var self = this;
+    self.serviceProxy.unblockAll();
+    var killSwtiches = self.remoteConfig.get('killSwitch', []);
+
+    for (var i = 0; i < killSwtiches.length; i++) {
+        var value = killSwtiches[i];
+        var edge = value.split('~~');
+        if (edge.length === 2 && (edge[0] !== '*' || edge[1] !== '*')) {
+            self.serviceProxy.block(edge[0], edge[1]);
+        }
     }
 };

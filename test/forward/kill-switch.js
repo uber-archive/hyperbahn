@@ -66,3 +66,36 @@ allocCluster.test('set kill switch and forward', {
         assert.end();
     }
 });
+
+allocCluster.test('remote config kill switch and forward', {
+    size: 1,
+    remoteConfig: {
+        'killSwitch': ['*~~steve']
+    }
+}, function t(cluster, assert) {
+    var steve = cluster.remotes.steve;
+    var bob = cluster.remotes.bob;
+    cluster.sendRegister(steve.channel, {
+        serviceName: steve.serviceName
+    }, onRegistered);
+
+    function onRegistered(err, resp) {
+        if (err) {
+            return assert.end(err);
+        }
+
+        var body = resp.body;
+        assert.ok(body, 'got a body from register');
+
+        bob.clientChannel.request({
+            serviceName: 'steve',
+            timeout: 10
+        }).send('echo', null, JSON.stringify('oh hi lol'), onForwarded);
+    }
+
+    function onForwarded(err, res, arg2, arg3) {
+        assert.ok(err, 'should fail');
+        assert.equals(err.type, 'tchannel.request.timeout', 'error type should be timeout');
+        assert.end();
+    }
+});
