@@ -43,21 +43,30 @@ function main() {
 
     function onAdmin(err, values) {
         if (err) {
-            for (var i = 0; i < values.length; i++) {
+            for (var i = 0; i < values.failures.length; i++) {
                 console.error('fanout failed', {
                     host: err.host,
                     err: err,
-                    errorValue: values[i]
+                    errorValue: values.failures[i]
                 });
             }
+
+            for (var j = 0; j < values.successes.length; j++) {
+                if (admin.json) {
+                    console.log(values.successes[j].toJson());
+                } else {
+                    console.log(values.successes[j].toString());
+                }
+            }
+
             return process.exit(1);
         }
 
-        for (var j = 0; j < values.length; j++) {
+        for (var k = 0; k < values.length; k++) {
             if (admin.json) {
-                console.log(values[j].toJson());
+                console.log(values[k].toJson());
             } else {
-                console.log(values[j].toString());
+                console.log(values[k].toString());
             }
         }
         console.log('finished');
@@ -210,7 +219,10 @@ function send(endpoint, body, query, cb) {
         self.channel.close();
 
         if (failures.length > 0) {
-            return cb(new Error('oops'), failures);
+            return cb(new Error('oops'), {
+                failures: failures,
+                successes: successes
+            });
         }
 
         cb(null, successes.filter(Boolean));
