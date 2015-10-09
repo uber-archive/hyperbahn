@@ -144,7 +144,7 @@ function refreshCounter(counter, rpsStatsName, rpsLimitStatsName, createStatsTag
 };
 
 RateLimiter.prototype.refreshEachCounter =
-function refreshEachCounter(counters, rpsStatsName, rpsLimitStatsName, createStatsTag) {
+function refreshEachCounter(counters, rpsStatsName, rpsLimitStatsName, createStatsTag, removeZeroRps) {
     var self = this;
     var serviceNames = Object.keys(counters);
     for (var i = 0; i < serviceNames.length; i++) {
@@ -155,6 +155,10 @@ function refreshEachCounter(counters, rpsStatsName, rpsLimitStatsName, createSta
             createStatsTag,
             serviceNames[i]
         );
+
+        if (removeZeroRps && counter.rps === 0) {
+            delete counters[serviceNames[i]];
+        }
     }
 };
 
@@ -193,7 +197,8 @@ function refresh() {
     self.refreshEachCounter(self.edgeCounters,
         'tchannel.rate-limiting.edge-rps',
         null,
-        createEdgeTag
+        createEdgeTag,
+        true
     );
 
     self.cycle--;
