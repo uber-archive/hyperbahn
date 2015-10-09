@@ -53,13 +53,14 @@ To use a service over Hyperbahn:
 
  - `git clone git@github.com:uber/hyperbahn`
  - `cd hyperbahn`
- - `npm install`
- - `npm install tcurl --global`
  - `./hyperbahn-dev.sh`
 
 This will spawn a 3 window tmux session with a two-node hyperbahn
-cluster running. The third window runs the health checks of both
-nodes to double check that the hyperbahn cluster is healthy.
+cluster running. It will also run `npm install` if necessary and install
+tcurl globally if possible and fallback to local installation if the npm
+global folder is not writeable. The third window runs the health checks
+of both nodes using tcurl to double check that the hyperbahn cluster is
+healthy.
 
 To exit run `tmux kill-session -t hyperbahn` in a seperate shell.
 
