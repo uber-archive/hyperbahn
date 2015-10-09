@@ -127,7 +127,7 @@ function handleLazily(conn, reqFrame) {
     var res = reqFrame.bodyRW.lazy.readService(reqFrame);
     if (res.err) {
         // TODO: stat?
-        self.channel.logger.warn('failed to lazy read frame serviceName', conn.extendLogInfo({
+        self.channel.logger.error('failed to lazy read frame serviceName', conn.extendLogInfo({
             error: res.err
         }));
         // TODO: protocol error instead?
@@ -139,7 +139,7 @@ function handleLazily(conn, reqFrame) {
     if (!serviceName) {
         // TODO: reqFrame.extendLogInfo would be nice, especially if it added
         // things like callerName and arg1
-        self.channel.logger.warn('missing service name in lazy frame', conn.extendLogInfo({}));
+        self.channel.logger.error('missing service name in lazy frame', conn.extendLogInfo({}));
         conn.sendLazyErrorFrame(reqFrame, 'BadRequest', 'missing serviceName');
         return false;
     }
