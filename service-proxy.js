@@ -429,7 +429,8 @@ function refreshServicePeer(serviceName, hostPort) {
     self.exitServices[serviceName] = time;
 
     if (self.partialAffinityEnabled) {
-        return self.refreshServicePeerPartially(serviceName, hostPort);
+        self.refreshServicePeerPartially(serviceName, hostPort);
+        return;
     }
 
     // The old way: fully connect every egress to all affine peers.
