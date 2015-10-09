@@ -247,20 +247,7 @@ function handleRelay(endpoint, req, arg2, arg3, cb) {
 
     for (var i = 0; i < services.length; i++) {
         var service = services[i];
-
-        var exitNodes = self.egressNodes
-            .exitsFor(service.serviceName);
-        var exitHosts = Object.keys(exitNodes);
-
-        var myHost = self.channel.hostPort;
-        if (exitHosts.indexOf(myHost) < 0) {
-            logger.warn('Non-exit node got relay', {
-                endpoint: endpoint,
-                service: service,
-                myHost: myHost,
-                exitHosts: exitHosts
-            });
-        } else if (endpoint === 'ad') {
+        if (endpoint === 'ad') {
             self.advertise(service);
         } else if (endpoint === 'unad') {
             self.unadvertise(service);
