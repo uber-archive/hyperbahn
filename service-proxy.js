@@ -172,6 +172,7 @@ function handleLazily(conn, reqFrame) {
 
         if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
             conn.ops.popInReq(reqFrame.id);
+            return true;
         } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
             var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
             self.logger.info('hyperbahn node is rate-limited by the total rps limit', self.extendLogInfo(conn.extendLogInfo({
@@ -180,6 +181,7 @@ function handleLazily(conn, reqFrame) {
                 edgeCounters: self.rateLimiter.edgeCounters
             })));
             conn.sendLazyErrorFrame(reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
+            return true;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
             var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
             self.logger.info('hyperbahn service is rate-limited by the service rps limit', self.extendLogInfo(conn.extendLogInfo({
@@ -188,9 +190,6 @@ function handleLazily(conn, reqFrame) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 })));
             conn.sendLazyErrorFrame(reqFrame, 'Busy', serviceName + ' is rate-limited by the rps of ' + serviceLimit);
-        }
-
-        if (rateLimitReason) {
             return true;
         }
     }
@@ -228,6 +227,7 @@ function handleRequest(req, buildRes) {
         var rateLimitReason = self.rateLimit(req.headers && req.headers.cn, req.serviceName);
         if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
             req.connection.ops.popInReq(req.id);
+            return;
         } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
             var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
             self.logger.info('hyperbahn node is rate-limited by the total rps limit',
@@ -237,6 +237,7 @@ function handleRequest(req, buildRes) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 })));
             buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
+            return;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
             var serviceLimit = self.rateLimiter.getRpsLimitForService(req.serviceName);
             self.logger.info('hyperbahn service is rate-limited by the service rps limit',
@@ -246,9 +247,6 @@ function handleRequest(req, buildRes) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 })));
             buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
-        }
-
-        if (rateLimitReason) {
             return;
         }
     }
