@@ -99,7 +99,7 @@ function runTests(HyperbahnCluster) {
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 3, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.ksCounters.steve.rps, 3, 'request for steve - kill switch');
-                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 3, 'request for bob~~steve');
+                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob.steve.exit'].rps, 3, 'request for bob.steve');
                     });
                     done();
                 },
@@ -110,7 +110,7 @@ function runTests(HyperbahnCluster) {
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 0, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.serviceCounters.steve.rps, 0, 'request for steve');
                         assert.equals(relayChannel.handler.rateLimiter.ksCounters.steve.rps, 0, 'request for steve - kill switch');
-                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'], undefined, 'bob~~steve gets removed');
+                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob.steve.exit'], undefined, 'bob.steve gets removed');
                     });
                     done();
                 }
@@ -165,7 +165,7 @@ function runTests(HyperbahnCluster) {
                         assert.equals(rateLimiter.totalRequestCounter.rps, 3, 'check1: total request');
                         assert.equals(rateLimiter.serviceCounters.steve.rps, 3, 'check1: request for steve');
                         assert.equals(rateLimiter.ksCounters.steve.rps, 3, 'check1: request for steve - kill switch');
-                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 3, 'check1: request for bob~~steve');
+                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob.steve.exit'].rps, 3, 'check1: request for bob.steve');
                     });
                     done();
                 },
@@ -179,7 +179,7 @@ function runTests(HyperbahnCluster) {
                         assert.equals(rateLimiter.totalRequestCounter.rps, 2, 'check2: total request');
                         assert.equals(rateLimiter.serviceCounters.steve.rps, 2, 'check2: request for steve');
                         assert.equals(rateLimiter.ksCounters.steve.rps, 2, 'check2: request for steve - kill switch');
-                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 2, 'check2: request for bob~~steve');
+                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob.steve.exit'].rps, 2, 'check2: request for bob.steve');
                     });
                     done();
                 }

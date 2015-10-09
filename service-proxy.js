@@ -187,10 +187,12 @@ ServiceDispatchHandler.prototype.rateLimit =
 function rateLimit(req, buildRes) {
     var self = this;
 
-    // stats edge traffic
-    self.rateLimiter.incrementEdgeCounter(req.headers.cn + '~~' + req.serviceName);
-
     var isExitNode = self.isExitFor(req.serviceName);
+    var role = isExitNode ? 'exit' : 'entry';
+
+    // stats edge traffic
+    self.rateLimiter.incrementEdgeCounter(req.headers.cn + '.' + req.serviceName + '.' + role);
+
     if (isExitNode) {
         self.rateLimiter.createServiceCounter(req.serviceName);
         self.rateLimiter.createKillSwitchServiceCounter(req.serviceName);
