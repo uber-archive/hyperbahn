@@ -159,8 +159,10 @@ function handleLazily(conn, reqFrame) {
         return false;
     }
 
-    var cn = res.value.getValue(CN_HEADER_BUFFER).toString();
+    var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
+    var cn = cnBuf && cnBuf.toString();
     if (!cn) {
+        self.channel.logger.error('request missing cn header', conn.extendLogInfo({}));
         conn.sendLazyErrorFrame(reqFrame, 'BadRequest', 'missing cn header');
         return false;
     }
