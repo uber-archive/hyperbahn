@@ -21,7 +21,6 @@
 'use strict';
 
 var inherits = require('util').inherits;
-var errors = require('tchannel/errors');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var Result = require('bufrw/result');
 
