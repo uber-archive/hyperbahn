@@ -416,6 +416,15 @@ ServiceDispatchHandler.prototype.refreshServicePeer =
 function refreshServicePeer(serviceName, hostPort) {
     var self = this;
 
+    var chan = self.channel.subChannels[serviceName];
+    if (!chan) {
+        chan = self.createServiceChannel(serviceName);
+    }
+    if (chan.serviceProxyMode !== 'exit') {
+        // TODO: stat, log
+        return;
+    }
+
     // Create a peer for the worker.
     // This is necessary for populating the worker pool regardless of whether
     // we connect.
