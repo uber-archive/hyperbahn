@@ -670,16 +670,20 @@ function updateExitNodes(exitNodes, svcchan) {
 ServiceDispatchHandler.prototype.isBlocked =
 function isBlocked(cn, serviceName) {
     var self = this;
-    if (!self.blockingTable) {
-        return false;
-    }
-
     cn = cn || '*';
     serviceName = serviceName || '*';
 
-    if (self.blockingTable[cn + '~~' + serviceName] ||
+    if (self.blockingTable &&
+        (self.blockingTable[cn + '~~' + serviceName] ||
         self.blockingTable['*~~' + serviceName] ||
-        self.blockingTable[cn + '~~*']) {
+        self.blockingTable[cn + '~~*'])) {
+        return true;
+    }
+
+    if (self.blockingTableRemoteConfig &&
+        (self.blockingTableRemoteConfig[cn + '~~' + serviceName] ||
+        self.blockingTableRemoteConfig['*~~' + serviceName] ||
+        self.blockingTableRemoteConfig[cn + '~~*'])) {
         return true;
     }
 
@@ -711,10 +715,20 @@ function unblock(cn, serviceName) {
     }
 };
 
-ServiceDispatchHandler.prototype.unblockAll =
-function unblockAll() {
+ServiceDispatchHandler.prototype.blockRemoteConfig =
+function blockRemoteConfig(cn, serviceName) {
     var self = this;
-    self.blockingTable = null;
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+    self.blockingTableRemoteConfig = self.blockingTableRemoteConfig || {};
+    assert(cn !== '*' || serviceName !== '*', 'at least one of cn/serviceName should be provided');
+    self.blockingTableRemoteConfig[cn + '~~' + serviceName] = Date.now();
+};
+
+ServiceDispatchHandler.prototype.unblockAllRemoteConfig =
+function unblockAllRemoteConfig() {
+    var self = this;
+    self.blockingTableRemoteConfig = null;
 };
 
 ServiceDispatchHandler.prototype.isExitFor =

@@ -421,14 +421,14 @@ ApplicationClients.prototype.updateKValues = function updateKValues() {
 
 ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches() {
     var self = this;
-    self.serviceProxy.unblockAll();
+    self.serviceProxy.unblockAllRemoteConfig();
     var killSwitches = self.remoteConfig.get('killSwitch', []);
 
     for (var i = 0; i < killSwitches.length; i++) {
         var value = killSwitches[i];
         var edge = value.split('~~');
-        if (edge.length === 2 && (edge[0] !== '*' || edge[1] !== '*')) {
-            self.serviceProxy.block(edge[0], edge[1]);
+        if (edge.length === 2 && value !== '*~~*') {
+            self.serviceProxy.blockRemoteConfig(edge[0], edge[1]);
         }
     }
 };
