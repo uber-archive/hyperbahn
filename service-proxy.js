@@ -124,6 +124,8 @@ ServiceDispatchHandler.prototype.handleLazily =
 function handleLazily(conn, reqFrame) {
     var self = this;
 
+    /*eslint max-statements: [2, 45]*/
+
     var res = reqFrame.bodyRW.lazy.readService(reqFrame);
     if (res.err) {
         // TODO: stat?
