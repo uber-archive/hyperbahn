@@ -152,6 +152,7 @@ function sendRelays(req, arg2, arg3, endpoint, cb) {
             continue;
         }
 
+        // TODO: cache / use sub-channel peers
         var exitNodes = self.egressNodes.exitsFor(serviceName);
         var exitHosts = Object.keys(exitNodes);
 
