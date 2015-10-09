@@ -165,7 +165,7 @@ function handleRequest(req, buildRes) {
     }
 
     if (self.isBlocked(req.headers && req.headers.cn, req.serviceName)) {
-        req.connection.ops.popInReq(req.id);
+        req.operations.popInReq(req.id);
         return;
     }
 
@@ -199,7 +199,7 @@ function rateLimit(req, buildRes) {
     // apply kill switch safe guard first
     if (self.rateLimiter.shouldKillSwitchTotalRequest(req.serviceName) ||
         (isExitNode && self.rateLimiter.shouldKillSwitchService(req.serviceName))) {
-        req.connection.ops.popInReq(req.id);
+        req.operations.popInReq(req.id);
         return true;
     }
 
