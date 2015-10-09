@@ -102,6 +102,17 @@ function runTests(HyperbahnCluster) {
                         assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'].rps, 3, 'request for bob~~steve');
                     });
                     done();
+                },
+                waitFor(1000),
+                function check2(done) {
+                    cluster.apps.forEach(function check(app) {
+                        var relayChannel = app.clients.tchannel;
+                        assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 0, 'total request');
+                        assert.equals(relayChannel.handler.rateLimiter.serviceCounters.steve.rps, 0, 'request for steve');
+                        assert.equals(relayChannel.handler.rateLimiter.ksCounters.steve.rps, 0, 'request for steve - kill switch');
+                        assert.equals(relayChannel.handler.rateLimiter.edgeCounters['bob~~steve'], undefined, 'bob~~steve gets removed');
+                    });
+                    done();
                 }
             ], function done() {
                 steveHyperbahnClient.destroy();
