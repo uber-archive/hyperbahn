@@ -23,6 +23,7 @@
 var inherits = require('util').inherits;
 var errors = require('tchannel/errors');
 var EventEmitter = require('tchannel/lib/event_emitter');
+var Result = require('bufrw/result');
 
 var states = require('./states.js');
 var StateMachine = require('./state_machine.js');
@@ -152,7 +153,7 @@ Circuits.prototype.getCircuitTuples = function getCircuitTuples() {
     return tuples;
 };
 
-Circuits.prototype.monitorRequest = function monitorRequest(req, buildRes) {
+Circuits.prototype.getCircuitForReq = function getCircuitForReq(req) {
     var self = this;
 
     // Default the caller name.
@@ -161,20 +162,23 @@ Circuits.prototype.monitorRequest = function monitorRequest(req, buildRes) {
     var callerName = req.headers.cn || 'no-cn';
     var serviceName = req.serviceName;
     if (!serviceName) {
-        buildRes().sendError('BadRequest', 'All requests must have a service name');
-        return null;
+        return new Result(new ErrorFrame('BadRequest', 'All requests must have a service name'));
     }
 
     var arg1 = String(req.arg1);
     var circuit = self.getCircuit(callerName, serviceName, arg1);
 
     if (!circuit.state.shouldRequest()) {
-        buildRes().sendError('Declined', 'Service is not healthy');
-        return null;
+        return new Result(new ErrorFrame('Declined', 'Service is not healthy'));
     }
 
-    return circuit.monitorRequest(req, buildRes);
+    return new Result(null, circuit);
 };
+
+function ErrorFrame(codeName, message) {
+    this.codeName = codeName;
+    this.message = message;
+}
 
 // Called upon membership change to collect services that the corresponding
 // exit node is no longer responsible for.
@@ -211,48 +215,6 @@ function Circuit(callerName, serviceName, endpointName) {
 inherits(Circuit, EventEmitter);
 
 Circuit.prototype.setState = StateMachine.prototype.setState;
-
-Circuit.prototype.monitorRequest = function monitorRequest(req, buildRes) {
-    var self = this;
-
-    self.state.onRequest(req);
-
-    req.errorEvent.on(onError);
-
-    function monitorBuildRes(options) {
-        var res = buildRes(options);
-        self.monitorResponse(res);
-        return res;
-    }
-
-    function onError(err) {
-        self.state.onRequestError(err);
-    }
-
-    return monitorBuildRes;
-};
-
-Circuit.prototype.monitorResponse = function monitorResponse(res) {
-    var self = this;
-
-    res.errorEvent.on(onError);
-    res.finishEvent.on(onFinish);
-
-    function onError(err) {
-        self.state.onRequestError(err);
-    }
-
-    function onFinish() {
-        // TODO distingiush res.ok?
-        // note that incoming requests do not have responseEvent and clear out
-        // their response upon finish.
-        if (errors.isUnhealthy(res.codeString)) {
-            self.state.onRequestUnhealthy();
-        } else {
-            self.state.onRequestHealthy();
-        }
-    }
-};
 
 Circuit.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
