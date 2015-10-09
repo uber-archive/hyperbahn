@@ -61,7 +61,6 @@ function ServiceDispatchHandler(options) {
     self.circuitsEnabled = false;
     self.circuitsConfig = options.circuitsConfig;
     self.circuits = null;
-    self.circuitTestServiceName = null;
     self.boundOnCircuitStateChange = onCircuitStateChange;
     if (self.circuitsConfig && self.circuitsConfig.enabled) {
         self.enableCircuits();
@@ -315,11 +314,9 @@ function createServiceChannel(serviceName) {
         }
     }
 
-    var circuitEnabled = self.circuitsEnabled || self.circuitTestServiceName === serviceName;
-
     svcchan.handler = new RelayHandler(
         svcchan,
-        mode === 'exit' && circuitEnabled && self.circuits);
+        mode === 'exit' && self.circuitsEnabled && self.circuits);
 
     return svcchan;
 };
@@ -831,49 +828,6 @@ function disableCircuits() {
             subChannel.handler.circuits = null;
         }
     }
-};
-
-// To try out circuit breaking with just one service.
-ServiceDispatchHandler.prototype.enableCircuitTestService =
-function enableCircuitTestService(serviceName) {
-    var self = this;
-
-    if (self.circuitTestServiceName !== null) {
-        self.disableCircuitTestService();
-    }
-
-    // for the subchannel if it exists already:
-    var subChannel = self.channel.subChannel[serviceName];
-    if (subChannel &&
-        subChannel.handler.type === 'tchannel.relay-handler' &&
-        subChannel.serviceProxymode === 'exit'
-    ) {
-        subChannel.handler.circuits = self.circuits;
-    }
-
-    // for subsequently added subchannels with the given service name:
-    self.circuitTestServiceName = serviceName;
-};
-
-ServiceDispatchHandler.prototype.disableCircuitTestService =
-function disableCircuitTestService() {
-    var self = this;
-
-    if (self.circuitTestServiceName === null) {
-        return;
-    }
-
-    // for the subchannel if it exists already:
-    var subChannel = self.channel.subChannel[self.circuitTestServiceName];
-    if (subChannel &&
-        subChannel.handler.type === 'tchannel.relay-handler' &&
-        subChannel.serviceProxymode === 'exit'
-    ) {
-        subChannel.handler.circuits = null;
-    }
-
-    // to ensure the circuit is not enabled for subsuequently created channels:
-    self.circuitTestServiceName = null;
 };
 
 ServiceDispatchHandler.prototype.enableRateLimiter =

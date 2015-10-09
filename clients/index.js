@@ -329,7 +329,6 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     var self = this;
     self.updateLazyHandling();
     self.updateCircuitsEnabled();
-    self.updateCircuitTestServiceName();
     self.updateRateLimitingEnabled();
     self.updateTotalRpsLimit();
     self.updateExemptServices();
@@ -363,16 +362,6 @@ ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnab
         self.serviceProxy.enableCircuits();
     } else {
         self.serviceProxy.disableCircuits();
-    }
-};
-
-ApplicationClients.prototype.updateCircuitTestServiceName = function updateCircuitTestServiceName() {
-    var self = this;
-    var serviceName = self.remoteConfig.get('circuits.testServiceName', null);
-    if (serviceName) {
-        self.serviceProxy.enableCircuitTestService(serviceName);
-    } else {
-        self.serviceProxy.disableCircuitTestService();
     }
 };
 
