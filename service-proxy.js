@@ -88,7 +88,6 @@ function ServiceDispatchHandler(options) {
 
     self.periodicStatsTimer = null;
     self.statsPeriod = options.statsPeriod || DEFAULT_STATS_PERIOD;
-    self.emitPeriodicStats();
 
     self.destroyed = false;
 
@@ -106,6 +105,8 @@ function ServiceDispatchHandler(options) {
     function onMembershipChanged() {
         self.updateServiceChannels();
     }
+
+    self.emitPeriodicStats();
 }
 
 util.inherits(ServiceDispatchHandler, EventEmitter);
