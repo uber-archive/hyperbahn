@@ -141,7 +141,9 @@ function ApplicationClients(options) {
         connectionStalePeriod: 1.5 * 1000,
         trace: false,
         logger: self.logger,
-        statsd: self.statsd
+        statsd: self.statsd,
+        useLazyRelaying: false,
+        useLazyHandling: false
     });
 
     self.autobahnHostPortList = self.loadHostList();
