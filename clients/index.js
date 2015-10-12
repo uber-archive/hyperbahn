@@ -141,7 +141,9 @@ function ApplicationClients(options) {
         connectionStalePeriod: 1.5 * 1000,
         trace: false,
         logger: self.logger,
-        statsd: self.statsd
+        statsd: self.statsd,
+        useLazyRelaying: false,
+        useLazyHandling: false
     });
 
     self.autobahnHostPortList = self.loadHostList();
@@ -341,7 +343,17 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
 ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
     var self = this;
     var enabled = self.remoteConfig.get('lazy.handling.enabled', false);
-    self.tchannel.setLazyHandling(enabled);
+    self.tchannel.setLazyRelaying(enabled);
+
+    if (enabled === false) {
+        self.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
+    } else {
+        self.tchannel.setLazyHandling(enabled);
+    }
+
+    function turnOffLazyHandling() {
+        self.tchannel.setLazyHandling(enabled);
+    }
 };
 
 ApplicationClients.prototype.updateReservoir = function updateReservoir() {
