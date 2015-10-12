@@ -397,8 +397,15 @@ TestCluster.prototype.checkExitKValue = function checkExitKValue(assert, opts) {
     var self = this;
 
     var app = self.apps[0];
+
     var exitShard = app.clients.egressNodes
         .exitsFor(opts.serviceName);
+
+    var affinePeers = app.clients.egressNodes
+        .getAffinePeers(opts.serviceName);
+
+    assert.deepEqual(affinePeers, Object.keys(exitShard).sort(),
+        'affine peers should equal exit shard keys');
 
     var shardKeys = Object.keys(exitShard)
         .reduce(function concatBuilder(acc, key) {

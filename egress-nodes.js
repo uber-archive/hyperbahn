@@ -23,6 +23,7 @@
 var assert = require('assert');
 var inherits = require('util').inherits;
 var EventEmitter = require('tchannel/lib/event_emitter');
+var sortedIndexOf = require('./lib/sorted-index-of');
 
 module.exports = EgressNodes;
 
@@ -39,7 +40,8 @@ function EgressNodes(options) {
     self.ringpop = null;
     self.defaultKValue = options.defaultKValue;
 
-    self.kValueForServiceName = {};
+    self.kValueForServiceName = Object.create(null);
+    self.affinePeers = Object.create(null);
 
     // Surface the membership changed event (for use in particular by service
     // proxies).
@@ -57,8 +59,20 @@ EgressNodes.prototype.setRingpop = function setRingpop(ringpop) {
 
     self.ringpop.on('membershipChanged', onMembershipChanged);
     function onMembershipChanged() {
-        self.membershipChangedEvent.emit(self);
+        self.onMembershipChanged();
     }
+};
+
+EgressNodes.prototype.onMembershipChanged = function onMembershipChanged() {
+    var self = this;
+
+    // Invalidate cached affine peers
+    self.affinePeers = Object.create(null);
+
+    // TODO alternately incrementally update affine peers based on e.added,
+    // e.removed of ringChanged.
+
+    self.membershipChangedEvent.emit(self);
 };
 
 EgressNodes.prototype.kValueFor = function kValueFor(serviceName) {
@@ -76,6 +90,41 @@ EgressNodes.prototype.setDefaultKValue = function setDefaultKValue(kValue) {
 EgressNodes.prototype.setKValueFor = function setKValueFor(serviceName, k) {
     var self = this;
     self.kValueForServiceName[serviceName] = k;
+};
+
+EgressNodes.prototype.getAffinePeers = function getAffinePeers(serviceName) {
+    var self = this;
+
+    var affinePeers = self.affinePeers[serviceName];
+    if (!affinePeers) {
+        affinePeers = self.computeAffinePeers(serviceName);
+        self.affinePeers[serviceName] = affinePeers;
+    }
+    return affinePeers;
+};
+
+EgressNodes.prototype.computeAffinePeers = function computeAffinePeers(serviceName) {
+    var self = this;
+
+    assert(
+        self.ringpop !== null,
+        'EgressNodes#exitsFor cannot be called before EgressNodes has ' +
+            ' ringpop set'
+    );
+
+    // Unique peers are retained in sorted order
+    var peers = [];
+    var k = self.kValueFor(serviceName);
+    for (var i = 0; i < k; i++) {
+        var shardKey = serviceName + '~' + i;
+        var peer = self.ringpop.lookup(shardKey);
+        var j = sortedIndexOf(peers, peer);
+        if (j < 0) {
+            peers.splice(~j, 0, peer);
+        }
+    }
+
+    return peers;
 };
 
 EgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
