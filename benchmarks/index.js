@@ -33,6 +33,7 @@ var console = require('console');
 var BenchmarkRunner = require('tchannel/benchmarks/');
 
 var bahn = path.join(__dirname, 'hyperbahn-worker.js');
+var multiBahn = path.join(__dirname, 'hyperbahn-multi-worker.js');
 
 var RELAY_SERVER_PORT = 7200;
 
@@ -44,9 +45,14 @@ function HyperbahnBenchmarkRunner(opts) {
     var self = this;
     BenchmarkRunner.call(self, opts);
 
-    self.startClientDelay = 500;
+    if (self.opts.multi) {
+        self.startClientDelay = 5000;
+    } else {
+        self.startClientDelay = 500;
+    }
 
     self.ports.relayServerPort = RELAY_SERVER_PORT;
+    self.multiInstances = opts.multiInstances || 25;
 }
 util.inherits(HyperbahnBenchmarkRunner, BenchmarkRunner);
 
@@ -85,7 +91,22 @@ function spawnRelayServer() {
         '--sentryPort', String(self.sentry.address().port)
     ];
 
-    spawnTheWorker();
+    if (self.opts.multi) {
+        var hyperbahnPeers = ['127.0.0.1:' + self.ports.relayServerPort];
+        for (var i = 0; i < self.multiInstances; i++) {
+            var port = self.ports.relayServerPort + (i + 1);
+            hyperbahnPeers.push('127.0.0.1:' + port);
+        }
+        procOpts.push('--ringpopList', hyperbahnPeers.join(','));
+
+        self.spawnMultibahnProc(procOpts.concat([
+            '--multiInstances', String(self.multiInstances)
+        ]));
+
+        setTimeout(spawnTheWorker, 50);
+    } else {
+        spawnTheWorker();
+    }
 
     function spawnTheWorker() {
         self.opts.torchIndex = self.spawnHyperbahnProc(procOpts);
@@ -112,6 +133,18 @@ function spawnHyperbahnProc(procOpts) {
                       bahn, hyperbahnProc.pid, self.opts.relayKillIn);
     }
 
+    return relayIndex;
+};
+
+HyperbahnBenchmarkRunner.prototype.spawnMultibahnProc =
+function spawnMultibahnProc(procOpts) {
+    var self = this;
+
+    var hyperbahnMultiProc = self.run(multiBahn, procOpts);
+    var relayIndex = self.relayProcs.length;
+    self.relayProcs.push(hyperbahnMultiProc);
+    hyperbahnMultiProc.stdout.pipe(process.stderr);
+    hyperbahnMultiProc.stderr.pipe(process.stderr);
     return relayIndex;
 };
 
