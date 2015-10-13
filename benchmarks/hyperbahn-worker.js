@@ -49,6 +49,7 @@ function HyperbahnWorker(opts) {
     self.statsdPort = Number(opts.statsdPort);
     self.kafkaPort = Number(opts.kafkaPort);
     self.sentryPort = Number(opts.sentryPort);
+    self.ringpopList = opts.ringpopList ? opts.ringpopList.split(',') : [];
     self.config = self.createConfig();
     self.app = HyperbahnApplication(self.config, {
         processTitle: process.title,
@@ -110,7 +111,8 @@ HyperbahnWorker.prototype.createConfig = function createConfig() {
             'clients.logtron.sentry': {
                 id: 'http://bs:bs@localhost:' + self.sentryPort
             },
-            'tchannel.host': '127.0.0.1'
+            'tchannel.host': '127.0.0.1',
+            'hyperbahn.ringpop.bootstrapFile': self.ringpopList
         }
     });
 };
