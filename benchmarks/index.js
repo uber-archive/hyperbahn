@@ -33,6 +33,9 @@ var console = require('console');
 var BenchmarkRunner = require('tchannel/benchmarks/');
 
 var bahn = path.join(__dirname, 'hyperbahn-worker.js');
+var multiBahn = path.join(__dirname, 'hyperbahn-multi-worker.js');
+
+var RELAY_SERVER_PORT = 7200;
 
 function HyperbahnBenchmarkRunner(opts) {
     if (!(this instanceof HyperbahnBenchmarkRunner)) {
@@ -41,6 +44,15 @@ function HyperbahnBenchmarkRunner(opts) {
 
     var self = this;
     BenchmarkRunner.call(self, opts);
+
+    if (self.opts.multi) {
+        self.startClientDelay = 5000;
+    } else {
+        self.startClientDelay = 500;
+    }
+
+    self.ports.relayServerPort = RELAY_SERVER_PORT;
+    self.multiInstances = opts.multiInstances || 25;
 }
 util.inherits(HyperbahnBenchmarkRunner, BenchmarkRunner);
 
@@ -69,6 +81,29 @@ function spawnRelayServer() {
     self.startFakeKafka();
     self.startFakeSentry();
 
+    var hyperbahnPeers = ['127.0.0.1:' + self.ports.relayServerPort];
+
+    if (self.opts.multi) {
+        for (var i = 0; i < self.multiInstances; i++) {
+            var port = self.ports.relayServerPort + (i + 1);
+            hyperbahnPeers.push('127.0.0.1:' + port);
+        }
+
+        self.spawnMultiRelayServer(hyperbahnPeers);
+
+        setTimeout(function spawnLater() {
+            self.spawnHyperbahnProc(hyperbahnPeers);
+            self.opts.torchIndex = self.relayProcs.length - 1;
+        }, 50);
+    } else {
+        self.spawnHyperbahnProc(hyperbahnPeers);
+    }
+};
+
+HyperbahnBenchmarkRunner.prototype.spawnHyperbahnProc =
+function spawnHyperbahnProc(hyperbahnPeers) {
+    var self = this;
+
     var hyperbahnProc = self.run(bahn, [
         '--serverPort', String(self.ports.serverPort),
         '--serverServiceName', String(self.serviceName),
@@ -76,7 +111,8 @@ function spawnRelayServer() {
         '--workerPort', String(self.ports.relayServerPort),
         '--statsdPort', String(self.ports.statsdPort),
         '--kafkaPort', String(self.kafka.port),
-        '--sentryPort', String(self.sentry.address().port)
+        '--sentryPort', String(self.sentry.address().port),
+        '--ringpopList', hyperbahnPeers.join(',')
     ]);
     self.relayProcs.push(hyperbahnProc);
     hyperbahnProc.stdout.pipe(process.stderr);
@@ -91,6 +127,27 @@ function spawnRelayServer() {
         console.error('set kill timer for %s[%s] in %sms',
                       bahn, hyperbahnProc.pid, self.opts.relayKillIn);
     }
+};
+
+HyperbahnBenchmarkRunner.prototype.spawnMultiRelayServer =
+function spawnMultiRelayServer(hyperbahnPeers) {
+    var self = this;
+
+    var hyperbahnMultiProc = self.run(multiBahn, [
+        '--serverPort', String(self.ports.serverPort),
+        '--serverServiceName', String(self.serviceName),
+        '--instances', String(self.instanceCount),
+        '--workerPort', String(self.ports.relayServerPort),
+        '--statsdPort', String(self.ports.statsdPort),
+        '--kafkaPort', String(self.kafka.port),
+        '--sentryPort', String(self.sentry.address().port),
+        '--ringpopList', hyperbahnPeers.join(','),
+
+        '--multiInstances', String(self.multiInstances)
+    ]);
+    self.relayProcs.push(hyperbahnMultiProc);
+    hyperbahnMultiProc.stdout.pipe(process.stderr);
+    hyperbahnMultiProc.stderr.pipe(process.stderr);
 };
 
 HyperbahnBenchmarkRunner.prototype.close = function close() {
