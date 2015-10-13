@@ -34,6 +34,8 @@ var BenchmarkRunner = require('tchannel/benchmarks/');
 
 var bahn = path.join(__dirname, 'hyperbahn-worker.js');
 
+var RELAY_SERVER_PORT = 7200;
+
 function HyperbahnBenchmarkRunner(opts) {
     if (!(this instanceof HyperbahnBenchmarkRunner)) {
         return new HyperbahnBenchmarkRunner(opts);
@@ -41,6 +43,8 @@ function HyperbahnBenchmarkRunner(opts) {
 
     var self = this;
     BenchmarkRunner.call(self, opts);
+
+    self.ports.relayServerPort = RELAY_SERVER_PORT;
 }
 util.inherits(HyperbahnBenchmarkRunner, BenchmarkRunner);
 
