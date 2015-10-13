@@ -44,6 +44,8 @@ function HyperbahnBenchmarkRunner(opts) {
     var self = this;
     BenchmarkRunner.call(self, opts);
 
+    self.startClientDelay = 500;
+
     self.ports.relayServerPort = RELAY_SERVER_PORT;
 }
 util.inherits(HyperbahnBenchmarkRunner, BenchmarkRunner);
