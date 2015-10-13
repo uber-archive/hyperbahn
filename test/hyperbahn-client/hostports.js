@@ -215,7 +215,7 @@ function runTests(HyperbahnCluster) {
             serviceName: 'hyperbahn',
             hasNoParent: true
         });
-        var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'), 'utf8');
+        var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-query.thrift'), 'utf8');
         var badThrift = new TChannelAsThrift({source: badSource});
         badThrift.send(request,
             'Hyperbahn::discover',
@@ -230,8 +230,9 @@ function runTests(HyperbahnCluster) {
                 'tchannel-thrift-handler.parse-error.body-failed: Could not parse body (arg3) argument.\n' +
                 'Expected Thrift encoded arg3 for endpoint Hyperbahn::discover.') === 0,
                 'error message should be a parsing failure');
-            assert.ok(err.message.indexOf(
-                'Parsing error was: missing required field "query" with id 1 on discover_args') !== -1,
+            assert.ok(
+                err.message.indexOf(
+                    'Parsing error was: missing required field "serviceName" with id 1 on DiscoveryQuery.') !== -1,
                 'error message should be a parsing failure');
 
             var items = cluster.logger.items();
@@ -268,13 +269,8 @@ function runTests(HyperbahnCluster) {
             onResponse
         );
         function onResponse(err, res) {
-            assert.ok(err, 'should be error');
-            assert.equals(err.type, 'tchannel-thrift-handler.parse-error.body-failed',
-                'error should be parser error');
-            assert.ok(err.message.indexOf(
-                'Could not parse body (arg3) argument.\n' +
-                'Expected Thrift encoded arg3 for endpoint Hyperbahn::discover.') === 0,
-                'error message should be a parsing failure');
+            // TODO expect UnrecognizedException
+            assert.ok(err || !res.ok, 'should be error (possibly unrecognized application error)');
 
             var items = cluster.logger.items();
             assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
