@@ -85,7 +85,7 @@ function spawnRelayServer() {
         '--sentryPort', String(self.sentry.address().port)
     ];
 
-    self.spawnHyperbahnProc(procOpts);
+    self.opts.torchIndex = self.spawnHyperbahnProc(procOpts);
 };
 
 HyperbahnBenchmarkRunner.prototype.spawnHyperbahnProc =
