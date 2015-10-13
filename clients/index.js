@@ -56,6 +56,8 @@ function ApplicationClients(options) {
     var self = this;
     var config = options.config;
 
+    self.lazyTimeout = null;
+
     // Used in setupRingpop method
     self.ringpopTimeouts = config.get('hyperbahn.ringpop.timeouts');
     self.projectName = config.get('info.project');
@@ -318,6 +320,7 @@ ApplicationClients.prototype.destroy = function destroy() {
         self.tchannel.close();
     }
     self.processReporter.destroy();
+    self.tchannel.timers.clearTimeout(self.lazyTimeout);
 
     self.repl.close();
     self._controlServer.close();
@@ -346,7 +349,8 @@ ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() 
     self.tchannel.setLazyRelaying(enabled);
 
     if (enabled === false) {
-        self.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
+        self.tchannel.timers.clearTimeout(self.lazyTimeout);
+        self.lazyTimeout = self.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
     } else {
         self.tchannel.setLazyHandling(enabled);
     }
