@@ -28,6 +28,8 @@ var StaticConfig = require('static-config');
 
 var HyperbahnApplication = require('../app.js');
 
+module.exports = HyperbahnWorker;
+
 function HyperbahnWorker(opts) {
     /*eslint max-statements: [2, 25]*/
     if (!(this instanceof HyperbahnWorker)) {
