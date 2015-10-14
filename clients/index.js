@@ -135,15 +135,15 @@ function ApplicationClients(options) {
     // Store the tchannel object with its peers on clients
     // Also store a json sender and a raw sender
     self.tchannel = TChannel({
+        logger: self.logger,
+        statsd: self.statsd,
         statTags: {
             app: 'autobahn',
             host: os.hostname()
         },
+        trace: false,
         emitConnectionMetrics: false,
         connectionStalePeriod: 1.5 * 1000,
-        trace: false,
-        logger: self.logger,
-        statsd: self.statsd,
         useLazyRelaying: false,
         useLazyHandling: false
     });
