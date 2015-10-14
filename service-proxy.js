@@ -132,7 +132,7 @@ function handleLazily(conn, reqFrame) {
             error: res.err
         }));
         // TODO: protocol error instead?
-        conn.sendLazyErrorFrame(reqFrame, 'BadRequest', 'failed to read serviceName');
+        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read serviceName');
         return false;
     }
 
@@ -141,7 +141,7 @@ function handleLazily(conn, reqFrame) {
         // TODO: reqFrame.extendLogInfo would be nice, especially if it added
         // things like callerName and arg1
         self.channel.logger.error('missing service name in lazy frame', conn.extendLogInfo({}));
-        conn.sendLazyErrorFrame(reqFrame, 'BadRequest', 'missing serviceName');
+        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing serviceName');
         return false;
     }
 
@@ -156,7 +156,7 @@ function handleLazily(conn, reqFrame) {
             error: res.err
         }));
         // TODO: protocol error instead?
-        conn.sendLazyErrorFrame(reqFrame, 'BadRequest', 'failed to read headers');
+        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read headers');
         return false;
     }
 
@@ -164,7 +164,7 @@ function handleLazily(conn, reqFrame) {
     var cn = cnBuf && cnBuf.toString();
     if (!cn) {
         self.channel.logger.error('request missing cn header', conn.extendLogInfo({}));
-        conn.sendLazyErrorFrame(reqFrame, 'BadRequest', 'missing cn header');
+        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing cn header');
         return false;
     }
 
@@ -181,7 +181,7 @@ function handleLazily(conn, reqFrame) {
                 serviceCounters: self.rateLimiter.serviceCounters,
                 edgeCounters: self.rateLimiter.edgeCounters
             })));
-            conn.sendLazyErrorFrame(reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
+            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
             return true;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
             var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
@@ -190,7 +190,7 @@ function handleLazily(conn, reqFrame) {
                     serviceCounters: self.rateLimiter.serviceCounters,
                     edgeCounters: self.rateLimiter.edgeCounters
                 })));
-            conn.sendLazyErrorFrame(reqFrame, 'Busy', serviceName + ' is rate-limited by the rps of ' + serviceLimit);
+            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the rps of ' + serviceLimit);
             return true;
         }
     }
