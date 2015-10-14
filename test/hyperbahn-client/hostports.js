@@ -272,10 +272,6 @@ function runTests(HyperbahnCluster) {
             // TODO expect UnrecognizedException
             assert.ok(err || !res.ok, 'should be error (possibly unrecognized application error)');
 
-            var items = cluster.logger.items();
-            assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
-                'Do not miss the error log');
-
             assert.end();
         }
     });
