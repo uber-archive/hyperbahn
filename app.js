@@ -67,7 +67,8 @@ function Application(config, opts) {
         minRequests: opts.minRequests,
         probation: opts.probation,
         defaultTotalKillSwitchBuffer: opts.defaultTotalKillSwitchBuffer,
-        rateLimiterBuckets: opts.rateLimiterBuckets
+        rateLimiterBuckets: opts.rateLimiterBuckets,
+        testChannelConfigOverlay: opts.channelTestConfigOverlay
     });
     self.services = null;
     self.logger = self.clients.logger;
