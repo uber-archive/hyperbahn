@@ -35,6 +35,7 @@ var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
 var ProcessReporter = require('process-reporter');
 var NullStatsd = require('uber-statsd-client/null');
+var extendInto = require('xtend/mutable');
 
 var ServiceProxy = require('../service-proxy.js');
 var createLogger = require('./logger.js');
@@ -134,7 +135,7 @@ function ApplicationClients(options) {
 
     // Store the tchannel object with its peers on clients
     // Also store a json sender and a raw sender
-    self.tchannel = TChannel({
+    self.tchannel = TChannel(extendInto({
         logger: self.logger,
         statsd: self.statsd,
         statTags: {
@@ -146,7 +147,7 @@ function ApplicationClients(options) {
         connectionStalePeriod: 1.5 * 1000,
         useLazyRelaying: false,
         useLazyHandling: false
-    });
+    }, options.testChannelConfigOverlay));
 
     self.autobahnHostPortList = self.loadHostList();
 
