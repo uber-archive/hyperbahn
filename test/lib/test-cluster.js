@@ -20,6 +20,11 @@
 
 'use strict';
 
+/* eslint no-console:0 no-process-env:0 */
+/* eslint max-statements: [2, 40] */
+var console = require('console');
+var process = require('process');
+
 var CountedReadySignal = require('ready-signal/counted');
 var EventEmitter = require('events').EventEmitter;
 var tape = require('tape');
@@ -33,9 +38,27 @@ var TChannelJSON = require('tchannel/as/json');
 var tapeCluster = require('tape-cluster');
 
 var TCReporter = require('tchannel/tcollector/reporter');
+var loadTChannelTestConfig = require('tchannel/test/lib/load_config.js');
 var FakeTCollector = require('./fake-tcollector');
 var TestApplication = require('./test-app.js');
 var RemoteConfigFile = require('./remote-config-file.js');
+
+var channelTestConfigOverlay = null;
+if (process.env.TCHANNEL_TEST_CONFIG) {
+    channelTestConfigOverlay = loadTChannelTestConfig(process.env.TCHANNEL_TEST_CONFIG);
+    JSON.stringify(channelTestConfigOverlay, null, 4)
+        .split('\n')
+        .forEach(function each(line, i) {
+            if (i === 0) {
+                console.log(
+                    '# TestCluster using test channel config overlay from %s: %s',
+                    process.env.TCHANNEL_TEST_CONFIG,
+                    line);
+            } else {
+                console.log('# %s', line);
+            }
+        });
+}
 
 TestCluster.test = tapeCluster(tape, TestCluster);
 
@@ -365,6 +388,7 @@ function createApplication(hostPort, cb) {
         defaultTotalKillSwitchBuffer = self.opts.remoteConfig['rateLimiting.defaultTotalKillSwitchBuffer'];
     }
 
+    localOpts.channelTestConfigOverlay = channelTestConfigOverlay;
     localOpts.clients = localOpts.clients || {};
     localOpts.clients.logger =
         localOpts.clients.logger || self.logger;
