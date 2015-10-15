@@ -124,6 +124,7 @@ function handleLazily(conn, reqFrame) {
     var self = this;
 
     /*eslint max-statements: [2, 45]*/
+    /*eslint complexity: [2, 15]*/
 
     var res = reqFrame.bodyRW.lazy.readService(reqFrame);
     if (res.err) {
