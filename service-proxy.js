@@ -37,6 +37,7 @@ var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 var DEFAULT_MIN_PEERS_PER_WORKER = 5;
 var DEFAULT_MIN_PEERS_PER_RELAY = 5;
 var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
+var DEFAULT_REAP_PEERS_PERIOD = 5 * 60 * 1000; // every 5 minutes
 
 var RATE_LIMIT_TOTAL = 'total';
 var RATE_LIMIT_SERVICE = 'service';
@@ -95,9 +96,19 @@ function ServiceDispatchHandler(options) {
     self.periodicStatsTimer = null;
     self.statsPeriod = options.statsPeriod || DEFAULT_STATS_PERIOD;
 
+    self.peersToReap = Object.create(null);
+    self.connectedPeers = Object.create(null);
+    self.reapPeersTimer = null;
+    self.reapPeersPeriod = options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD;
+
     self.destroyed = false;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
+
+    self.boundReapPeers = reapPeers;
+    function reapPeers() {
+        self.reapPeers();
+    }
 
     self.boundEmitPeriodicStats = emitPeriodicStats;
     function emitPeriodicStats() {
@@ -112,6 +123,7 @@ function ServiceDispatchHandler(options) {
         self.updateServiceChannels();
     }
 
+    self.requestReapPeers();
     self.emitPeriodicStats();
 }
 
@@ -444,6 +456,14 @@ function refreshServicePeer(serviceName, hostPort) {
 
     // The old way: fully connect every egress to all affine peers.
     peer.connectTo();
+
+    // Unmark recently seen peers, so they don't get reaped
+    delete self.peersToReap[hostPort];
+    // Mark known peers, so they are candidates for future reaping
+    if (!self.connectedPeers[hostPort]) {
+        self.connectedPeers[hostPort] = Object.create(null);
+    }
+    self.connectedPeers[hostPort][serviceName] = true;
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeerPartially =
@@ -748,6 +768,54 @@ function requestPeriodicStats() {
     self.periodicStatsTimer = self.channel.timers.setTimeout(self.boundEmitPeriodicStats, self.statsPeriod);
 };
 
+ServiceDispatchHandler.prototype.requestReapPeers =
+function requestReapPeers() {
+    var self = this;
+    if (self.reapPeersTimer || self.destroyed) {
+        return;
+    }
+    self.reapPeersTimer = self.channel.timers.setTimeout(self.boundReapPeers, self.reapPeersPeriod);
+};
+
+ServiceDispatchHandler.prototype.reapPeers =
+function reapPeers() {
+    var self = this;
+
+    var i;
+    var j;
+
+    self.logger.info('Reaping dead peers', self.extendLogInfo({
+        peers: self.peersToReap
+    }));
+
+    var peersToReap = Object.keys(self.peersToReap);
+    for (i = 0; i < peersToReap.length; i++) {
+        var hostPort = peersToReap[i];
+        var peer = self.channel.peers.get(hostPort);
+        for (j = 0; j < peer.connections.length; j++) {
+            var connection = peer.connections[j];
+            connection.drain('reaped for expired advertisement');
+        }
+
+        var serviceNames = Object.keys(self.peersToReap[hostPort]);
+        for (j = 0; j < serviceNames.length; j++) {
+            var serviceName = serviceNames[j];
+            var svcchan = self.getServiceChannel(serviceName);
+            if (!svcchan) {
+                continue;
+            }
+            svcchan.peers.delete(hostPort);
+        }
+
+        self.channel.peers.delete(hostPort);
+    }
+
+    self.peersToReap = self.connectedPeers;
+    self.connectedPeers = Object.create(null);
+
+    self.requestReapPeers();
+};
+
 ServiceDispatchHandler.prototype.emitPeriodicServiceStats =
 function emitPeriodicServiceStats(serviceChannel, serviceName) {
     var self = this;
@@ -838,6 +906,7 @@ function destroy() {
     }
     self.destroyed = true;
     self.channel.timers.clearTimeout(self.servicePurgeTimer);
+    self.channel.timers.clearTimeout(self.reapPeersTimer);
     self.channel.timers.clearTimeout(self.periodicStatsTimer);
     self.rateLimiter.destroy();
 };

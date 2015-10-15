@@ -173,7 +173,7 @@ function checkExitPeers(assert, opts) {
 
     if (opts.isDead) {
         assert.equal(
-            peerInfo.serviceNames.length, 0,
+            peerInfo ? peerInfo.serviceNames.length : 0, 0,
             'peer has no services');
     } else if (expectedConnectedOut === false) {
         assert.ok(peer, 'peer exists on exitApp');
