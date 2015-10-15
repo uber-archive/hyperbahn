@@ -168,6 +168,11 @@ function handleLazily(conn, reqFrame) {
         return false;
     }
 
+    if (self.isBlocked(cn, serviceName)) {
+        conn.ops.popInReq(reqFrame.id);
+        return null;
+    }
+
     if (self.rateLimiterEnabled) {
         var rateLimitReason = self.rateLimit(cn, serviceName);
 
