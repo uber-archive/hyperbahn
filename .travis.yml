@@ -2,4 +2,8 @@ language: node_js
 node_js:
   - "0.10"
 before_install: npm i npm@latest -g
+env:
+# Get some of them configs
+- HYPERBAHN_REMOTE_TEST_CONFIG=
+- HYPERBAHN_REMOTE_TEST_CONFIG=test/config/with_lazy_relay.json
 script: npm run travis

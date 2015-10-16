@@ -36,6 +36,7 @@ var inherits = require('util').inherits;
 var nodeAssert = require('assert');
 var TChannelJSON = require('tchannel/as/json');
 var tapeCluster = require('tape-cluster');
+var extend = require('xtend');
 
 var TCReporter = require('tchannel/tcollector/reporter');
 var loadTChannelTestConfig = require('tchannel/test/lib/load_config.js');
@@ -52,6 +53,23 @@ if (process.env.TCHANNEL_TEST_CONFIG) {
             if (i === 0) {
                 console.log(
                     '# TestCluster using test channel config overlay from %s: %s',
+                    process.env.TCHANNEL_TEST_CONFIG,
+                    line);
+            } else {
+                console.log('# %s', line);
+            }
+        });
+}
+
+var remoteConfigOverlay = null;
+if (process.env.HYPERBAHN_REMOTE_TEST_CONFIG) {
+    remoteConfigOverlay = loadTChannelTestConfig(process.env.HYPERBAHN_REMOTE_TEST_CONFIG);
+    JSON.stringify(channelTestConfigOverlay, null, 4)
+        .split('\n')
+        .forEach(function each(line, i) {
+            if (i === 0) {
+                console.log(
+                    '# TestCluster using remote config overlay from %s: %s',
                     process.env.TCHANNEL_TEST_CONFIG,
                     line);
             } else {
@@ -378,6 +396,12 @@ function createApplication(hostPort, cb) {
     var rateLimiterBuckets;
     var remoteConfigFile;
     var defaultTotalKillSwitchBuffer;
+
+    self.opts.remoteConfig = self.opts.remoteConfig || {};
+    if (remoteConfigOverlay) {
+        self.opts.remoteConfig = extend(remoteConfigOverlay, self.opts.remoteConfig);
+    }
+
     if (self.opts.remoteConfig) {
         remoteConfigFile = RemoteConfigFile(hostPort);
         remoteConfigFile.write(self.opts.remoteConfig);

@@ -124,6 +124,7 @@ function handleLazily(conn, reqFrame) {
     var self = this;
 
     /*eslint max-statements: [2, 45]*/
+    /*eslint complexity: [2, 15]*/
 
     var res = reqFrame.bodyRW.lazy.readService(reqFrame);
     if (res.err) {
@@ -166,6 +167,11 @@ function handleLazily(conn, reqFrame) {
         self.channel.logger.error('request missing cn header', conn.extendLogInfo({}));
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing cn header');
         return false;
+    }
+
+    if (self.isBlocked(cn, serviceName)) {
+        conn.ops.popInReq(reqFrame.id);
+        return null;
     }
 
     if (self.rateLimiterEnabled) {
