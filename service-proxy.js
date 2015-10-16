@@ -832,6 +832,8 @@ function reapPeers() {
         }
 
         self.channel.peers.delete(hostPort);
+        delete self.peersToReap[hostPort];
+        delete self.connectedPeers[hostPort];
     }
 
     self.peersToReap = self.connectedPeers;
