@@ -341,6 +341,7 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateRpsLimitForServiceName();
     self.updateKValues();
     self.updateReservoir();
+    self.updateReapPeersPeriod();
     self.updatePartialAffinityEnabled();
 };
 
@@ -389,6 +390,14 @@ ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimi
         self.serviceProxy.enableRateLimiter();
     } else {
         self.serviceProxy.disableRateLimiter();
+    }
+};
+
+ApplicationClients.prototype.updateReapPeersPeriod = function updateReapPeersPeriod() {
+    var self = this;
+    var period = self.remoteConfig.get('peerReaper.period', 0);
+    if (period !== self.serviceProxy.reapPeersPeriod) {
+        self.serviceProxy.setReapPeersPeriod(period);
     }
 };
 
