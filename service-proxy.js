@@ -816,6 +816,10 @@ function reapPeers() {
     for (i = 0; i < peersToReap.length; i++) {
         var hostPort = peersToReap[i];
         var peer = self.channel.peers.get(hostPort);
+        if (!peer) {
+            continue;
+        }
+
         for (j = 0; j < peer.connections.length; j++) {
             var connection = peer.connections[j];
             connection.drain('reaped for expired advertisement');
@@ -832,8 +836,6 @@ function reapPeers() {
         }
 
         self.channel.peers.delete(hostPort);
-        delete self.peersToReap[hostPort];
-        delete self.connectedPeers[hostPort];
     }
 
     self.peersToReap = self.connectedPeers;
