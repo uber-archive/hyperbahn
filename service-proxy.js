@@ -37,7 +37,7 @@ var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 var DEFAULT_MIN_PEERS_PER_WORKER = 5;
 var DEFAULT_MIN_PEERS_PER_RELAY = 5;
 var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
-var DEFAULT_REAP_PEERS_PERIOD = 5 * 60 * 1000; // every 5 minutes
+var DEFAULT_REAP_PEERS_PERIOD = 0; // never
 
 var RATE_LIMIT_TOTAL = 'total';
 var RATE_LIMIT_SERVICE = 'service';
@@ -768,10 +768,28 @@ function requestPeriodicStats() {
     self.periodicStatsTimer = self.channel.timers.setTimeout(self.boundEmitPeriodicStats, self.statsPeriod);
 };
 
+ServiceDispatchHandler.prototype.setReapPeersPeriod =
+function setReapPeersPeriod(period) {
+    // period === 0 means never / disabled, and is the default
+    var self = this;
+    if (self.reapPeersPeriod === period) {
+        return;
+    }
+    self.reapPeersPeriod = period;
+    if (self.reapPeersTimer) {
+        self.channel.timers.clearTimeout(self.reapPeersTimer);
+        self.reapPeersTimer = null;
+    }
+    if (period !== 0) {
+        self.reapPeers();
+        // This will also establish the next timer
+    }
+};
+
 ServiceDispatchHandler.prototype.requestReapPeers =
 function requestReapPeers() {
     var self = this;
-    if (self.reapPeersTimer || self.destroyed) {
+    if (self.reapPeersTimer || self.reapPeersPeriod === 0 || self.destroyed) {
         return;
     }
     self.reapPeersTimer = self.channel.timers.setTimeout(self.boundReapPeers, self.reapPeersPeriod);
