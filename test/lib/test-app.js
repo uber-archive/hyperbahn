@@ -163,6 +163,14 @@ function checkExitPeers(assert, opts) {
 
     // By default we expect all connections to be connected
     var expectedConnectedOut = true;
+
+    if (self.clients.serviceProxy.partialAffinityEnabled) {
+        var range = self.clients.serviceProxy.computePartialRange(opts.serviceName);
+        // assert.comment(self.hostPort + ' affineWorkers: ' + range.affineWorkers);
+        // assert.comment(self.hostPort + ' hostPort: ' + opts.hostPort);
+        expectedConnectedOut = range.affineWorkers.indexOf(opts.hostPort) > -1;
+    }
+
     // However allow for a disconnected hostPort blackList
     if (opts.disconnectedHostsPorts &&
         opts.disconnectedHostsPorts.indexOf(opts.hostPort) >= 0) {
