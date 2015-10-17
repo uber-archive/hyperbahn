@@ -827,13 +827,14 @@ function requestReapPeers() {
 ServiceDispatchHandler.prototype.reapPeers =
 function reapPeers() {
     var self = this;
+    self.reapPeersTimer = null;
 
     var i;
     var j;
 
     var peersToReap = Object.keys(self.peersToReap);
 
-    self.logger.info('Reaping dead peers', self.extendLogInfo({
+    self.logger.info('reaping dead peers', self.extendLogInfo({
         numPeersToReap: peersToReap.length
     }));
 
