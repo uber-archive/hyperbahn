@@ -57,7 +57,7 @@ function ServiceDispatchHandler(options) {
 
     assert(options, 'service dispatch handler options not actually optional');
     self.channel = options.channel;
-    self.logger = options.logger;
+    self.logger = options.logger || self.channel.logger;
     self.statsd = options.statsd;
     self.egressNodes = options.egressNodes;
     self.createdAt = self.channel.timers.now();
