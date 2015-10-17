@@ -44,6 +44,7 @@ var loadTChannelTestConfig = require('tchannel/test/lib/load_config.js');
 var FakeTCollector = require('./fake-tcollector');
 var TestApplication = require('./test-app.js');
 var RemoteConfigFile = require('./remote-config-file.js');
+var CollapsedAssert = require('./collapsed-assert.js');
 
 var channelTestConfigOverlay = null;
 if (process.env.TCHANNEL_TEST_CONFIG) {
@@ -129,6 +130,14 @@ function TestCluster(opts) {
 
     self.tchannelJSON = TChannelJSON();
     self.logger = DebugLogtron('autobahn');
+
+    if (self.opts.whitelist) {
+        for (var i = 0; i < self.opts.whitelist.length; i++) {
+            self.logger.whitelist(
+                self.opts.whitelist[i][0], self.opts.whitelist[i][1]
+            );
+        }
+    }
 }
 inherits(TestCluster, EventEmitter);
 
@@ -510,6 +519,8 @@ function checkExitPeers(assert, opts) {
     nodeAssert(opts && opts.serviceName, 'serviceName required');
     nodeAssert(opts && opts.hostPort, 'hostPort required');
 
+    var cassert = CollapsedAssert();
+
     var self = this;
     var app = self.apps[0];
 
@@ -527,8 +538,10 @@ function checkExitPeers(assert, opts) {
     }
 
     exitApps.forEach(function checkApp(exitApp) {
-        exitApp.checkExitPeers(assert, opts);
+        exitApp.checkExitPeers(cassert, opts);
     });
+
+    cassert.report(assert, 'exit peers are correct for ' + opts.serviceName);
 };
 
 TestCluster.prototype.getExitNodes = function getExitNodes(serviceName) {
