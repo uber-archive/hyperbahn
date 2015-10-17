@@ -115,6 +115,29 @@ allocCluster.test('nominal parameters', {
     }
 });
 
+var manyAlice = [];
+for (var _count = 0; _count < 10; _count++) {
+    manyAlice.push('alice');
+}
+
+allocCluster.test('big cluster', {
+    size: 20,
+    kValue: 5,
+    whitelist: [
+        ['info', 'Refreshing service peer affinity']
+    ],
+    namedRemotes: manyAlice,
+    remoteConfig: {
+        'partialAffinity.enabled': true
+    },
+    seedConfig: {}
+}, function t(cluster, assert) {
+    runScenario(cluster, assert, onCompletion);
+    function onCompletion(err) {
+        assert.end(err);
+    }
+});
+
 function setupRemotes(cluster) {
     cluster.namedRemotes.forEach(function eachRemote(alice) {
         alice.serverChannel.register('ping',
