@@ -808,11 +808,12 @@ function reapPeers() {
     var i;
     var j;
 
+    var peersToReap = Object.keys(self.peersToReap);
+
     self.logger.info('Reaping dead peers', self.extendLogInfo({
-        peers: self.peersToReap
+        numPeersToReap: peersToReap.length
     }));
 
-    var peersToReap = Object.keys(self.peersToReap);
     for (i = 0; i < peersToReap.length; i++) {
         var hostPort = peersToReap[i];
         var peer = self.channel.peers.get(hostPort);
