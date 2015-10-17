@@ -472,8 +472,8 @@ function refreshServicePeer(serviceName, hostPort) {
     self.connectedPeers[hostPort][serviceName] = true;
 };
 
-ServiceDispatchHandler.prototype.refreshServicePeerPartially =
-function refreshServicePeerPartially(serviceName, hostPort) {
+ServiceDispatchHandler.prototype.computePartialRange =
+function computePartialRange(serviceName, hostPort) {
     var self = this;
 
     // Obtain and sort the affine worker and relay lists.
@@ -497,7 +497,7 @@ function refreshServicePeerPartially(serviceName, hostPort) {
             relays: relays,
             workers: workers
         }));
-        return;
+        return null;
     }
 
     // Compute the range of workers that this relay should be connected to.
@@ -514,32 +514,43 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     );
     var stop = (start + length) % workers.length;
 
-    self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
-        serviceName: serviceName,
-        serviceHostPort: hostPort,
+    return {
+        start: start,
+        stop: stop,
         relayIndex: relayIndex,
         relays: relays,
         workers: workers,
-        start: start,
-        stop: stop,
         length: length
+    };
+};
+
+ServiceDispatchHandler.prototype.refreshServicePeerPartially =
+function refreshServicePeerPartially(serviceName, hostPort) {
+    var self = this;
+
+    var range = self.computePartialRange(serviceName, hostPort);
+
+    self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
+        serviceName: serviceName,
+        serviceHostPort: hostPort,
+        partialRange: range
     }));
 
     // Open connections to affine peers
     var index;
     var peer;
-    if (start <= stop) { // ... start WITHIN stop ...
-        for (index = start; index < stop; index++) {
-            peer = self.getServicePeer(serviceName, workers[index]);
+    if (range.start <= range.stop) { // ... start WITHIN stop ...
+        for (index = range.start; index < range.stop; index++) {
+            peer = self.getServicePeer(serviceName, range.workers[index]);
             peer.connectTo();
         }
     } else { // BEFORE stop ... start AFTER
-        for (index = start; index < workers.length; index++) {
-            peer = self.getServicePeer(serviceName, workers[index]);
+        for (index = range.start; index < range.workers.length; index++) {
+            peer = self.getServicePeer(serviceName, range.workers[index]);
             peer.connectTo();
         }
-        for (index = 0; index < stop; index++) {
-            peer = self.getServicePeer(serviceName, workers[index]);
+        for (index = 0; index < range.stop; index++) {
+            peer = self.getServicePeer(serviceName, range.workers[index]);
             peer.connectTo();
         }
     }
