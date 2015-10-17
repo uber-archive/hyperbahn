@@ -786,10 +786,8 @@ function setReapPeersPeriod(period) {
         self.channel.timers.clearTimeout(self.reapPeersTimer);
         self.reapPeersTimer = null;
     }
-    if (period !== 0) {
-        self.reapPeers();
-        // This will also establish the next timer
-    }
+
+    self.requestReapPeers();
 };
 
 ServiceDispatchHandler.prototype.requestReapPeers =
