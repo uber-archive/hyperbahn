@@ -586,7 +586,9 @@ function connectToServiceWorkers(serviceName, workers, start, stop) {
 
     for (var i = start; i < stop; i++) {
         var peer = self.getServicePeer(serviceName, workers[i]);
-        peer.connectTo();
+        if (!peer.isConnected('out')) {
+            peer.connectTo();
+        }
     }
 };
 
