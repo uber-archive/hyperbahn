@@ -1,4 +1,4 @@
-#!/bin/sh 
+#!/usr/bin/env bash
 set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -26,7 +26,7 @@ tmux new-session -s 'hyperbahn' -n 'hyperbahn-0' \; \
     send -t hyperbahn-0 'make run-local-0' Enter \; \
     send -t hyperbahn-1 'make run-local-1' Enter \; \
     select-window -t hyperbahn-adhoc \; \
-    send 'sleep 1; command -v $LOCAL_BIN/tcurl >/dev/null 2>&1 && export PATH=$LOCAL_BIN:$PATH' Enter \; \
+    send "sleep 1; command -v $LOCAL_BIN/tcurl >/dev/null 2>&1 && export PATH=$LOCAL_BIN:\$PATH" Enter \; \
     send "tcurl -p $H0 autobahn health_v1" Enter \; \
     send "tcurl -p $H1 autobahn health_v1" Enter \; \
     send "tcurl autobahn health_v1" Enter
