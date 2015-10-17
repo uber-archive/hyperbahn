@@ -72,7 +72,7 @@ CollapsedAssert.prototype.report = function report(realAssert, message) {
         return realAssert.ok(true, message);
     }
 
-    for (var i = 0; i < self._commands; i++) {
+    for (var i = 0; i < self._commands.length; i++) {
         var command = self._commands[i];
 
         var method = command.shift();
