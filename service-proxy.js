@@ -782,6 +782,11 @@ function setReapPeersPeriod(period) {
         return;
     }
     self.reapPeersPeriod = period;
+
+    self.logger.info('set peer reap period', self.extendLogInfo({
+        period: self.reapPeersPeriod
+    }));
+
     if (self.reapPeersTimer) {
         self.channel.timers.clearTimeout(self.reapPeersTimer);
         self.reapPeersTimer = null;
@@ -793,9 +798,29 @@ function setReapPeersPeriod(period) {
 ServiceDispatchHandler.prototype.requestReapPeers =
 function requestReapPeers() {
     var self = this;
-    if (self.reapPeersTimer || self.reapPeersPeriod === 0 || self.destroyed) {
+
+    if (self.destroyed) {
         return;
     }
+
+    if (self.reapPeersTimer) {
+        self.logger.info('not setting peer reap timer', self.extendLogInfo({
+            reason: 'timer already set'
+        }));
+        return;
+    }
+
+    if (self.reapPeersPeriod === 0) {
+        self.logger.info('not setting peer reap timer', self.extendLogInfo({
+            reason: 'disabled'
+        }));
+        return;
+    }
+
+    self.logger.info('setting peer reap timer', self.extendLogInfo({
+        period: self.reapPeersPeriod
+    }));
+
     self.reapPeersTimer = self.channel.timers.setTimeout(self.boundReapPeers, self.reapPeersPeriod);
 };
 
