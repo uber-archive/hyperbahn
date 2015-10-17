@@ -46,6 +46,16 @@ CollapsedAssert.prototype.equal = function equal(a, b, msg, extra) {
     self._commands.push(['equal', a, b, msg, extra]);
 };
 
+CollapsedAssert.prototype.ok = function ok(bool, msg, extra) {
+    var self = this;
+
+    if (!bool) {
+        self._failed = true;
+    }
+
+    self._commands.push(['ok', bool, msg, extra]);
+};
+
 CollapsedAssert.prototype.fail = function fail(msg, extra) {
     var self = this;
 
