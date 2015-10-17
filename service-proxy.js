@@ -57,7 +57,7 @@ function ServiceDispatchHandler(options) {
 
     assert(options, 'service dispatch handler options not actually optional');
     self.channel = options.channel;
-    self.logger = options.logger;
+    self.logger = options.logger || self.channel.logger;
     self.statsd = options.statsd;
     self.egressNodes = options.egressNodes;
     self.createdAt = self.channel.timers.now();
@@ -782,22 +782,45 @@ function setReapPeersPeriod(period) {
         return;
     }
     self.reapPeersPeriod = period;
+
+    self.logger.info('set peer reap period', self.extendLogInfo({
+        period: self.reapPeersPeriod
+    }));
+
     if (self.reapPeersTimer) {
         self.channel.timers.clearTimeout(self.reapPeersTimer);
         self.reapPeersTimer = null;
     }
-    if (period !== 0) {
-        self.reapPeers();
-        // This will also establish the next timer
-    }
+
+    self.requestReapPeers();
 };
 
 ServiceDispatchHandler.prototype.requestReapPeers =
 function requestReapPeers() {
     var self = this;
-    if (self.reapPeersTimer || self.reapPeersPeriod === 0 || self.destroyed) {
+
+    if (self.destroyed) {
         return;
     }
+
+    if (self.reapPeersTimer) {
+        self.logger.info('not setting peer reap timer', self.extendLogInfo({
+            reason: 'timer already set'
+        }));
+        return;
+    }
+
+    if (self.reapPeersPeriod === 0) {
+        self.logger.info('not setting peer reap timer', self.extendLogInfo({
+            reason: 'disabled'
+        }));
+        return;
+    }
+
+    self.logger.info('setting peer reap timer', self.extendLogInfo({
+        period: self.reapPeersPeriod
+    }));
+
     self.reapPeersTimer = self.channel.timers.setTimeout(self.boundReapPeers, self.reapPeersPeriod);
 };
 
@@ -808,11 +831,12 @@ function reapPeers() {
     var i;
     var j;
 
+    var peersToReap = Object.keys(self.peersToReap);
+
     self.logger.info('Reaping dead peers', self.extendLogInfo({
-        peers: self.peersToReap
+        numPeersToReap: peersToReap.length
     }));
 
-    var peersToReap = Object.keys(self.peersToReap);
     for (i = 0; i < peersToReap.length; i++) {
         var hostPort = peersToReap[i];
         var peer = self.channel.peers.get(hostPort);

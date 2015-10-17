@@ -396,9 +396,7 @@ ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimi
 ApplicationClients.prototype.updateReapPeersPeriod = function updateReapPeersPeriod() {
     var self = this;
     var period = self.remoteConfig.get('peerReaper.period', 0);
-    if (period !== self.serviceProxy.reapPeersPeriod) {
-        self.serviceProxy.setReapPeersPeriod(period);
-    }
+    self.serviceProxy.setReapPeersPeriod(period);
 };
 
 ApplicationClients.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled() {
