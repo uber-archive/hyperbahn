@@ -547,7 +547,10 @@ function connectToPartialRange(serviceName, range) {
     var self = this;
 
     // Open connections to affine peers
-    if (range.start <= range.stop) { // ... start WITHIN stop ...
+    if (range.start === range.stop) {
+        // fully connected
+        connectToRange(0, range.workers.length);
+    } else if (range.start < range.stop) { // ... start WITHIN stop ...
         connectToRange(range.start, range.stop);
     } else { // BEFORE stop ... start AFTER
         connectToRange(range.start, range.workers.length);
