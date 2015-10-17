@@ -473,6 +473,12 @@ function refreshServicePeer(serviceName, hostPort) {
 
     // The old way: fully connect every egress to all affine peers.
     peer.connectTo();
+    self.addPeerIndex(serviceName, hostPort);
+};
+
+ServiceDispatchHandler.prototype.addPeerIndex =
+function addPeerIndex(serviceName, hostPort) {
+    var self = this;
 
     // Unmark recently seen peers, so they don't get reaped
     delete self.peersToReap[hostPort];
