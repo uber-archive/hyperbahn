@@ -945,7 +945,7 @@ function onCircuitStateChange(change) {
                     clean(circuit.endpointName),
                 1
             );
-            self.logger.warn('circuit became unhealthy',
+            self.logger.info('circuit became unhealthy',
                 self.extendLogInfo(circuit.extendLogInfo({})));
         }
     }
