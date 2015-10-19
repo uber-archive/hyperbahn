@@ -59,7 +59,7 @@ allocCluster.test('register and forward with thrift', {
 
     echoServerRemote.thriftServer.register(
         echoServerRemote.serverChannel, 'echo::thrift_echo', {}, echo
-    )
+    );
 
     function echo(ctx, req, arg2, arg3, cb) {
         cb(null, {
@@ -78,13 +78,13 @@ allocCluster.test('register and forward with thrift', {
     }, onForwarded);
 
     echoServerRemote.thriftClient.request({
-        serviceName: 'echoRemote',
+        serviceName: 'echoRemote'
     }).send('echo::thrift_echo', null, {
         foo: {
             bar: 2,
             baz: 'hi'
         }
-    }, onForwarded)
+    }, onForwarded);
 
     function onForwarded(err, res) {
         assert.ifError(err);

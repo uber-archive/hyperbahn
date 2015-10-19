@@ -83,6 +83,7 @@ TestCluster.test = tapeCluster(tape, TestCluster);
 
 module.exports = TestCluster;
 
+ /*eslint complexity: 13*/
 function TestCluster(opts) {
     if (!(this instanceof TestCluster)) {
         return new TestCluster(opts);
@@ -241,7 +242,6 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     channel.listen(0, '127.0.0.1');
     var serviceSpec = self.remoteSpecs[opts.serviceName];
 
-
     if (serviceSpec) {
         thriftSpec = self.remoteSpecs[opts.serviceName].thriftSpec;
     }
@@ -262,7 +262,7 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
 
     serverChannel = channel.makeSubChannel({
         serviceName: opts.serviceName
-    })
+    });
 
     clientChannel = channel.makeSubChannel({
         serviceName: 'autobahn-client',
@@ -274,21 +274,21 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
                 cn: opts.serviceName
             }
         }
-    })
+    });
 
-    if (thriftSpec){
+    if (thriftSpec) {
         var thriftPath = thriftSpec;
         var thriftSource = fs.readFileSync(thriftPath).toString();
 
         thriftServer = channel.TChannelAsThrift({
             source: thriftSource,
             channel: serverChannel
-        })
+        });
 
         thriftClient = channel.TChannelAsThrift({
             source: thriftSource,
             channel: clientChannel
-        })
+        });
     } else {
         serverChannel.register('echo', echo);
     }
