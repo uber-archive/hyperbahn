@@ -24,6 +24,7 @@
 /* eslint max-statements: [2, 40] */
 var console = require('console');
 var process = require('process');
+var fs = require('fs');
 
 var CountedReadySignal = require('ready-signal/counted');
 var EventEmitter = require('events').EventEmitter;
@@ -94,6 +95,7 @@ function TestCluster(opts) {
     self.size = self.opts.size || 2;
     self.dummySize = self.opts.dummySize || 2;
     self.namedRemotesConfig = self.opts.namedRemotes || [];
+    self.remoteSpecs = self.opts.remoteSpecs || {};
 
     var defaultKValue = self.size <= 20 ?
         Math.floor(self.size / 2) : 10;
@@ -205,8 +207,10 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
         }, remotesDone.signal);
 
         for (i = 0; i < self.namedRemotesConfig.length; i++) {
+            var serviceName = self.namedRemotesConfig[i];
             self.namedRemotes[i] = self.createRemote({
-                serviceName: self.namedRemotesConfig[i],
+                serviceName: serviceName,
+                remoteSpecs: self.remoteSpecs[serviceName],
                 trace: self.opts.trace,
                 traceSample: 1
             }, remotesDone.signal);
@@ -221,6 +225,11 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
 TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     var self = this;
+    var serverChannel;
+    var clientChannel;
+    var thriftServerChannel;
+    var thriftClientChannel;
+
     var channel = TChannel({
         logger: self.logger,
         trace: opts.trace,
@@ -229,6 +238,8 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     self.timers = channel.timers;
     channel.on('listening', onListen);
     channel.listen(0, '127.0.0.1');
+    var thriftSpec = self.remoteSpecs[opts.serviceName];
+    var hyperbahnClient;
 
     if (opts.trace) {
         var tcreporter = TCReporter({
@@ -244,27 +255,49 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
         };
     }
 
-    var remote = {
-        clientChannel: channel.makeSubChannel({
-            serviceName: 'autobahn-client',
-            peers: self.hostPortList,
-            requestDefaults: {
-                hasNoParent: true,
-                headers: {
-                    as: 'raw',
-                    cn: opts.serviceName
-                }
+    serverChannel = channel.makeSubChannel({
+        serviceName: opts.serviceName
+    })
+
+    clientChannel = channel.makeSubChannel({
+        serviceName: 'autobahn-client',
+        peers: self.hostPortList,
+        requestDefaults: {
+            hasNoParent: true,
+            headers: {
+                as: 'raw',
+                cn: opts.serviceName
             }
-        }),
-        serverChannel: channel.makeSubChannel({
-            serviceName: opts.serviceName
-        }),
+        }
+    })
+
+    if (thriftSpec){
+        var thriftPath = thriftSpec;
+        var thriftSource = fs.readFileSync(thriftPath).toString();
+
+        thriftServerChannel = channel.TChannelAsThrift({
+            source: thriftSource,
+            channel: serverChannel
+        })
+
+        thriftClientChannel = channel.TChannelAsThrift({
+            source: thriftSource,
+            channel: clientChannel
+        })
+    } else {
+        serverChannel.register('echo', echo);
+    }
+
+    var remote = {
+        clientChannel: clientChannel,
+        serverChannel: serverChannel,
         channel: channel,
         serviceName: opts.serviceName,
         hostPort: null,
-        destroy: destroy
+        destroy: destroy,
+        thriftServerChannel: thriftServerChannel,
+        thriftClientChannel: thriftClientChannel
     };
-    remote.serverChannel.register('echo', echo);
 
     return remote;
 

@@ -29,15 +29,22 @@ var someSpec = fs.readFileSync(
 var allocCluster = require('../lib/test-cluster.js');
 
 allocCluster.test('register and forward with thrift', {
-    size: 5
+    size: 5,
+    namedRemotes: ['echoRemote'],
+    remoteSpecs: {
+        echoRemote: path.join(__dirname, 'someSpec.thrift')
+    }
 }, function t(cluster, assert) {
     var TChannelAsThrift = cluster.dummies[0].TChannelAsThrift;
+    var echoServerRemote = cluster.namedRemotes[0];
 
     var steve = cluster.remotes.steve;
     var bob = cluster.remotes.bob;
     var tchannelThrift = TChannelAsThrift({
         source: someSpec
     });
+
+    var remoteCalls = 0;
 
     cluster.checkExitPeers(assert, {
         serviceName: steve.serviceName,
@@ -47,6 +54,10 @@ allocCluster.test('register and forward with thrift', {
     tchannelThrift.register(
         steve.serverChannel, 'echo::thrift_echo', {}, echo
     );
+
+    echoServerRemote.thriftServerChannel.register(
+        echoServerRemote.serverChannel, 'echo::thrift_echo', {}, echo
+    )
 
     function echo(ctx, req, arg2, arg3, cb) {
         cb(null, {
@@ -64,6 +75,15 @@ allocCluster.test('register and forward with thrift', {
         }
     }, onForwarded);
 
+    echoServerRemote.thriftClientChannel.request({
+        serviceName: 'echoRemote',
+    }).send('echo::thrift_echo', null, {
+        foo: {
+            bar: 2,
+            baz: 'hi'
+        }
+    }, onForwarded)
+
     function onForwarded(err, res) {
         assert.ifError(err);
 
@@ -74,6 +94,10 @@ allocCluster.test('register and forward with thrift', {
             }
         });
 
-        assert.end();
+        if (remoteCalls < 1) {
+            remoteCalls++;
+        } else {
+            assert.end();
+        }
     }
 });
