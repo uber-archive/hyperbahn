@@ -32,6 +32,9 @@ allocCluster.test('degenerate case for partial affinity', {
     size: 1,
     kValue: 1,
     namedRemotes: ['alice'],
+    whitelist: [
+        ['info', 'Refreshing service peer affinity']
+    ],
     remoteConfig: {
         'partialAffinity.enabled': true
     },
@@ -51,6 +54,9 @@ allocCluster.test('degenerate case for partial affinity', {
 allocCluster.test('few relays, many workers', {
     size: 1,
     kValue: 1,
+    whitelist: [
+        ['info', 'Refreshing service peer affinity']
+    ],
     namedRemotes: ['alice', 'alice', 'alice', 'alice', 'alice'],
     remoteConfig: {
         'partialAffinity.enabled': true
@@ -72,6 +78,9 @@ allocCluster.test('many relays, few workers', {
     size: 20,
     kValue: 20,
     namedRemotes: ['alice'],
+    whitelist: [
+        ['info', 'Refreshing service peer affinity']
+    ],
     remoteConfig: {
         'partialAffinity.enabled': true
     },
@@ -91,6 +100,9 @@ allocCluster.test('many relays, few workers', {
 allocCluster.test('nominal parameters', {
     size: 20,
     kValue: 5,
+    whitelist: [
+        ['info', 'Refreshing service peer affinity']
+    ],
     namedRemotes: ['alice', 'alice', 'alice', 'alice'],
     remoteConfig: {
         'partialAffinity.enabled': true
