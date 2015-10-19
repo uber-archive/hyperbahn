@@ -32,7 +32,9 @@ allocCluster.test('register and forward with thrift', {
     size: 5,
     namedRemotes: ['echoRemote'],
     remoteSpecs: {
-        echoRemote: path.join(__dirname, 'someSpec.thrift')
+        echoRemote: {
+            thriftSpec: path.join(__dirname, 'someSpec.thrift')
+        }
     }
 }, function t(cluster, assert) {
     var TChannelAsThrift = cluster.dummies[0].TChannelAsThrift;
@@ -55,7 +57,7 @@ allocCluster.test('register and forward with thrift', {
         steve.serverChannel, 'echo::thrift_echo', {}, echo
     );
 
-    echoServerRemote.thriftServerChannel.register(
+    echoServerRemote.thriftServer.register(
         echoServerRemote.serverChannel, 'echo::thrift_echo', {}, echo
     )
 
@@ -75,7 +77,7 @@ allocCluster.test('register and forward with thrift', {
         }
     }, onForwarded);
 
-    echoServerRemote.thriftClientChannel.request({
+    echoServerRemote.thriftClient.request({
         serviceName: 'echoRemote',
     }).send('echo::thrift_echo', null, {
         foo: {

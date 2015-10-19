@@ -227,8 +227,9 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     var self = this;
     var serverChannel;
     var clientChannel;
-    var thriftServerChannel;
-    var thriftClientChannel;
+    var thriftServer;
+    var thriftClient;
+    var thriftSpec;
 
     var channel = TChannel({
         logger: self.logger,
@@ -238,8 +239,12 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     self.timers = channel.timers;
     channel.on('listening', onListen);
     channel.listen(0, '127.0.0.1');
-    var thriftSpec = self.remoteSpecs[opts.serviceName];
-    var hyperbahnClient;
+    var serviceSpec = self.remoteSpecs[opts.serviceName];
+
+
+    if (serviceSpec) {
+        thriftSpec = self.remoteSpecs[opts.serviceName].thriftSpec;
+    }
 
     if (opts.trace) {
         var tcreporter = TCReporter({
@@ -275,12 +280,12 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
         var thriftPath = thriftSpec;
         var thriftSource = fs.readFileSync(thriftPath).toString();
 
-        thriftServerChannel = channel.TChannelAsThrift({
+        thriftServer = channel.TChannelAsThrift({
             source: thriftSource,
             channel: serverChannel
         })
 
-        thriftClientChannel = channel.TChannelAsThrift({
+        thriftClient = channel.TChannelAsThrift({
             source: thriftSource,
             channel: clientChannel
         })
@@ -295,8 +300,8 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
         serviceName: opts.serviceName,
         hostPort: null,
         destroy: destroy,
-        thriftServerChannel: thriftServerChannel,
-        thriftClientChannel: thriftClientChannel
+        thriftServer: thriftServer,
+        thriftClient: thriftClient
     };
 
     return remote;
