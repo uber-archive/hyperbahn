@@ -472,8 +472,8 @@ function refreshServicePeer(serviceName, hostPort) {
     self.connectedPeers[hostPort][serviceName] = true;
 };
 
-ServiceDispatchHandler.prototype.refreshServicePeerPartially =
-function refreshServicePeerPartially(serviceName, hostPort) {
+ServiceDispatchHandler.prototype.computePartialRange =
+function computePartialRange(serviceName, hostPort) {
     var self = this;
 
     // Obtain and sort the affine worker and relay lists.
@@ -490,14 +490,14 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     if (relayIndex < 0) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
-        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
-            serviceName: serviceName,
-            relayHostPort: self.channel.hostPort,
-            workerHostPort: hostPort,
+        return {
+            start: -1,
+            stop: -1,
+            relayIndex: relayIndex,
             relays: relays,
-            workers: workers
-        }));
-        return;
+            workers: workers,
+            length: -1
+        };
     }
 
     // Compute the range of workers that this relay should be connected to.
@@ -514,38 +514,62 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     );
     var stop = (start + length) % workers.length;
 
-    self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
-        serviceName: serviceName,
-        serviceHostPort: hostPort,
+    return {
+        start: start,
+        stop: stop,
         relayIndex: relayIndex,
         relays: relays,
         workers: workers,
-        start: start,
-        stop: stop,
         length: length
+    };
+};
+
+ServiceDispatchHandler.prototype.refreshServicePeerPartially =
+function refreshServicePeerPartially(serviceName, hostPort) {
+    var self = this;
+
+    var range = self.computePartialRange(serviceName, hostPort);
+    if (range.length < 0) {
+        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
+            serviceName: serviceName,
+            workerHostPort: hostPort,
+            partialRange: range
+        }));
+        // TODO: upgrade two-in-a-row or more to an error
+        return;
+    }
+
+    self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
+        serviceName: serviceName,
+        serviceHostPort: hostPort,
+        partialRange: range
     }));
 
-    // Open connections to affine peers
-    var index;
-    var peer;
-    if (start <= stop) { // ... start WITHIN stop ...
-        for (index = start; index < stop; index++) {
-            peer = self.getServicePeer(serviceName, workers[index]);
-            peer.connectTo();
-        }
-    } else { // BEFORE stop ... start AFTER
-        for (index = start; index < workers.length; index++) {
-            peer = self.getServicePeer(serviceName, workers[index]);
-            peer.connectTo();
-        }
-        for (index = 0; index < stop; index++) {
-            peer = self.getServicePeer(serviceName, workers[index]);
-            peer.connectTo();
-        }
-    }
+    self.connectToServiceWorkers(serviceName, range.workers, range.start, range.stop);
 
     // TODO Drop peers that no longer have affinity for this service, such
     // that they may be elligible for having their connections reaped.
+};
+
+ServiceDispatchHandler.prototype.connectToServiceWorkers =
+function connectToServiceWorkers(serviceName, workers, start, stop) {
+    var self = this;
+
+    if (start === stop) {
+        // fully connected
+        start = 0;
+        stop = workers.length;
+    } else if (stop < start) {
+        // wrap-around --> complement
+        self.connectToServiceWorkers(serviceName, workers, 0, stop);
+        self.connectToServiceWorkers(serviceName, workers, start, workers.length);
+        return;
+    }
+
+    for (var i = start; i < stop; i++) {
+        var peer = self.getServicePeer(serviceName, workers[i]);
+        peer.connectTo();
+    }
 };
 
 ServiceDispatchHandler.prototype.removeServicePeer =
