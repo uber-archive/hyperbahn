@@ -20,13 +20,21 @@
 
 'use strict';
 
+var CollapsedAssert = require('../lib/collapsed-assert.js');
 var allocCluster = require('../lib/test-cluster.js');
 
 allocCluster.test('forwarding to a down service', {
-    size: 5
+    size: 5,
+    whitelist: [
+        ['info', 'Refreshing service peer affinity']
+    ]
 }, function t(cluster, assert) {
     var bob = cluster.remotes.bob;
     var steve = cluster.remotes.steve;
+
+    cluster.logger.whitelist('info', 'resetting connection');
+    cluster.logger.whitelist('warn', 'error while forwarding');
+    cluster.logger.whitelist('warn', 'forwarding error frame');
 
     cluster.checkExitPeers(assert, {
         serviceName: steve.serviceName,
@@ -41,6 +49,7 @@ allocCluster.test('forwarding to a down service', {
     }).send('hi', null, JSON.stringify(null), onForwarded);
 
     function onForwarded(err, resp, arg2, arg3) {
+        /*eslint complexity: [2, 15], max-statements: [2, 40] */
         assert.ok(err, 'forward call should fail');
 
         assert.equal(err.isErrorFrame, true,
@@ -69,6 +78,46 @@ allocCluster.test('forwarding to a down service', {
             err.message === 'This socket has been ended by the other party',
             'expected error to be a socket closed error'
         );
+
+        var logLines = cluster.logger.items();
+        var cassert = CollapsedAssert();
+        for (var i = 0; i < logLines.length; i++) {
+            var logLine = logLines[i];
+            var logErr = logLine.meta.error;
+            if (logLine.msg === 'error while forwarding') {
+                cassert.equal(logLine.levelName, 'warn');
+                cassert.equal(
+                    logErr.socketRemoteAddr, steve.hostPort,
+                    'expected exception to steve'
+                );
+                cassert.ok(
+                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.connect.ECONNREFUSED' ||
+                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET',
+                    'Expected exception to be network error'
+                );
+            } else if (logLine.msg === 'resetting connection') {
+                cassert.equal(logLine.levelName, 'info');
+                cassert.equal(
+                    logErr.socketRemoteAddr, steve.hostPort,
+                    'expected exception to steve'
+                );
+                cassert.ok(
+                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.connect.ECONNREFUSED' ||
+                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET',
+                    'Expected exception to be network error'
+                );
+            } else if (logLine.msg === 'forwarding error frame') {
+                cassert.equal(logLine.meta.isErrorFrame, true,
+                    'expected error frame');
+                cassert.equal(logLine.meta.serviceName, 'steve',
+                    'expected steve error');
+            } else if (logLine.msg === 'Refreshing service peer affinity') {
+                cassert.ok(true, 'expected peer affinity refresh');
+            } else {
+                cassert.ok(false, 'unexpected log line');
+            }
+        }
+        cassert.report(assert, 'logs should be correct');
 
         assert.end();
     }

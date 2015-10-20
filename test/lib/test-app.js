@@ -160,8 +160,6 @@ function checkExitPeers(assert, opts) {
     nodeAssert(opts && opts.hostPort, 'hostPort required');
 
     var self = this;
-    var peer = self.tchannel.peers.get(opts.hostPort);
-    var peerInfo = peer && getPeerInfo(peer);
 
     // By default we expect all connections to be connected
     var expectedConnectedOut = true;
@@ -170,6 +168,9 @@ function checkExitPeers(assert, opts) {
         opts.disconnectedHostsPorts.indexOf(opts.hostPort) >= 0) {
         expectedConnectedOut = false;
     }
+
+    var peer = self.tchannel.peers.get(opts.hostPort);
+    var peerInfo = peer && getPeerInfo(peer);
 
     if (opts.isDead) {
         assert.equal(
