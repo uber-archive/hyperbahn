@@ -532,7 +532,6 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     if (range.length < 0) {
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
             serviceName: serviceName,
-            relayHostPort: self.channel.hostPort,
             workerHostPort: hostPort,
             partialRange: range
         }));
