@@ -547,20 +547,16 @@ function connectToPartialRange(serviceName, range) {
     var self = this;
 
     // Open connections to affine peers
-    var index;
-    var peer;
     if (range.start <= range.stop) { // ... start WITHIN stop ...
-        for (index = range.start; index < range.stop; index++) {
-            peer = self.getServicePeer(serviceName, range.workers[index]);
-            peer.connectTo();
-        }
+        connectToRange(range.start, range.stop);
     } else { // BEFORE stop ... start AFTER
-        for (index = range.start; index < range.workers.length; index++) {
-            peer = self.getServicePeer(serviceName, range.workers[index]);
-            peer.connectTo();
-        }
-        for (index = 0; index < range.stop; index++) {
-            peer = self.getServicePeer(serviceName, range.workers[index]);
+        connectToRange(range.start, range.workers.length);
+        connectToRange(0, range.stop);
+    }
+
+    function connectToRange(lo, hi) {
+        for (var i = lo; i < hi; i++) {
+            var peer = self.getServicePeer(serviceName, range.workers[i]);
             peer.connectTo();
         }
     }
