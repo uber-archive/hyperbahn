@@ -331,7 +331,10 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
 
     function onRegister(err) {
         if (err) {
-            return self.emit('error', err);
+            self.logger.error('Failed to register to hyperbahn for remote', {
+                error: err
+            });
+            return;
         }
 
         cb();
