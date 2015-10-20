@@ -27,7 +27,7 @@ var parallel = require('run-parallel');
 var CollapsedAssert = require('./lib/collapsed-assert');
 
 var NUM_REMOTES = 5000;
-var BATCH_SIZE = 100;
+var BATCH_SIZE = 50;
 
 allocCluster.test('make sure peer reaper doesnt take too long', {
     size: 10,
@@ -57,7 +57,6 @@ allocCluster.test('make sure peer reaper doesnt take too long', {
         }
 
         if (batch <= 0) {
-            console.log("# finished batch");
             batch = BATCH_SIZE;
             for (i = 0; i < BATCH_SIZE; i++) {
                 remotes.push(cluster.createRemote({
@@ -68,17 +67,28 @@ allocCluster.test('make sure peer reaper doesnt take too long', {
         }
     }
 
+    var apiExitNode = cluster.getExitNodes('api')[0];
+
     function doneCreating() {
         console.log("# done creating remotes");
         cassert.report(assert, 'remote creation successful');
 
-        var apiExitNode = cluster.getExitNodes('api')[0];
-        var start = Date.now();
-        apiExitNode.clients.serviceProxy.reapPeers();
-        apiExitNode.clients.serviceProxy.reapPeers();
-        var end = Date.now();
-        console.log("# done reaping peers", end - start);
+        apiExitNode.clients.serviceProxy.reapPeers(doneFirstReapPeers);
+    }
 
+    var start;
+
+    function doneFirstReapPeers() {
+        start = Date.now();
+        apiExitNode.clients.serviceProxy.reapPeers(doneSecondReapPeers);
+
+        var time = Date.now() - start;
+        console.log("# after reap peers", time);
+
+        assert.ok(time < 10, 'reap peers stalls proc for less than 10ms');
+    }
+
+    function doneSecondReapPeers() {
         finish();
     }
 
@@ -86,6 +96,7 @@ allocCluster.test('make sure peer reaper doesnt take too long', {
         for (i = 0; i < remotes.length; i++) {
             remotes[i].destroy();
         }
+        console.log("done destroying remotes");
         assert.end();
     }
 });

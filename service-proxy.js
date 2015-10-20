@@ -849,7 +849,7 @@ function requestReapPeers() {
 };
 
 ServiceDispatchHandler.prototype.reapPeers =
-function reapPeers() {
+function reapPeers(callback) {
     var self = this;
     self.reapPeersTimer = null;
 
@@ -857,40 +857,84 @@ function reapPeers() {
     var j;
 
     var peersToReap = Object.keys(self.peersToReap);
+    var numPeersToReap = peersToReap.length;
+
+    if (numPeersToReap === 0) {
+        return finish();
+    }
 
     self.logger.info('reaping dead peers', self.extendLogInfo({
         numPeersToReap: peersToReap.length
     }));
 
     for (i = 0; i < peersToReap.length; i++) {
-        var hostPort = peersToReap[i];
-        var peer = self.channel.peers.get(hostPort);
-        if (!peer) {
-            continue;
-        }
-
-        for (j = 0; j < peer.connections.length; j++) {
-            var connection = peer.connections[j];
-            connection.drain('reaped for expired advertisement');
-        }
-
-        var serviceNames = Object.keys(self.peersToReap[hostPort]);
-        for (j = 0; j < serviceNames.length; j++) {
-            var serviceName = serviceNames[j];
-            var svcchan = self.getServiceChannel(serviceName);
-            if (!svcchan) {
-                continue;
-            }
-            svcchan.peers.delete(hostPort);
-        }
-
-        self.channel.peers.delete(hostPort);
+        self.nextTickReapSinglePeer(peersToReap[i], peerDone);
     }
 
-    self.peersToReap = self.connectedPeers;
-    self.connectedPeers = Object.create(null);
+    function peerDone() {
+        numPeersToReap--;
+        if (numPeersToReap <= 0) {
+            if (numPeersToReap < 0) {
+                self.logger.error('reaped too many peers', self.extendLogInfo({
+                    numPeersToReap: numPeersToReap
+                }));
+            } else {
+                finish();
+            }
+        }
+    }
 
-    self.requestReapPeers();
+    function finish() {
+        self.peersToReap = self.connectedPeers;
+        self.connectedPeers = Object.create(null);
+
+        self.requestReapPeers();
+
+        if (callback) {
+            callback();
+        }
+    }
+};
+
+ServiceDispatchHandler.prototype.nextTickReapSinglePeer =
+function nextTickReapSinglePeer(hostPort, callback) {
+    var self = this;
+
+    process.nextTick(nextTick);
+
+    function nextTick() {
+        self.reapSinglePeer(hostPort);
+        callback();
+    }
+}
+
+ServiceDispatchHandler.prototype.reapSinglePeer =
+function reapSinglePeer(hostPort) {
+    var self = this;
+
+    var j;
+
+    var peer = self.channel.peers.get(hostPort);
+    if (!peer) {
+        return;
+    }
+
+    for (j = 0; j < peer.connections.length; j++) {
+        var connection = peer.connections[j];
+        connection.drain('reaped for expired advertisement');
+    }
+
+    var serviceNames = Object.keys(self.peersToReap[hostPort]);
+    for (j = 0; j < serviceNames.length; j++) {
+        var serviceName = serviceNames[j];
+        var svcchan = self.getServiceChannel(serviceName);
+        if (!svcchan) {
+            return;
+        }
+        svcchan.peers.delete(hostPort);
+    }
+
+    self.channel.peers.delete(hostPort);
 };
 
 ServiceDispatchHandler.prototype.emitPeriodicServiceStats =
