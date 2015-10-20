@@ -536,6 +536,16 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         partialRange: range
     }));
 
+    self.connectToPartialRange(serviceName, range);
+
+    // TODO Drop peers that no longer have affinity for this service, such
+    // that they may be elligible for having their connections reaped.
+};
+
+ServiceDispatchHandler.prototype.connectToPartialRange =
+function connectToPartialRange(serviceName, range) {
+    var self = this;
+
     // Open connections to affine peers
     var index;
     var peer;
@@ -554,9 +564,6 @@ function refreshServicePeerPartially(serviceName, hostPort) {
             peer.connectTo();
         }
     }
-
-    // TODO Drop peers that no longer have affinity for this service, such
-    // that they may be elligible for having their connections reaped.
 };
 
 ServiceDispatchHandler.prototype.removeServicePeer =
