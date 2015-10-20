@@ -490,14 +490,14 @@ function computePartialRange(serviceName, hostPort) {
     if (relayIndex < 0) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
-        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
-            serviceName: serviceName,
-            relayHostPort: self.channel.hostPort,
-            workerHostPort: hostPort,
+        return {
+            start: -1,
+            stop: -1,
+            relayIndex: relayIndex,
             relays: relays,
-            workers: workers
-        }));
-        return null;
+            workers: workers,
+            length: -1
+        };
     }
 
     // Compute the range of workers that this relay should be connected to.
@@ -529,6 +529,16 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     var self = this;
 
     var range = self.computePartialRange(serviceName, hostPort);
+    if (range.length < 0) {
+        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
+            serviceName: serviceName,
+            relayHostPort: self.channel.hostPort,
+            workerHostPort: hostPort,
+            partialRange: range
+        }));
+        // TODO: upgrade two-in-a-row or more to an error
+        return;
+    }
 
     self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
         serviceName: serviceName,
