@@ -96,7 +96,7 @@ function TestCluster(opts) {
     self.size = self.opts.size || 2;
     self.dummySize = self.opts.dummySize || 2;
     self.namedRemotesConfig = self.opts.namedRemotes || [];
-    self.remoteSpecs = self.opts.remoteSpecs || {};
+    self.remotesConfig = self.opts.remotes || {};
 
     var defaultKValue = self.size <= 20 ?
         Math.floor(self.size / 2) : 10;
@@ -211,7 +211,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
             var serviceName = self.namedRemotesConfig[i];
             self.namedRemotes[i] = self.createRemote({
                 serviceName: serviceName,
-                remoteSpecs: self.remoteSpecs[serviceName],
+                remotesConfig: self.remotesConfig[serviceName],
                 trace: self.opts.trace,
                 traceSample: 1
             }, remotesDone.signal);
@@ -240,10 +240,10 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     self.timers = channel.timers;
     channel.on('listening', onListen);
     channel.listen(0, '127.0.0.1');
-    var serviceSpec = self.remoteSpecs[opts.serviceName];
+    var serviceConfig = self.remotesConfig[opts.serviceName];
 
-    if (serviceSpec) {
-        thriftSpec = self.remoteSpecs[opts.serviceName].thriftSpec;
+    if (serviceConfig) {
+        thriftSpec = serviceConfig.thriftSpec;
     }
 
     if (opts.trace) {

@@ -31,7 +31,7 @@ var allocCluster = require('../lib/test-cluster.js');
 allocCluster.test('register and forward with thrift', {
     size: 5,
     namedRemotes: ['echoRemote'],
-    remoteSpecs: {
+    remotes: {
         echoRemote: {
             thriftSpec: path.join(__dirname, 'someSpec.thrift')
         }
