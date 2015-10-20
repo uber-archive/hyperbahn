@@ -24,6 +24,7 @@
 /* eslint max-statements: [2, 40] */
 var console = require('console');
 var process = require('process');
+var fs = require('fs');
 
 var CountedReadySignal = require('ready-signal/counted');
 var EventEmitter = require('events').EventEmitter;
@@ -82,6 +83,7 @@ TestCluster.test = tapeCluster(tape, TestCluster);
 
 module.exports = TestCluster;
 
+ /*eslint complexity: 13*/
 function TestCluster(opts) {
     if (!(this instanceof TestCluster)) {
         return new TestCluster(opts);
@@ -94,6 +96,7 @@ function TestCluster(opts) {
     self.size = self.opts.size || 2;
     self.dummySize = self.opts.dummySize || 2;
     self.namedRemotesConfig = self.opts.namedRemotes || [];
+    self.remotesConfig = self.opts.remotes || {};
 
     var defaultKValue = self.size <= 20 ?
         Math.floor(self.size / 2) : 10;
@@ -205,8 +208,10 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
         }, remotesDone.signal);
 
         for (i = 0; i < self.namedRemotesConfig.length; i++) {
+            var serviceName = self.namedRemotesConfig[i];
             self.namedRemotes[i] = self.createRemote({
-                serviceName: self.namedRemotesConfig[i],
+                serviceName: serviceName,
+                remotesConfig: self.remotesConfig[serviceName],
                 trace: self.opts.trace,
                 traceSample: 1
             }, remotesDone.signal);
@@ -221,6 +226,12 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
 TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     var self = this;
+    var serverChannel;
+    var clientChannel;
+    var thriftServer;
+    var thriftClient;
+    var thriftSpec;
+
     var channel = TChannel({
         logger: self.logger,
         trace: opts.trace,
@@ -229,6 +240,11 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     self.timers = channel.timers;
     channel.on('listening', onListen);
     channel.listen(0, '127.0.0.1');
+    var serviceConfig = self.remotesConfig[opts.serviceName];
+
+    if (serviceConfig) {
+        thriftSpec = serviceConfig.thriftSpec;
+    }
 
     if (opts.trace) {
         var tcreporter = TCReporter({
@@ -244,27 +260,49 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
         };
     }
 
-    var remote = {
-        clientChannel: channel.makeSubChannel({
-            serviceName: 'autobahn-client',
-            peers: self.hostPortList,
-            requestDefaults: {
-                hasNoParent: true,
-                headers: {
-                    as: 'raw',
-                    cn: opts.serviceName
-                }
+    serverChannel = channel.makeSubChannel({
+        serviceName: opts.serviceName
+    });
+
+    clientChannel = channel.makeSubChannel({
+        serviceName: 'autobahn-client',
+        peers: self.hostPortList,
+        requestDefaults: {
+            hasNoParent: true,
+            headers: {
+                as: 'raw',
+                cn: opts.serviceName
             }
-        }),
-        serverChannel: channel.makeSubChannel({
-            serviceName: opts.serviceName
-        }),
+        }
+    });
+
+    if (thriftSpec) {
+        var thriftPath = thriftSpec;
+        var thriftSource = fs.readFileSync(thriftPath).toString();
+
+        thriftServer = channel.TChannelAsThrift({
+            source: thriftSource,
+            channel: serverChannel
+        });
+
+        thriftClient = channel.TChannelAsThrift({
+            source: thriftSource,
+            channel: clientChannel
+        });
+    } else {
+        serverChannel.register('echo', echo);
+    }
+
+    var remote = {
+        clientChannel: clientChannel,
+        serverChannel: serverChannel,
         channel: channel,
         serviceName: opts.serviceName,
         hostPort: null,
-        destroy: destroy
+        destroy: destroy,
+        thriftServer: thriftServer,
+        thriftClient: thriftClient
     };
-    remote.serverChannel.register('echo', echo);
 
     return remote;
 
