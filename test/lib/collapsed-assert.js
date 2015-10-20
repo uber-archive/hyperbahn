@@ -36,6 +36,16 @@ function CollapsedAssert() {
     self._failed = false;
 }
 
+CollapsedAssert.prototype.ifError = function ifError(err, msg, extra) {
+    var self = this;
+
+    if (err) {
+        self._failed = true;
+    }
+
+    self._commands.push(['ifError', err, msg, extra]);
+};
+
 CollapsedAssert.prototype.equal = function equal(a, b, msg, extra) {
     var self = this;
 
