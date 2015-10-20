@@ -536,31 +536,30 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         partialRange: range
     }));
 
-    self.connectToPartialRange(serviceName, range);
+    self.connectToServiceWorkers(serviceName, range.workers, range.start, range.stop);
 
     // TODO Drop peers that no longer have affinity for this service, such
     // that they may be elligible for having their connections reaped.
 };
 
-ServiceDispatchHandler.prototype.connectToPartialRange =
-function connectToPartialRange(serviceName, range) {
+ServiceDispatchHandler.prototype.connectToServiceWorkers =
+function connectToServiceWorkers(serviceName, workers, start, stop) {
     var self = this;
 
-    if (range.start === range.stop) {
+    if (start === stop) {
         // fully connected
-        connectToRange(0, range.workers.length);
-    } else if (range.start < range.stop) {
-        connectToRange(range.start, range.stop);
-    } else { // if (range.stop < range.start) by elimination
-        connectToRange(0, range.stop);
-        connectToRange(range.start, range.workers.length);
+        start = 0;
+        stop = workers.length;
+    } else if (stop < start) {
+        // wrap-around --> complement
+        self.connectToServiceWorkers(serviceName, workers, 0, stop);
+        self.connectToServiceWorkers(serviceName, workers, start, workers.length);
+        return;
     }
 
-    function connectToRange(lo, hi) {
-        for (var i = lo; i < hi; i++) {
-            var peer = self.getServicePeer(serviceName, range.workers[i]);
-            peer.connectTo();
-        }
+    for (var i = start; i < stop; i++) {
+        var peer = self.getServicePeer(serviceName, workers[i]);
+        peer.connectTo();
     }
 };
 
