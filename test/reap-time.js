@@ -20,10 +20,10 @@
 
 'use strict';
 
-var setTimeout = require('timers').setTimeout;
+/* global console */
+/* eslint-disable no-console */
 
 var allocCluster = require('./lib/test-cluster.js');
-var parallel = require('run-parallel');
 var CollapsedAssert = require('./lib/collapsed-assert');
 
 var NUM_REMOTES = 5000;
@@ -70,7 +70,7 @@ allocCluster.test('make sure peer reaper doesnt take too long', {
     var apiExitNode = cluster.getExitNodes('api')[0];
 
     function doneCreating() {
-        console.log("# done creating remotes");
+        console.log('# done creating remotes');
         cassert.report(assert, 'remote creation successful');
 
         apiExitNode.clients.serviceProxy.reapPeers(doneFirstReapPeers);
@@ -83,7 +83,7 @@ allocCluster.test('make sure peer reaper doesnt take too long', {
         apiExitNode.clients.serviceProxy.reapPeers(doneSecondReapPeers);
 
         var time = Date.now() - start;
-        console.log("# after reap peers", time);
+        console.log('# after reap peers', time);
 
         assert.ok(time < 10, 'reap peers stalls proc for less than 10ms');
     }
@@ -96,7 +96,7 @@ allocCluster.test('make sure peer reaper doesnt take too long', {
         for (i = 0; i < remotes.length; i++) {
             remotes[i].destroy();
         }
-        console.log("done destroying remotes");
+        console.log('# done destroying remotes');
         assert.end();
     }
 });
