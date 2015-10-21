@@ -1,34 +1,16 @@
 #!/usr/bin/env bash
 set -e
-# set -x
 
-# Detect which `ls` flavor is in use
-if ls --color > /dev/null 2>&1; then
-    COLORFLAG="--color=never"
-else
-    COLORFLAG=""
-fi
-
-FILES=$(
-    ls $COLORFLAG test/**/*.js test/*.js | \
-    sed "s/test\//.\//g" | \
-    grep -v 'lib' | \
-    grep -v 'constant-low-volume' | \
-    grep -v './index.js'
-)
-
-# echo $FILES
-
-for FILE in $FILES; do
-    # echo $FILE
-
-    set +e
-    WORD=$(git grep "require.*$FILE" | grep 'test/index')
-    EXIT_CODE="$?"
-    set -e
-
-    if [ "$EXIT_CODE" != "0" ]; then
-        echo "Could not find $FILE";
+find test \
+    -name '*.js' \
+    -not -path 'test/lib/*' \
+    -not -path 'test/time-series/constant-low-volume*' \
+    -not -path 'test/todo.js' \
+    -not -path 'test/index.js' \
+    -not -path 'test/reap-time.js' |
+while read FILE; do
+    if ! git grep -l "require.*\./${FILE#*/}" | grep -q 'test/index' ; then
+        echo "Could not find $FILE" >&2
         exit 1
     fi
 done
