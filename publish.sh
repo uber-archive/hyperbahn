@@ -33,6 +33,6 @@ npm version "$1"
 git push origin master --tags
 
 git archive --prefix=package/ --format tgz master >package.tgz
-${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-latest}"
+${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
 rm package.tgz
 npm cache clean hyperbahn
