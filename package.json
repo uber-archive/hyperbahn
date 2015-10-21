@@ -80,8 +80,7 @@
     "view-cover": "opn ./coverage/index.html"
   },
   "engines": {
-    "node": "0.10.x",
-    "npm": "1.4.3"
+    "node": "0.10.x"
   },
   "standard": {
     "ignore": [
