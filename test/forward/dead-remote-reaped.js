@@ -74,12 +74,26 @@ allocCluster.test('dead exit peers get reaped', {
             return;
         }
 
+        var todo = cluster.apps.length;
+
         // Reap peers
         for (i = 0; i < cluster.apps.length; i++) {
             app = cluster.apps[i];
             serviceProxy = app.clients.serviceProxy;
-            serviceProxy.reapPeers();
+            serviceProxy.reapPeers(doneReapPeers);
         }
+
+        function doneReapPeers() {
+            todo--;
+            if (todo <= 0) {
+                assert.ok(todo === 0);
+
+                afterReapPeers();
+            }
+        }
+    }
+
+    function afterReapPeers() {
 
         // Some of the peers remain
         for (i = 0; i < activeNum; i++) {
