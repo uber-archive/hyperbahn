@@ -83,11 +83,6 @@ require('./hyperbahn-client/rate-limiter.js')(TestCluster);
 require('./hyperbahn-client/rate-limiter-lazy.js')(TestCluster);
 require('./hyperbahn-client/advertise-with-purge-interval.js')(TestCluster);
 
-require('./larch/errors.js');
-require('./larch/larch.js');
-require('./larch/reservoir-backend.js');
-require('./larch/level-router-backend.js');
-
 require('./register/to-connected-node.js');
 require('./register/with-ringpop-divergence.js');
 require('./register/happy-path.js');

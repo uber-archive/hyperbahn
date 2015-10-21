@@ -24,11 +24,11 @@ var os = require('os');
 var Logger = require('logtron');
 var process = require('process');
 
-var LarchLogger = require('../lib/larch/larch');
-var LogtronBackend = require('../lib/larch/logtron-backend');
-var ReservoirBackend = require('../lib/larch/reservoir-backend');
-var LevelRouterBackend = require('../lib/larch/level-router-backend');
-var DropBackend = require('../lib/larch/drop-backend');
+var LarchLogger = require('larch/larch');
+var LogtronBackend = require('larch/logtron-backend');
+var ReservoirBackend = require('larch/reservoir-backend');
+var LevelRouterBackend = require('larch/level-router-backend');
+var DropBackend = require('larch/drop-backend');
 
 var Levels = {
     TRACE: 10,
