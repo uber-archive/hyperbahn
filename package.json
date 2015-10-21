@@ -43,7 +43,6 @@
     "tchannel": "3.5.18",
     "uber-statsd-client": "1.4.0",
     "uncaught-exception": "5.0.0",
-    "uuid": "2.0.1",
     "xtend": "4.0.0"
   },
   "devDependencies": {
