@@ -20,6 +20,8 @@
 
 'use strict';
 
+/* global setImmediate */
+
 var assert = require('assert');
 var Buffer = require('buffer').Buffer;
 var RelayHandler = require('tchannel/relay_handler');
@@ -853,34 +855,29 @@ function reapPeers(callback) {
     var self = this;
     self.reapPeersTimer = null;
 
-    var i;
-    var j;
-
     var peersToReap = Object.keys(self.peersToReap);
-    var numPeersToReap = peersToReap.length;
 
-    if (numPeersToReap === 0) {
-        return finish();
+    if (peersToReap.length === 0) {
+        finish();
+        return;
     }
 
     self.logger.info('reaping dead peers', self.extendLogInfo({
         numPeersToReap: peersToReap.length
     }));
 
-    for (i = 0; i < peersToReap.length; i++) {
-        self.nextTickReapSinglePeer(peersToReap[i], peerDone);
-    }
+    nextPeer(0, finish);
 
-    function peerDone() {
-        numPeersToReap--;
-        if (numPeersToReap <= 0) {
-            if (numPeersToReap < 0) {
-                self.logger.error('reaped too many peers', self.extendLogInfo({
-                    numPeersToReap: numPeersToReap
-                }));
-            } else {
-                finish();
-            }
+    function nextPeer(i, done) {
+        if (i >= peersToReap.length) {
+            finish();
+            return;
+        }
+        self.reapSinglePeer(peersToReap[i]);
+        setImmediate(deferNextPeer);
+
+        function deferNextPeer() {
+            nextPeer(i + 1, done);
         }
     }
 
@@ -895,18 +892,6 @@ function reapPeers(callback) {
         }
     }
 };
-
-ServiceDispatchHandler.prototype.nextTickReapSinglePeer =
-function nextTickReapSinglePeer(hostPort, callback) {
-    var self = this;
-
-    process.nextTick(nextTick);
-
-    function nextTick() {
-        self.reapSinglePeer(hostPort);
-        callback();
-    }
-}
 
 ServiceDispatchHandler.prototype.reapSinglePeer =
 function reapSinglePeer(hostPort) {
