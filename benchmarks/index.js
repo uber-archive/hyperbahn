@@ -98,8 +98,12 @@ HyperbahnBenchmarkRunner.prototype.close = function close() {
 
     BenchmarkRunner.prototype.close.call(self);
 
-    self.sentry.close();
-    self.kafka.close();
+    if (self.sentry) {
+        self.sentry.close();
+    }
+    if (self.kafka) {
+        self.kafka.close();
+    }
 };
 
 if (require.main === module) {
