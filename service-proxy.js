@@ -472,9 +472,7 @@ function refreshServicePeer(serviceName, hostPort) {
     // The old way: fully connect every egress to all affine peers.
     self.addPeerIndex(serviceName, hostPort);
     var peer = self.getServicePeer(serviceName, hostPort);
-    if (!peer.isConnected('out')) {
-        peer.connectTo();
-    }
+    self.ensurePeerConnected(peer, 'service peer refresh');
 };
 
 ServiceDispatchHandler.prototype.addPeerIndex =
@@ -492,6 +490,15 @@ function deletePeerIndex(serviceName, hostPort) {
     var self = this;
 
     deleteIndexEntry(self.knownPeers, hostPort, serviceName);
+};
+
+ServiceDispatchHandler.prototype.ensurePeerConnected =
+function ensurePeerConnected(peer, reason) {
+    if (peer.isConnected('out')) {
+        return;
+    }
+
+    peer.connectTo();
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
@@ -600,9 +607,7 @@ function refreshServicePeerPartially(serviceName, hostPort) {
 
     for (var i = 0; i < range.affineWorkers.length; i++) {
         peer = self._getServicePeer(chan, range.affineWorkers[i]);
-        if (!peer.isConnected('out')) {
-            peer.connectTo();
-        }
+        self.ensurePeerConnected(peer, 'service peer affinity refresh');
     }
 
     // TODO Drop peers that no longer have affinity for this service, such
