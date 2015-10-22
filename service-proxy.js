@@ -881,7 +881,11 @@ function requestReapPeers() {
 ServiceDispatchHandler.prototype.reapPeers =
 function reapPeers(callback) {
     var self = this;
-    self.reapPeersTimer = null;
+
+    if (self.reapPeersTimer) {
+        self.channel.timers.clearTimeout(self.reapPeersTimer);
+        self.reapPeersTimer = null;
+    }
 
     var peersToReap = Object.keys(self.peersToReap);
 
