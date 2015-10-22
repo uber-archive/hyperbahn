@@ -21,6 +21,7 @@
 'use strict';
 
 /* global setImmediate */
+/* eslint-disable max-statements */
 
 var assert = require('assert');
 var Buffer = require('buffer').Buffer;
@@ -47,7 +48,6 @@ var RATE_LIMIT_KILLSWITCH = 'killswitch';
 
 var CN_HEADER_BUFFER = new Buffer('cn');
 
-/* eslint max-statements: [2, 40] */
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
         return new ServiceDispatchHandler(options);
