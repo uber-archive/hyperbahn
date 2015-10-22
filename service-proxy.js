@@ -933,20 +933,13 @@ function reapSinglePeer(hostPort) {
         return;
     }
 
-    var j;
-
     var peer = self.channel.peers.get(hostPort);
     if (!peer) {
         return;
     }
 
-    for (j = 0; j < peer.connections.length; j++) {
-        var connection = peer.connections[j];
-        connection.drain('reaped for expired advertisement');
-    }
-
     var serviceNames = Object.keys(self.peersToReap[hostPort]);
-    for (j = 0; j < serviceNames.length; j++) {
+    for (var j = 0; j < serviceNames.length; j++) {
         var serviceName = serviceNames[j];
         var svcchan = self.getServiceChannel(serviceName);
         if (!svcchan) {
@@ -956,7 +949,44 @@ function reapSinglePeer(hostPort) {
         self.deletePeerIndex(serviceName, hostPort);
     }
 
-    self.channel.peers.delete(hostPort);
+    // TODO: info log/stat
+
+    peer.drain({
+        reason: 'reaped for expired advertisement',
+        direction: 'both',
+        timeout: self.drainTimeout
+    }, disconnectDrainDone);
+
+    function disconnectDrainDone(err) {
+        if (err &&
+            err.type === 'tchannel.drain.peer.timed-out') {
+            // TODO: stat?
+            self.logger.warn('forcibly closing reaped peer', self.extendLogInfo({
+                timeout: err.timeout,
+                elapsed: err.elapsed
+            }));
+            err = null;
+        }
+        thenCloseIt(err);
+    }
+
+    function thenCloseIt(err) {
+        if (err) {
+            self.logger.warn('error draining reaped peer, force closing', self.extendLogInfo({
+                error: err
+            }));
+        }
+        peer.close(thenDeleteIt);
+    }
+
+    function thenDeleteIt(err) {
+        if (err) {
+            self.logger.warn('error closing reaped peer, deleting it anyhow', self.extendLogInfo({
+                error: err
+            }));
+        }
+        self.channel.peers.delete(hostPort);
+    }
 };
 
 ServiceDispatchHandler.prototype.emitPeriodicServiceStats =
