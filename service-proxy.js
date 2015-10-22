@@ -849,23 +849,9 @@ function requestReapPeers() {
         return;
     }
 
-    if (self.reapPeersTimer) {
-        self.logger.info('not setting peer reap timer', self.extendLogInfo({
-            reason: 'timer already set'
-        }));
+    if (self.reapPeersTimer || self.reapPeersPeriod === 0) {
         return;
     }
-
-    if (self.reapPeersPeriod === 0) {
-        self.logger.info('not setting peer reap timer', self.extendLogInfo({
-            reason: 'disabled'
-        }));
-        return;
-    }
-
-    self.logger.info('setting peer reap timer', self.extendLogInfo({
-        period: self.reapPeersPeriod
-    }));
 
     self.reapPeersTimer = self.channel.timers.setTimeout(self.boundReapPeers, self.reapPeersPeriod);
 };
