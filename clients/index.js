@@ -340,6 +340,7 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateExemptServices();
     self.updateRpsLimitForServiceName();
     self.updateKValues();
+    self.updateKillSwitches();
     self.updateReservoir();
     self.updateReapPeersPeriod();
     self.updatePartialAffinityEnabled();
@@ -439,5 +440,19 @@ ApplicationClients.prototype.updateKValues = function updateKValues() {
         var kValue = serviceKValues[serviceName];
         self.egressNodes.setKValueFor(serviceName, kValue);
         self.serviceProxy.updateServiceChannels();
+    }
+};
+
+ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches() {
+    var self = this;
+    self.serviceProxy.unblockAllRemoteConfig();
+    var killSwitches = self.remoteConfig.get('killSwitch', []);
+
+    for (var i = 0; i < killSwitches.length; i++) {
+        var value = killSwitches[i];
+        var edge = value.split('~~');
+        if (edge.length === 2 && value !== '*~~*') {
+            self.serviceProxy.blockRemoteConfig(edge[0], edge[1]);
+        }
     }
 };
