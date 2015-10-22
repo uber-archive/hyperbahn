@@ -418,11 +418,11 @@ ServiceDispatchHandler.prototype.purgeServices =
 function purgeServices() {
     var self = this;
 
-    var time = self.channel.timers.now();
+    var now = self.channel.timers.now();
     var keys = Object.keys(self.exitServices);
     for (var i = 0; i < keys.length; i++) {
         var serviceName = keys[i];
-        if (time - self.exitServices[serviceName] > self.servicePurgePeriod) {
+        if (now - self.exitServices[serviceName] > self.servicePurgePeriod) {
             delete self.exitServices[serviceName];
             var chan = self.channel.subChannels[serviceName];
             if (chan) {
@@ -455,6 +455,8 @@ function refreshServicePeer(serviceName, hostPort) {
         return;
     }
 
+    var now = self.channel.timers.now();
+
     // Create a peer for the worker.
     // This is necessary for populating the worker pool regardless of whether
     // we connect.
@@ -464,8 +466,7 @@ function refreshServicePeer(serviceName, hostPort) {
     var peer = self.getServicePeer(serviceName, hostPort);
 
     // Reset the expiration time for this service peer
-    var time = self.channel.timers.now();
-    self.exitServices[serviceName] = time;
+    self.exitServices[serviceName] = now;
 
     if (self.partialAffinityEnabled) {
         self.refreshServicePeerPartially(serviceName, hostPort);
