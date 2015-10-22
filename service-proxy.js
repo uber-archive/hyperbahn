@@ -939,8 +939,8 @@ function reapSinglePeer(hostPort) {
     }
 
     var serviceNames = Object.keys(self.peersToReap[hostPort]);
-    for (var j = 0; j < serviceNames.length; j++) {
-        var serviceName = serviceNames[j];
+    for (var i = 0; i < serviceNames.length; i++) {
+        var serviceName = serviceNames[i];
         var svcchan = self.getServiceChannel(serviceName);
         if (!svcchan) {
             return;
