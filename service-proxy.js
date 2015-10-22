@@ -99,16 +99,16 @@ function ServiceDispatchHandler(options) {
 
     /* service peer state data structures
      *
-     * serviceName    :: string
-     * hostPort       :: string
-     * lastRefresh    :: number // timestamp
-     * exitServices   :: Map<serviceName, lastRefresh>
-     * peersToReap    :: Map<hostPort, bool>
-     * connectedPeers :: Map<hostPort, bool>
+     * serviceName  :: string
+     * hostPort     :: string
+     * lastRefresh  :: number // timestamp
+     * exitServices :: Map<serviceName, lastRefresh>
+     * peersToReap  :: Map<hostPort, bool>
+     * knownPeers   :: Map<hostPort, bool>
      */
     self.exitServices = Object.create(null);
     self.peersToReap = Object.create(null);
-    self.connectedPeers = Object.create(null);
+    self.knownPeers = Object.create(null);
 
     self.reapPeersTimer = null;
     self.reapPeersPeriod = options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD;
@@ -478,10 +478,10 @@ function refreshServicePeer(serviceName, hostPort) {
     // Unmark recently seen peers, so they don't get reaped
     delete self.peersToReap[hostPort];
     // Mark known peers, so they are candidates for future reaping
-    if (!self.connectedPeers[hostPort]) {
-        self.connectedPeers[hostPort] = Object.create(null);
+    if (!self.knownPeers[hostPort]) {
+        self.knownPeers[hostPort] = Object.create(null);
     }
-    self.connectedPeers[hostPort][serviceName] = true;
+    self.knownPeers[hostPort][serviceName] = true;
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
@@ -898,8 +898,8 @@ function reapPeers(callback) {
     }
 
     function finish() {
-        self.peersToReap = self.connectedPeers;
-        self.connectedPeers = Object.create(null);
+        self.peersToReap = self.knownPeers;
+        self.knownPeers = Object.create(null);
 
         self.requestReapPeers();
 
