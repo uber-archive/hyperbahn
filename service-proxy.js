@@ -103,8 +103,8 @@ function ServiceDispatchHandler(options) {
      * hostPort     :: string
      * lastRefresh  :: number // timestamp
      * exitServices :: Map<serviceName, lastRefresh>
-     * peersToReap  :: Map<hostPort, bool>
-     * knownPeers   :: Map<hostPort, bool>
+     * peersToReap  :: Map<hostPort, lastRefresh>
+     * knownPeers   :: Map<hostPort, lastRefresh>
      */
     self.exitServices = Object.create(null);
     self.peersToReap = Object.create(null);
@@ -465,24 +465,24 @@ function refreshServicePeer(serviceName, hostPort) {
     self.exitServices[serviceName] = now;
 
     if (self.partialAffinityEnabled) {
-        self.refreshServicePeerPartially(serviceName, hostPort);
+        self.refreshServicePeerPartially(serviceName, hostPort, now);
         return;
     }
 
     // The old way: fully connect every egress to all affine peers.
-    self.addPeerIndex(serviceName, hostPort);
+    self.addPeerIndex(serviceName, hostPort, now);
     var peer = self.getServicePeer(serviceName, hostPort);
     self.ensurePeerConnected(peer, 'service peer refresh');
 };
 
 ServiceDispatchHandler.prototype.addPeerIndex =
-function addPeerIndex(serviceName, hostPort) {
+function addPeerIndex(serviceName, hostPort, now) {
     var self = this;
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
     // Mark known peers, so they are candidates for future reaping
-    addIndexEntry(self.knownPeers, hostPort, serviceName, true);
+    addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 };
 
 ServiceDispatchHandler.prototype.deletePeerIndex =
@@ -564,7 +564,7 @@ function computePartialRange(serviceName, hostPort) {
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeerPartially =
-function refreshServicePeerPartially(serviceName, hostPort) {
+function refreshServicePeerPartially(serviceName, hostPort, now) {
     var self = this;
 
     // guaranteed non-null by refreshServicePeer above; we call this only so
@@ -612,7 +612,7 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         toConnect: toConnect
     }));
 
-    self.addPeerIndex(serviceName, hostPort);
+    self.addPeerIndex(serviceName, hostPort, now);
     self._getServicePeer(chan, hostPort);
 
     for (i = 0; i < toConnect.length; i++) {
