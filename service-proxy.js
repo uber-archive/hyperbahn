@@ -635,7 +635,65 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
         peer.clearDrain('canceled to ensure peer connection');
     }
 
-    peer.connectTo();
+    peer.waitForIdentified(peer.connectTo(), onConnIded);
+
+    function onConnIded(err) {
+        if (err) {
+            self.logger.warn(
+                'failed to ensure outgoing connection to service peer',
+                self.extendLogInfo({
+                    error: err,
+                    peerHostPort: peer.hostPort,
+                    refreshReason: reason
+                }));
+            return;
+        }
+        peer.drain({
+            reason: reason,
+            direction: 'in',
+            timeout: self.drainTimeout
+        }, connectDrainDone);
+    }
+
+    function connectDrainDone(err) {
+        if (err &&
+            err.type === 'tchannel.drain.peer.timed-out') {
+            // TODO: stat?
+            self.logger.warn(
+                'forcibly closing drained peer',
+                self.extendLogInfo({
+                    error: err,
+                    drainReason: reason
+                })
+            );
+            err = null;
+        }
+        if (err) {
+            self.logger.warn(
+                'failed to drain incoming connections from service peer',
+                self.extendLogInfo({
+                    error: err,
+                    peerHostPort: peer.hostPort
+                })
+            );
+            peer.clearDrain();
+            return;
+        }
+        peer.closeDrainedConnections(connectDrainCloseDone);
+    }
+
+    function connectDrainCloseDone(err) {
+        if (err) {
+            self.logger.warn(
+                'failed to close drained incoming connections from service peer',
+                self.extendLogInfo({
+                    error: err,
+                    peerHostPort: peer.hostPort
+                })
+            );
+        }
+        peer.clearDrain();
+    }
 };
 
 ServiceDispatchHandler.prototype.getPartialRange =
