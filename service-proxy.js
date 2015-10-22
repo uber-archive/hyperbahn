@@ -78,7 +78,6 @@ function ServiceDispatchHandler(options) {
 
     self.servicePurgePeriod = options.servicePurgePeriod ||
         SERVICE_PURGE_PERIOD;
-    self.exitServices = Object.create(null);
     self.purgeServices();
     self.rateLimiter = new RateLimiter({
         channel: self.channel,
@@ -98,8 +97,19 @@ function ServiceDispatchHandler(options) {
     self.periodicStatsTimer = null;
     self.statsPeriod = options.statsPeriod || DEFAULT_STATS_PERIOD;
 
+    /* service peer state data structures
+     *
+     * serviceName    :: string
+     * hostPort       :: string
+     * lastRefresh    :: number // timestamp
+     * exitServices   :: Map<serviceName, lastRefresh>
+     * peersToReap    :: Map<hostPort, bool>
+     * connectedPeers :: Map<hostPort, bool>
+     */
+    self.exitServices = Object.create(null);
     self.peersToReap = Object.create(null);
     self.connectedPeers = Object.create(null);
+
     self.reapPeersTimer = null;
     self.reapPeersPeriod = options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD;
 
