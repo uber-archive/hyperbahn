@@ -468,7 +468,9 @@ function refreshServicePeer(serviceName, hostPort) {
     // The old way: fully connect every egress to all affine peers.
     self.addPeerIndex(serviceName, hostPort);
     var peer = self.getServicePeer(serviceName, hostPort);
-    peer.connectTo();
+    if (!peer.isConnected('out')) {
+        peer.connectTo();
+    }
 };
 
 ServiceDispatchHandler.prototype.addPeerIndex =
