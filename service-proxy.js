@@ -1149,3 +1149,31 @@ function extendLogInfo(info) {
 // node though
 
 module.exports = ServiceDispatchHandler;
+
+function addIndexEntry(index, keya, keyb, value) {
+    var level = index[keya];
+    if (!level) {
+        level = Object.create(null);
+        index[keya] = level;
+    }
+    level[keyb] = value;
+}
+
+function deleteIndexEntry(index, keya, keyb) {
+    var level = index[keya];
+    if (level && level[keyb]) {
+        delete level[keyb];
+        if (isObjectEmpty(level)) {
+            delete index[keya];
+        }
+    }
+}
+
+/* eslint-disable guard-for-in, no-unused-vars */
+function isObjectEmpty(obj) {
+    for (var prop in obj) {
+        return false;
+    }
+    return true;
+}
+/* eslint-enable guard-for-in, no-unused-vars */
