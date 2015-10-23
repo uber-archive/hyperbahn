@@ -348,7 +348,7 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
 
 ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
     var self = this;
-    var enabled = self.remoteConfig.get('lazy.handling.enabled', false);
+    var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
     self.tchannel.setLazyRelaying(enabled);
 
     if (enabled === false) {
