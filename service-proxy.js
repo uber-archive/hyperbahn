@@ -21,6 +21,7 @@
 'use strict';
 
 /* global setImmediate */
+/* eslint-disable max-statements */
 
 var assert = require('assert');
 var Buffer = require('buffer').Buffer;
@@ -47,7 +48,6 @@ var RATE_LIMIT_KILLSWITCH = 'killswitch';
 
 var CN_HEADER_BUFFER = new Buffer('cn');
 
-/* eslint max-statements: [2, 40] */
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
         return new ServiceDispatchHandler(options);
@@ -72,14 +72,9 @@ function ServiceDispatchHandler(options) {
     self.circuitsConfig = options.circuitsConfig;
     self.circuits = null;
     self.boundOnCircuitStateChange = onCircuitStateChange;
-    if (self.circuitsConfig && self.circuitsConfig.enabled) {
-        self.enableCircuits();
-    }
 
     self.servicePurgePeriod = options.servicePurgePeriod ||
         SERVICE_PURGE_PERIOD;
-    self.exitServices = Object.create(null);
-    self.purgeServices();
     self.rateLimiter = new RateLimiter({
         channel: self.channel,
         rpsLimitForServiceName: options.rpsLimitForServiceName,
@@ -98,14 +93,30 @@ function ServiceDispatchHandler(options) {
     self.periodicStatsTimer = null;
     self.statsPeriod = options.statsPeriod || DEFAULT_STATS_PERIOD;
 
+    /* service peer state data structures
+     *
+     * serviceName  :: string
+     * hostPort     :: string
+     * lastRefresh  :: number // timestamp
+     * exitServices :: Map<serviceName, lastRefresh>
+     * peersToReap  :: Map<hostPort, bool>
+     * knownPeers   :: Map<hostPort, bool>
+     */
+    self.exitServices = Object.create(null);
     self.peersToReap = Object.create(null);
-    self.connectedPeers = Object.create(null);
+    self.knownPeers = Object.create(null);
+
     self.reapPeersTimer = null;
     self.reapPeersPeriod = options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD;
 
     self.destroyed = false;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
+
+    if (self.circuitsConfig && self.circuitsConfig.enabled) {
+        self.enableCircuits();
+    }
+    self.purgeServices();
 
     self.boundReapPeers = reapPeers;
     function reapPeers() {
@@ -408,11 +419,11 @@ ServiceDispatchHandler.prototype.purgeServices =
 function purgeServices() {
     var self = this;
 
-    var time = self.channel.timers.now();
+    var now = self.channel.timers.now();
     var keys = Object.keys(self.exitServices);
     for (var i = 0; i < keys.length; i++) {
         var serviceName = keys[i];
-        if (time - self.exitServices[serviceName] > self.servicePurgePeriod) {
+        if (now - self.exitServices[serviceName] > self.servicePurgePeriod) {
             delete self.exitServices[serviceName];
             var chan = self.channel.subChannels[serviceName];
             if (chan) {
@@ -436,14 +447,13 @@ ServiceDispatchHandler.prototype.refreshServicePeer =
 function refreshServicePeer(serviceName, hostPort) {
     var self = this;
 
-    var chan = self.channel.subChannels[serviceName];
-    if (!chan) {
-        chan = self.createServiceChannel(serviceName);
-    }
+    var chan = self.getOrCreateServiceChannel(serviceName);
     if (chan.serviceProxyMode !== 'exit') {
         // TODO: stat, log
         return;
     }
+
+    var now = self.channel.timers.now();
 
     // Create a peer for the worker.
     // This is necessary for populating the worker pool regardless of whether
@@ -454,8 +464,7 @@ function refreshServicePeer(serviceName, hostPort) {
     var peer = self.getServicePeer(serviceName, hostPort);
 
     // Reset the expiration time for this service peer
-    var time = self.channel.timers.now();
-    self.exitServices[serviceName] = time;
+    self.exitServices[serviceName] = now;
 
     if (self.partialAffinityEnabled) {
         self.refreshServicePeerPartially(serviceName, hostPort);
@@ -468,10 +477,10 @@ function refreshServicePeer(serviceName, hostPort) {
     // Unmark recently seen peers, so they don't get reaped
     delete self.peersToReap[hostPort];
     // Mark known peers, so they are candidates for future reaping
-    if (!self.connectedPeers[hostPort]) {
-        self.connectedPeers[hostPort] = Object.create(null);
+    if (!self.knownPeers[hostPort]) {
+        self.knownPeers[hostPort] = Object.create(null);
     }
-    self.connectedPeers[hostPort][serviceName] = true;
+    self.knownPeers[hostPort][serviceName] = true;
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
@@ -888,8 +897,8 @@ function reapPeers(callback) {
     }
 
     function finish() {
-        self.peersToReap = self.connectedPeers;
-        self.connectedPeers = Object.create(null);
+        self.peersToReap = self.knownPeers;
+        self.knownPeers = Object.create(null);
 
         self.requestReapPeers();
 
