@@ -903,6 +903,10 @@ ServiceDispatchHandler.prototype.reapSinglePeer =
 function reapSinglePeer(hostPort) {
     var self = this;
 
+    if (!self.peersToReap[hostPort]) {
+        return;
+    }
+
     var j;
 
     var peer = self.channel.peers.get(hostPort);
