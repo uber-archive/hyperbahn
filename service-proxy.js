@@ -72,13 +72,9 @@ function ServiceDispatchHandler(options) {
     self.circuitsConfig = options.circuitsConfig;
     self.circuits = null;
     self.boundOnCircuitStateChange = onCircuitStateChange;
-    if (self.circuitsConfig && self.circuitsConfig.enabled) {
-        self.enableCircuits();
-    }
 
     self.servicePurgePeriod = options.servicePurgePeriod ||
         SERVICE_PURGE_PERIOD;
-    self.purgeServices();
     self.rateLimiter = new RateLimiter({
         channel: self.channel,
         rpsLimitForServiceName: options.rpsLimitForServiceName,
@@ -116,6 +112,11 @@ function ServiceDispatchHandler(options) {
     self.destroyed = false;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
+
+    if (self.circuitsConfig && self.circuitsConfig.enabled) {
+        self.enableCircuits();
+    }
+    self.purgeServices();
 
     self.boundReapPeers = reapPeers;
     function reapPeers() {
