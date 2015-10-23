@@ -216,8 +216,8 @@ function ApplicationClients(options) {
     });
     self.remoteConfig.on('update', onRemoteConfigUpdate);
     // initlialize to default
-    self.onRemoteConfigUpdate();
     self.remoteConfig.loadSync();
+    self.onRemoteConfigUpdate();
     self.remoteConfig.startPolling();
 
     function onRemoteConfigUpdate() {
@@ -348,8 +348,10 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
 
 ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
     var self = this;
-    var enabled = self.remoteConfig.get('lazy.handling.enabled', false);
+    var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
     self.tchannel.setLazyRelaying(enabled);
+
+    self.tchannel.timers.clearTimeout(self.lazyTimeout);
 
     if (enabled === false) {
         self.tchannel.timers.clearTimeout(self.lazyTimeout);
