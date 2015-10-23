@@ -351,6 +351,8 @@ ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() 
     var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
     self.tchannel.setLazyRelaying(enabled);
 
+    self.tchannel.timers.clearTimeout(self.lazyTimeout);
+
     if (enabled === false) {
         self.tchannel.timers.clearTimeout(self.lazyTimeout);
         self.lazyTimeout = self.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
