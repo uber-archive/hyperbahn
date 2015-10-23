@@ -216,8 +216,8 @@ function ApplicationClients(options) {
     });
     self.remoteConfig.on('update', onRemoteConfigUpdate);
     // initlialize to default
-    self.onRemoteConfigUpdate();
     self.remoteConfig.loadSync();
+    self.onRemoteConfigUpdate();
     self.remoteConfig.startPolling();
 
     function onRemoteConfigUpdate() {
