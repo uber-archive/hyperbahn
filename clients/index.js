@@ -333,6 +333,7 @@ ApplicationClients.prototype.destroy = function destroy() {
 
 ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
     var self = this;
+    self.updateWriteBufferMode();
     self.updateLazyHandling();
     self.updateCircuitsEnabled();
     self.updateRateLimitingEnabled();
@@ -344,6 +345,14 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateReservoir();
     self.updateReapPeersPeriod();
     self.updatePartialAffinityEnabled();
+};
+
+ApplicationClients.prototype.updateWriteBufferMode =
+function updateWriteBufferMode() {
+    var self = this;
+    self.tchannel.setWriteBufferMode(self.remoteConfig.get(
+        'write_buffer_mode', 1 // WRITE_BUFFER_STATIC
+    ));
 };
 
 ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {

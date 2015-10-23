@@ -6,4 +6,6 @@ env:
 # Get some of them configs
 - HYPERBAHN_REMOTE_TEST_CONFIG=
 - HYPERBAHN_REMOTE_TEST_CONFIG=test/config/with_lazy_relay.json
+- HYPERBAHN_REMOTE_TEST_CONFIG test/config/with_write_buffer_ephemeral.json
+- HYPERBAHN_REMOTE_TEST_CONFIG=test/config/with_{lazy_relay,write_buffer_ephemeral}.json
 script: npm run travis
