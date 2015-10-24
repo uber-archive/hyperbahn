@@ -454,13 +454,6 @@ function refreshServicePeer(serviceName, hostPort) {
     }
 
     var now = self.channel.timers.now();
-
-    // Create a peer for the worker.
-    // This is necessary for populating the worker pool regardless of whether
-    // we connect.
-    // TODO This belies an underlying assumption that the peer pool includes
-    // exactly and only the worker pool, that we would eventually reap peers
-    // that have not advertised recently.
     var peer = self.getServicePeer(serviceName, hostPort);
 
     // Reset the expiration time for this service peer
