@@ -948,6 +948,7 @@ function reapSinglePeer(hostPort) {
             return;
         }
         svcchan.peers.delete(hostPort);
+        self.deletePeerIndex(serviceName, hostPort);
     }
 
     self.channel.peers.delete(hostPort);
