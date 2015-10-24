@@ -483,10 +483,7 @@ function addPeerIndex(serviceName, hostPort) {
     // Unmark recently seen peers, so they don't get reaped
     delete self.peersToReap[hostPort];
     // Mark known peers, so they are candidates for future reaping
-    if (!self.knownPeers[hostPort]) {
-        self.knownPeers[hostPort] = Object.create(null);
-    }
-    self.knownPeers[hostPort][serviceName] = true;
+    addIndexEntry(self.knownPeers, hostPort, serviceName, true);
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
