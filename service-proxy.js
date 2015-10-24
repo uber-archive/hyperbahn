@@ -559,12 +559,12 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         partialRange: range
     }));
 
+    self.addPeerIndex(serviceName, hostPort);
+
     self.connectToServiceWorkers(serviceName, range.workers, range.start, range.stop);
 
     // TODO Drop peers that no longer have affinity for this service, such
     // that they may be elligible for having their connections reaped.
-
-    self.addPeerIndex(serviceName, hostPort);
 };
 
 ServiceDispatchHandler.prototype.connectToServiceWorkers =
