@@ -454,7 +454,6 @@ function refreshServicePeer(serviceName, hostPort) {
     }
 
     var now = self.channel.timers.now();
-    var peer = self.getServicePeer(serviceName, hostPort);
 
     // Reset the expiration time for this service peer
     self.exitServices[serviceName] = now;
@@ -466,6 +465,7 @@ function refreshServicePeer(serviceName, hostPort) {
 
     // The old way: fully connect every egress to all affine peers.
     self.addPeerIndex(serviceName, hostPort);
+    var peer = self.getServicePeer(serviceName, hostPort);
     peer.connectTo();
 };
 
@@ -560,7 +560,7 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     }));
 
     self.addPeerIndex(serviceName, hostPort);
-
+    self.getServicePeer(serviceName, hostPort);
     self.connectToServiceWorkers(serviceName, range.workers, range.start, range.stop);
 
     // TODO Drop peers that no longer have affinity for this service, such
