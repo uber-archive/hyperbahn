@@ -486,6 +486,13 @@ function addPeerIndex(serviceName, hostPort) {
     addIndexEntry(self.knownPeers, hostPort, serviceName, true);
 };
 
+ServiceDispatchHandler.prototype.deletePeerIndex =
+function deletePeerIndex(serviceName, hostPort) {
+    var self = this;
+
+    deleteIndexEntry(self.knownPeers, hostPort, serviceName);
+};
+
 ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName, hostPort) {
     var self = this;
