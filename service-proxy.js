@@ -481,7 +481,7 @@ function addPeerIndex(serviceName, hostPort) {
     var self = this;
 
     // Unmark recently seen peers, so they don't get reaped
-    delete self.peersToReap[hostPort];
+    deleteIndexEntry(self.peersToReap, hostPort, serviceName);
     // Mark known peers, so they are candidates for future reaping
     addIndexEntry(self.knownPeers, hostPort, serviceName, true);
 };
