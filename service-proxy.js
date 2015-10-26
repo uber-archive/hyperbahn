@@ -43,7 +43,6 @@ var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
 var DEFAULT_REAP_PEERS_PERIOD = 0; // never
 
 // our call SLA is 30 seconds currently
-// TODO: dedupe with DRAIN_DEADLINE_TIMEOUT from app.js
 var DEFAULT_DRAIN_TIMEOUT = 30 * 1000;
 
 var RATE_LIMIT_TOTAL = 'total';

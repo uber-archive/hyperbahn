@@ -32,9 +32,6 @@ var ApplicationClients = require('./clients/');
 var ExitNode = require('./exit');
 var EntryNode = require('./entry');
 
-// our call SLA is 30 seconds currently
-var DRAIN_DEADLINE_TIMEOUT = 30 * 1000;
-
 var ApplicationClientsFailureError = WrappedError({
     type: 'autobahn.app-clients-failed',
     message: 'Application createClients failed: {origMessage}'
@@ -182,7 +179,8 @@ function startDrain() {
     self.logger.info('got SIGTERM, draining application', self.extendLogInfo({}));
     self.tchannel.drain('shutting down due to SIGTERM', drainedThenClose);
     self.drainDeadlineTimer = self.tchannel.timers.setTimeout(
-        deadlineTimedOut, DRAIN_DEADLINE_TIMEOUT);
+        deadlineTimedOut,
+        self.clients.serviceProxy.drainTimeout);
 
     function drainedThenClose() {
         self.drainedThenClose();
