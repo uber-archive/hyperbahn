@@ -585,6 +585,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     var chan = self.getServiceChannel(serviceName, false);
 
     var peer = chan.peers.get(hostPort);
+    var connectedPeers = self.connectedServicePeers[serviceName];
 
     if (!peer) {
         peer = self._getServicePeer(chan, hostPort);
@@ -607,7 +608,6 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
             advertisingPeer: hostPort,
             partialRange: range
         }));
-
     }
 
     var toConnect = [];
@@ -617,7 +617,9 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     for (i = 0; i < range.affineWorkers.length; i++) {
         worker = range.affineWorkers[i];
         isAffine[worker] = true;
-        toConnect.push(worker);
+        if (!connectedPeers || !connectedPeers[worker]) {
+            toConnect.push(worker);
+        }
     }
 
     self.logger.info('implementing affinity change', self.extendLogInfo({
