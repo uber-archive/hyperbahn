@@ -575,33 +575,36 @@ function refreshServicePeerPartially(serviceName, hostPort) {
 
     self.addPeerIndex(serviceName, hostPort);
     self._getServicePeer(chan, hostPort);
-    self.connectToServiceWorkers(serviceName, range.workers, range.start, range.stop);
+    self.connectToServiceWorkers(serviceName, range);
 
     // TODO Drop peers that no longer have affinity for this service, such
     // that they may be elligible for having their connections reaped.
 };
 
 ServiceDispatchHandler.prototype.connectToServiceWorkers =
-function connectToServiceWorkers(serviceName, workers, start, stop) {
+function connectToServiceWorkers(serviceName, range) {
     var self = this;
-
-    if (start === stop) {
-        // fully connected
-        start = 0;
-        stop = workers.length;
-    } else if (stop < start) {
-        // wrap-around --> complement
-        self.connectToServiceWorkers(serviceName, workers, 0, stop);
-        self.connectToServiceWorkers(serviceName, workers, start, workers.length);
-        return;
-    }
-
-    for (var i = start; i < stop; i++) {
-        var peer = self.getServicePeer(serviceName, workers[i]);
+    var affineWorkers = self.getAffineWorkers(serviceName, range);
+    for (var i = 0; i < affineWorkers.length; i++) {
+        var peer = self.getServicePeer(serviceName, affineWorkers[i]);
         if (!peer.isConnected('out')) {
             peer.connectTo();
         }
     }
+};
+
+ServiceDispatchHandler.prototype.getAffineWorkers =
+function getAffineWorkers(serviceName, range) {
+    if (range.start === range.stop) {
+        // fully connected
+        return range.workers; // XXX .slice(0)?
+    } else if (range.stop < range.start) {
+        // wrap-around --> complement
+        var head = range.workers.slice(0, range.stop);
+        var tail = range.workers.slice(range.start, range.workers.length);
+        return head.concat(tail);
+    }
+    return range.workers.slice(range.start, range.stop);
 };
 
 ServiceDispatchHandler.prototype.removeServicePeer =
