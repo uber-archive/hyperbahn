@@ -596,9 +596,9 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         }));
     }
 
-    self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
+    self.logger.info('implementing affinity change', self.extendLogInfo({
         serviceName: serviceName,
-        serviceHostPort: hostPort,
+        newPeer: hostPort,
         partialRange: range
     }));
 
