@@ -498,60 +498,80 @@ ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName, hostPort) {
     var self = this;
 
-    // Obtain and sort the affine worker and relay lists.
-    var relays = Object.keys(self.egressNodes.exitsFor(serviceName));
-    relays.sort();
     var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-    var workers = serviceChannel.peers.keys();
-    workers.sort();
+
+    var range = {
+        relays: null,
+        workers: null,
+        relayIndex: NaN,
+        ratio: NaN,
+        start: NaN,
+        stop: NaN,
+        length: NaN,
+        affineWorkers: []
+    };
+
+    // Obtain and sort the affine worker and relay lists.
+    range.relays = Object.keys(self.egressNodes.exitsFor(serviceName));
+    range.relays.sort();
+    range.workers = serviceChannel.peers.keys();
+    range.workers.sort();
 
     // Find our position within the affine relay set so we can project that
     // position into the affine worker set.
-    var relayIndex = sortedIndexOf(relays, self.channel.hostPort);
+    range.relayIndex = sortedIndexOf(range.relays, self.channel.hostPort);
     // istanbul ignore if
-    if (relayIndex < 0) {
+    if (range.relayIndex < 0) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
-        return {
-            start: -1,
-            stop: -1,
-            relayIndex: relayIndex,
-            relays: relays,
-            workers: workers,
-            length: -1
-        };
+        return range;
     }
 
     // Compute the range of workers that this relay should be connected to.
-    var ratio = workers.length / relays.length;
-    var start = Math.floor(relayIndex * ratio);
-    var length = Math.ceil(
+    range.ratio = range.workers.length / range.relays.length;
+    range.start = Math.floor(range.relayIndex * range.ratio);
+    range.length = Math.ceil(
         Math.min(
-            workers.length,
+            range.workers.length,
             Math.max(
                 self.minPeersPerRelay,
-                self.minPeersPerWorker * ratio
+                self.minPeersPerWorker * range.ratio
             )
         )
     );
-    var stop = (start + length) % workers.length;
+    range.stop = (range.start + range.length) % range.workers.length;
 
-    return {
-        start: start,
-        stop: stop,
-        relayIndex: relayIndex,
-        relays: relays,
-        workers: workers,
-        length: length
-    };
+    if (range.start === range.stop) {
+        // fully connected
+        range.affineWorkers = range.workers; // XXX .slice(0)?
+    } else if (range.stop < range.start) {
+        // wrap-around --> complement
+        var head = range.workers.slice(0, range.stop);
+        var tail = range.workers.slice(range.start, range.workers.length);
+        range.affineWorkers = head.concat(tail);
+    } else {
+        range.affineWorkers = range.workers.slice(range.start, range.stop);
+    }
+
+    return range;
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeerPartially =
 function refreshServicePeerPartially(serviceName, hostPort) {
     var self = this;
 
+    // guaranteed non-null by refreshServicePeer above; we call this only so
+    // as not to pass another arg along to the partial path.
+    var chan = self.getServiceChannel(serviceName, false);
+
+    var peer = chan.peers.get(hostPort);
+
+    if (!peer) {
+        peer = self._getServicePeer(chan, hostPort);
+    }
+
     var range = self.computePartialRange(serviceName, hostPort);
-    if (range.length < 0) {
+    if (range.relayIndex < 0) {
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
             serviceName: serviceName,
             workerHostPort: hostPort,
@@ -561,6 +581,14 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         return;
     }
 
+    if (!range.affineWorkers.length) {
+        self.logger.error('empty affineWorkers, this should not happen', self.extendLogInfo({
+            serviceName: serviceName,
+            advertisingPeer: hostPort,
+            partialRange: range
+        }));
+    }
+
     self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
         serviceName: serviceName,
         serviceHostPort: hostPort,
@@ -568,34 +596,17 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     }));
 
     self.addPeerIndex(serviceName, hostPort);
-    self.getServicePeer(serviceName, hostPort);
-    self.connectToServiceWorkers(serviceName, range.workers, range.start, range.stop);
+    self._getServicePeer(chan, hostPort);
 
-    // TODO Drop peers that no longer have affinity for this service, such
-    // that they may be elligible for having their connections reaped.
-};
-
-ServiceDispatchHandler.prototype.connectToServiceWorkers =
-function connectToServiceWorkers(serviceName, workers, start, stop) {
-    var self = this;
-
-    if (start === stop) {
-        // fully connected
-        start = 0;
-        stop = workers.length;
-    } else if (stop < start) {
-        // wrap-around --> complement
-        self.connectToServiceWorkers(serviceName, workers, 0, stop);
-        self.connectToServiceWorkers(serviceName, workers, start, workers.length);
-        return;
-    }
-
-    for (var i = start; i < stop; i++) {
-        var peer = self.getServicePeer(serviceName, workers[i]);
+    for (var i = 0; i < range.affineWorkers.length; i++) {
+        peer = self._getServicePeer(chan, range.affineWorkers[i]);
         if (!peer.isConnected('out')) {
             peer.connectTo();
         }
     }
+
+    // TODO Drop peers that no longer have affinity for this service, such
+    // that they may be elligible for having their connections reaped.
 };
 
 ServiceDispatchHandler.prototype.removeServicePeer =
