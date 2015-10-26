@@ -41,6 +41,7 @@ var DEFAULT_MIN_PEERS_PER_WORKER = 5;
 var DEFAULT_MIN_PEERS_PER_RELAY = 5;
 var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
 var DEFAULT_REAP_PEERS_PERIOD = 0; // never
+var DEFAULT_DRAIN_TIMEOUT = 30;
 
 var RATE_LIMIT_TOTAL = 'total';
 var RATE_LIMIT_SERVICE = 'service';
@@ -89,6 +90,7 @@ function ServiceDispatchHandler(options) {
     self.partialAffinityEnabled = options.partialAffinityEnabled;
     self.minPeersPerWorker = options.minPeersPerWorker || DEFAULT_MIN_PEERS_PER_WORKER;
     self.minPeersPerRelay = options.minPeersPerRelay || DEFAULT_MIN_PEERS_PER_RELAY;
+    self.drainTimeout = options.drainTimeout || DEFAULT_DRAIN_TIMEOUT;
 
     self.periodicStatsTimer = null;
     self.statsPeriod = options.statsPeriod || DEFAULT_STATS_PERIOD;
