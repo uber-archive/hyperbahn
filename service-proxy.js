@@ -594,19 +594,29 @@ function refreshServicePeerPartially(serviceName, hostPort) {
             advertisingPeer: hostPort,
             partialRange: range
         }));
+
+    }
+
+    var toConnect = [];
+    var i;
+    var worker;
+    for (i = 0; i < range.affineWorkers.length; i++) {
+        worker = range.affineWorkers[i];
+        toConnect.push(worker);
     }
 
     self.logger.info('implementing affinity change', self.extendLogInfo({
         serviceName: serviceName,
         newPeer: hostPort,
-        partialRange: range
+        partialRange: range,
+        toConnect: toConnect
     }));
 
     self.addPeerIndex(serviceName, hostPort);
     self._getServicePeer(chan, hostPort);
 
-    for (var i = 0; i < range.affineWorkers.length; i++) {
-        peer = self._getServicePeer(chan, range.affineWorkers[i]);
+    for (i = 0; i < toConnect.length; i++) {
+        peer = self._getServicePeer(chan, toConnect[i]);
         self.ensurePeerConnected(peer, 'service peer affinity refresh');
     }
 
