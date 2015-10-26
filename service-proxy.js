@@ -103,6 +103,11 @@ function ServiceDispatchHandler(options) {
      * peersToReap           :: Map<hostPort, lastRefresh>
      * knownPeers            :: Map<hostPort, lastRefresh>
      * connectedServicePeers :: Map<serviceName, Map<hostPort, lastRefresh>>
+     *
+     * On every advertise knownPeers is updated.
+     *
+     * However every reap period, knownPeers gets rolled over into peersToReap
+     * and emptied, so it represents the "peers seen this reap round"
      */
     self.exitServices = Object.create(null);
     self.connectedServicePeers = Object.create(null);
