@@ -105,6 +105,10 @@ function ServiceDispatchHandler(options) {
      * peersToReap           :: Map<hostPort, lastRefresh>
      * knownPeers            :: Map<hostPort, lastRefresh>
      * connectedServicePeers :: Map<serviceName, Map<hostPort, lastRefresh>>
+     * connectedPeerServices :: Map<hostPort, Map<serviceName, lastRefresh>>
+     *
+     * connectedServicePeers and connectedPeerServices are updated by
+     * connection events, maybe subject to partial affinity.
      *
      * relaysFor is a map of service name to list of other exit nodes in SORTED
      * order ONLY for services which this ServiceProxy is an exit.
@@ -117,6 +121,7 @@ function ServiceDispatchHandler(options) {
     self.relaysFor = {};
     self.exitServices = Object.create(null);
     self.connectedServicePeers = Object.create(null);
+    self.connectedPeerServices = Object.create(null);
     self.peersToReap = Object.create(null);
     self.knownPeers = Object.create(null);
     self.peersToPrune = Object.create(null);
@@ -544,6 +549,7 @@ function refreshServicePeer(serviceName, hostPort) {
 
     // Update secondary indices
     addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
+    addIndexEntry(self.connectedPeerServices, hostPort, serviceName, now);
     delete self.peersToPrune[hostPort];
 
     // Unmark recently seen peers, so they don't get reaped
@@ -560,6 +566,7 @@ function deletePeerIndex(serviceName, hostPort) {
     var self = this;
 
     deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+    deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
     deleteIndexEntry(self.knownPeers, hostPort, serviceName);
 };
 
@@ -568,6 +575,7 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
     var self = this;
 
     addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+    addIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName, now);
     delete self.peersToPrune[peer.hostPort];
 
     if (peer.isConnected('out')) {
@@ -660,9 +668,11 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         // Update secondary indices
         if (connected) {
             addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+            addIndexEntry(self.connectedPeerServices, hostPort, serviceName, now);
             delete self.peersToPrune[hostPort];
         } else {
             deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
+            deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
         }
 
         // Unmark recently seen peers, so they don't get reaped
@@ -699,9 +709,11 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         // ensurePeerDisconnected were called for the advertising peer
         if (result.isAffine[hostPort]) {
             addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
+            addIndexEntry(self.connectedPeerServices, hostPort, serviceName, now);
             delete self.peersToPrune[hostPort];
         } else {
             deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+            deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
         }
     }
 };
