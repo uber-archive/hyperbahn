@@ -568,6 +568,13 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     }
 
     var affineWorkers = self.getAffineWorkers(serviceName, range);
+    if (!affineWorkers.length) {
+        self.logger.error('empty affineWorkers, this should not happen', self.extendLogInfo({
+            serviceName: serviceName,
+            advertisingPeer: hostPort,
+            partialRange: range
+        }));
+    }
 
     self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
         serviceName: serviceName,
