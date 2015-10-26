@@ -546,6 +546,10 @@ ServiceDispatchHandler.prototype.refreshServicePeerPartially =
 function refreshServicePeerPartially(serviceName, hostPort) {
     var self = this;
 
+    // guaranteed non-null by refreshServicePeer above; we call this only so
+    // as not to pass another arg along to the partial path.
+    var chan = self.getServiceChannel(serviceName, false);
+
     var range = self.computePartialRange(serviceName, hostPort);
     if (range.length < 0) {
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
@@ -564,7 +568,7 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     }));
 
     self.addPeerIndex(serviceName, hostPort);
-    self.getServicePeer(serviceName, hostPort);
+    self._getServicePeer(chan, hostPort);
     self.connectToServiceWorkers(serviceName, range.workers, range.start, range.stop);
 
     // TODO Drop peers that no longer have affinity for this service, such
