@@ -496,51 +496,47 @@ function computePartialRange(serviceName, hostPort) {
 
     var serviceChannel = self.getOrCreateServiceChannel(serviceName);
 
+    var range = {
+        relays: null,
+        workers: null,
+        relayIndex: NaN,
+        ratio: NaN,
+        start: NaN,
+        stop: NaN,
+        length: NaN
+    };
+
     // Obtain and sort the affine worker and relay lists.
-    var relays = Object.keys(self.egressNodes.exitsFor(serviceName));
-    relays.sort();
-    var workers = serviceChannel.peers.keys();
-    workers.sort();
+    range.relays = Object.keys(self.egressNodes.exitsFor(serviceName));
+    range.relays.sort();
+    range.workers = serviceChannel.peers.keys();
+    range.workers.sort();
 
     // Find our position within the affine relay set so we can project that
     // position into the affine worker set.
-    var relayIndex = sortedIndexOf(relays, self.channel.hostPort);
+    range.relayIndex = sortedIndexOf(range.relays, self.channel.hostPort);
     // istanbul ignore if
-    if (relayIndex < 0) {
+    if (range.relayIndex < 0) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
-        return {
-            start: -1,
-            stop: -1,
-            relayIndex: relayIndex,
-            relays: relays,
-            workers: workers,
-            length: -1
-        };
+        return range;
     }
 
     // Compute the range of workers that this relay should be connected to.
-    var ratio = workers.length / relays.length;
-    var start = Math.floor(relayIndex * ratio);
-    var length = Math.ceil(
+    range.ratio = range.workers.length / range.relays.length;
+    range.start = Math.floor(range.relayIndex * range.ratio);
+    range.length = Math.ceil(
         Math.min(
-            workers.length,
+            range.workers.length,
             Math.max(
                 self.minPeersPerRelay,
-                self.minPeersPerWorker * ratio
+                self.minPeersPerWorker * range.ratio
             )
         )
     );
-    var stop = (start + length) % workers.length;
+    range.stop = (range.start + range.length) % range.workers.length;
 
-    return {
-        start: start,
-        stop: stop,
-        relayIndex: relayIndex,
-        relays: relays,
-        workers: workers,
-        length: length
-    };
+    return range;
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeerPartially =
@@ -558,7 +554,7 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     }
 
     var range = self.computePartialRange(serviceName, hostPort);
-    if (range.length < 0) {
+    if (range.relayIndex < 0) {
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
             serviceName: serviceName,
             workerHostPort: hostPort,
