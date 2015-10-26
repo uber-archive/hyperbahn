@@ -457,14 +457,6 @@ function refreshServicePeer(serviceName, hostPort) {
 
     var now = self.channel.timers.now();
 
-    // Create a peer for the worker.
-    // This is necessary for populating the worker pool regardless of whether
-    // we connect.
-    // TODO This belies an underlying assumption that the peer pool includes
-    // exactly and only the worker pool, that we would eventually reap peers
-    // that have not advertised recently.
-    var peer = self.getServicePeer(serviceName, hostPort);
-
     // Reset the expiration time for this service peer
     self.exitServices[serviceName] = now;
 
@@ -474,15 +466,26 @@ function refreshServicePeer(serviceName, hostPort) {
     }
 
     // The old way: fully connect every egress to all affine peers.
+    self.addPeerIndex(serviceName, hostPort);
+    var peer = self.getServicePeer(serviceName, hostPort);
     peer.connectTo();
+};
+
+ServiceDispatchHandler.prototype.addPeerIndex =
+function addPeerIndex(serviceName, hostPort) {
+    var self = this;
 
     // Unmark recently seen peers, so they don't get reaped
-    delete self.peersToReap[hostPort];
+    deleteIndexEntry(self.peersToReap, hostPort, serviceName);
     // Mark known peers, so they are candidates for future reaping
-    if (!self.knownPeers[hostPort]) {
-        self.knownPeers[hostPort] = Object.create(null);
-    }
-    self.knownPeers[hostPort][serviceName] = true;
+    addIndexEntry(self.knownPeers, hostPort, serviceName, true);
+};
+
+ServiceDispatchHandler.prototype.deletePeerIndex =
+function deletePeerIndex(serviceName, hostPort) {
+    var self = this;
+
+    deleteIndexEntry(self.knownPeers, hostPort, serviceName);
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
@@ -558,6 +561,8 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         partialRange: range
     }));
 
+    self.addPeerIndex(serviceName, hostPort);
+    self.getServicePeer(serviceName, hostPort);
     self.connectToServiceWorkers(serviceName, range.workers, range.start, range.stop);
 
     // TODO Drop peers that no longer have affinity for this service, such
@@ -938,6 +943,7 @@ function reapSinglePeer(hostPort) {
             return;
         }
         svcchan.peers.delete(hostPort);
+        self.deletePeerIndex(serviceName, hostPort);
     }
 
     self.channel.peers.delete(hostPort);
@@ -1151,3 +1157,31 @@ function extendLogInfo(info) {
 // node though
 
 module.exports = ServiceDispatchHandler;
+
+function addIndexEntry(index, keya, keyb, value) {
+    var level = index[keya];
+    if (!level) {
+        level = Object.create(null);
+        index[keya] = level;
+    }
+    level[keyb] = value;
+}
+
+function deleteIndexEntry(index, keya, keyb) {
+    var level = index[keya];
+    if (level && level[keyb]) {
+        delete level[keyb];
+        if (isObjectEmpty(level)) {
+            delete index[keya];
+        }
+    }
+}
+
+/* eslint-disable guard-for-in, no-unused-vars */
+function isObjectEmpty(obj) {
+    for (var prop in obj) {
+        return false;
+    }
+    return true;
+}
+/* eslint-enable guard-for-in, no-unused-vars */
