@@ -550,6 +550,12 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     // as not to pass another arg along to the partial path.
     var chan = self.getServiceChannel(serviceName, false);
 
+    var peer = chan.peers.get(hostPort);
+
+    if (!peer) {
+        peer = self._getServicePeer(chan, hostPort);
+    }
+
     var range = self.computePartialRange(serviceName, hostPort);
     if (range.length < 0) {
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
