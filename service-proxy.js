@@ -494,10 +494,11 @@ ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName, hostPort) {
     var self = this;
 
+    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
+
     // Obtain and sort the affine worker and relay lists.
     var relays = Object.keys(self.egressNodes.exitsFor(serviceName));
     relays.sort();
-    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
     var workers = serviceChannel.peers.keys();
     workers.sort();
 
