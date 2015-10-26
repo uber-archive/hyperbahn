@@ -503,7 +503,8 @@ function computePartialRange(serviceName, hostPort) {
         ratio: NaN,
         start: NaN,
         stop: NaN,
-        length: NaN
+        length: NaN,
+        affineWorkers: []
     };
 
     // Obtain and sort the affine worker and relay lists.
@@ -536,6 +537,18 @@ function computePartialRange(serviceName, hostPort) {
     );
     range.stop = (range.start + range.length) % range.workers.length;
 
+    if (range.start === range.stop) {
+        // fully connected
+        range.affineWorkers = range.workers; // XXX .slice(0)?
+    } else if (range.stop < range.start) {
+        // wrap-around --> complement
+        var head = range.workers.slice(0, range.stop);
+        var tail = range.workers.slice(range.start, range.workers.length);
+        range.affineWorkers = head.concat(tail);
+    } else {
+        range.affineWorkers = range.workers.slice(range.start, range.stop);
+    }
+
     return range;
 };
 
@@ -564,8 +577,7 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         return;
     }
 
-    var affineWorkers = self.getAffineWorkers(serviceName, range);
-    if (!affineWorkers.length) {
+    if (!range.affineWorkers.length) {
         self.logger.error('empty affineWorkers, this should not happen', self.extendLogInfo({
             serviceName: serviceName,
             advertisingPeer: hostPort,
@@ -582,8 +594,8 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     self.addPeerIndex(serviceName, hostPort);
     self._getServicePeer(chan, hostPort);
 
-    for (var i = 0; i < affineWorkers.length; i++) {
-        peer = self._getServicePeer(chan, affineWorkers[i]);
+    for (var i = 0; i < range.affineWorkers.length; i++) {
+        peer = self._getServicePeer(chan, range.affineWorkers[i]);
         if (!peer.isConnected('out')) {
             peer.connectTo();
         }
@@ -591,20 +603,6 @@ function refreshServicePeerPartially(serviceName, hostPort) {
 
     // TODO Drop peers that no longer have affinity for this service, such
     // that they may be elligible for having their connections reaped.
-};
-
-ServiceDispatchHandler.prototype.getAffineWorkers =
-function getAffineWorkers(serviceName, range) {
-    if (range.start === range.stop) {
-        // fully connected
-        return range.workers; // XXX .slice(0)?
-    } else if (range.stop < range.start) {
-        // wrap-around --> complement
-        var head = range.workers.slice(0, range.stop);
-        var tail = range.workers.slice(range.start, range.workers.length);
-        return head.concat(tail);
-    }
-    return range.workers.slice(range.start, range.stop);
 };
 
 ServiceDispatchHandler.prototype.removeServicePeer =
