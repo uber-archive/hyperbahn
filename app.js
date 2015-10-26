@@ -32,6 +32,7 @@ var ApplicationClients = require('./clients/');
 var ExitNode = require('./exit');
 var EntryNode = require('./entry');
 
+// our call SLA is 30 seconds currently
 var DRAIN_DEADLINE_TIMEOUT = 30 * 1000;
 
 var ApplicationClientsFailureError = WrappedError({
