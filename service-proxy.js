@@ -189,7 +189,9 @@ function handleLazily(conn, reqFrame) {
     var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
     var cn = cnBuf && cnBuf.toString();
     if (!cn) {
-        self.channel.logger.error('request missing cn header', conn.extendLogInfo({}));
+        self.channel.logger.warn('request missing cn header', conn.extendLogInfo({
+            serviceName: serviceName
+        }));
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing cn header');
         return false;
     }
