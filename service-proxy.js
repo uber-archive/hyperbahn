@@ -567,6 +567,8 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         return;
     }
 
+    var affineWorkers = self.getAffineWorkers(serviceName, range);
+
     self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
         serviceName: serviceName,
         serviceHostPort: hostPort,
@@ -575,22 +577,16 @@ function refreshServicePeerPartially(serviceName, hostPort) {
 
     self.addPeerIndex(serviceName, hostPort);
     self._getServicePeer(chan, hostPort);
-    self.connectToServiceWorkers(serviceName, range);
 
-    // TODO Drop peers that no longer have affinity for this service, such
-    // that they may be elligible for having their connections reaped.
-};
-
-ServiceDispatchHandler.prototype.connectToServiceWorkers =
-function connectToServiceWorkers(serviceName, range) {
-    var self = this;
-    var affineWorkers = self.getAffineWorkers(serviceName, range);
     for (var i = 0; i < affineWorkers.length; i++) {
-        var peer = self.getServicePeer(serviceName, affineWorkers[i]);
+        peer = self._getServicePeer(chan, affineWorkers[i]);
         if (!peer.isConnected('out')) {
             peer.connectTo();
         }
     }
+
+    // TODO Drop peers that no longer have affinity for this service, such
+    // that they may be elligible for having their connections reaped.
 };
 
 ServiceDispatchHandler.prototype.getAffineWorkers =
