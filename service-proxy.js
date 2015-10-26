@@ -587,9 +587,23 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     var peer = chan.peers.get(hostPort);
     var connectedPeers = self.connectedServicePeers[serviceName];
 
-    if (!peer) {
-        peer = self._getServicePeer(chan, hostPort);
+    // simply freshen if not new
+    if (peer) {
+        var connected = connectedPeers && connectedPeers[hostPort];
+        self.addPeerIndex(serviceName, peer.hostPort, connected, now);
+        if (connected) {
+            self.ensurePeerConnected(serviceName, peer, 'service peer affinity refresh', now);
+        }
+
+        self.logger.info('refreshed peer partially', self.extendLogInfo({
+            serviceName: serviceName,
+            serviceHostPort: hostPort,
+            isConnected: connected
+        }));
+        return;
     }
+
+    peer = self._getServicePeer(chan, hostPort);
 
     var range = self.computePartialRange(serviceName, hostPort);
     if (range.relayIndex < 0) {
@@ -634,7 +648,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     for (i = 0; i < toConnect.length; i++) {
         peer = self._getServicePeer(chan, toConnect[i]);
-        self.ensurePeerConnected(serviceName, peer, 'service peer affinity refresh', now);
+        self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
     }
 
     // TODO Drop peers that no longer have affinity for this service, such
