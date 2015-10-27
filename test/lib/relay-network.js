@@ -26,7 +26,9 @@ var NullStatsd = require('uber-statsd-client/null');
 var tapeCluster = require('tape-cluster');
 var allocCluster = require('tchannel/test/lib/alloc-cluster.js');
 var EndpointHandler = require('tchannel/endpoint-handler.js');
+var timers = require('timers');
 
+var BatchStatsd = require('tchannel/lib/statsd');
 var FakeEgressNodes = require('./fake-egress-nodes.js');
 var ServiceProxy = require('../../service-proxy.js');
 var HyperbahnHandler = require('../../handler.js');
@@ -163,6 +165,11 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             channel: relayChannel,
             logger: self.cluster.logger,
             statsd: statsd,
+            batchStats: new BatchStatsd({
+                statsd: statsd,
+                logger: self.cluster.logger,
+                timers: timers
+            }),
             egressNodes: egressNodes,
             servicePurgePeriod: self.servicePurgePeriod,
             exemptServices: self.exemptServices,

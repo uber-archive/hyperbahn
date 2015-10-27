@@ -22,6 +22,7 @@
 
 var assert = require('assert');
 var http = require('http');
+var timers = require('timers');
 // TODO use better module. This sometimes fails when you
 // move around and change wifi networks.
 var myLocalIp = require('my-local-ip');
@@ -36,6 +37,7 @@ var fs = require('fs');
 var ProcessReporter = require('process-reporter');
 var NullStatsd = require('uber-statsd-client/null');
 var extendInto = require('xtend/mutable');
+var BatchStatsd = require('tchannel/lib/statsd');
 
 var ServiceProxy = require('../service-proxy.js');
 var createLogger = require('./logger.js');
@@ -133,15 +135,22 @@ function ApplicationClients(options) {
         res.end('OK');
     }
 
+    self.batchStats = new BatchStatsd({
+        statsd: self.statsd,
+        logger: self.logger,
+        timers: timers,
+        baseTags: {
+            app: 'autobahn',
+            host: os.hostname()
+        }
+    });
+    self.batchStats.flushStats();
+
     // Store the tchannel object with its peers on clients
     // Also store a json sender and a raw sender
     self.tchannel = TChannel(extendInto({
         logger: self.logger,
-        statsd: self.statsd,
-        statTags: {
-            app: 'autobahn',
-            host: os.hostname()
-        },
+        batchStats: self.batchStats,
         trace: false,
         emitConnectionMetrics: false,
         connectionStalePeriod: 1.5 * 1000,
@@ -188,6 +197,7 @@ function ApplicationClients(options) {
         channel: self.tchannel,
         logger: self.logger,
         statsd: self.statsd,
+        batchStats: self.batchStats,
         egressNodes: self.egressNodes,
         servicePurgePeriod: options.servicePurgePeriod,
         serviceReqDefaults: options.serviceReqDefaults,
@@ -322,6 +332,8 @@ ApplicationClients.prototype.destroy = function destroy() {
     }
     self.processReporter.destroy();
     self.tchannel.timers.clearTimeout(self.lazyTimeout);
+    self.batchStats.destroy();
+
 
     self.repl.close();
     self._controlServer.close();

@@ -24,16 +24,13 @@ var EventEmitter = require('tchannel/lib/event_emitter.js');
 var test = require('tape');
 var TChannel = require('tchannel');
 
-var ServiceProxy = require('../../service-proxy.js');
+var TestCluster = require('../lib/test-cluster.js')
 
-test('set cn/service', function t(assert) {
+TestCluster.test('set cn/service', {
+    size: 1
+}, function t(cluster, assert) {
+    var proxy = cluster.apps[0].clients.serviceProxy;
 
-    var egress = new EventEmitter();
-    egress.membershipChangedEvent = egress.defineEvent('membershipChanged');
-    var proxy = new ServiceProxy({
-        channel: TChannel(),
-        egressNodes: egress
-    });
     assert.equals(proxy.blockingTable, undefined, 'blocking table should be undefined');
     proxy.block('client1', 'service1');
     proxy.block('client1', 'service2');
@@ -54,14 +51,11 @@ test('set cn/service', function t(assert) {
     assert.end();
 });
 
-test('clear cn/service', function t(assert) {
+TestCluster.test('clear cn/service', {
+    size: 1
+}, function t(cluster, assert) {
+    var proxy = cluster.apps[0].clients.serviceProxy;
 
-    var egress = new EventEmitter();
-    egress.membershipChangedEvent = egress.defineEvent('membershipChanged');
-    var proxy = new ServiceProxy({
-        channel: TChannel(),
-        egressNodes: egress
-    });
     assert.equals(proxy.blockingTable, undefined, 'blocking table should be undefined');
     proxy.block('client1', 'service1');
     proxy.block('client1', 'service2');

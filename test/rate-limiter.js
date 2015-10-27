@@ -19,15 +19,11 @@
 // THE SOFTWARE.
 
 'use strict';
-var test = require('tape');
-var TimeMock = require('time-mock');
-var nullStatsd = require('uber-statsd-client/null');
+
+var timers = require('timers');
 var series = require('run-series');
-var TChannel = require('tchannel');
 
-var RateLimiter = require('../rate_limiter.js');
-
-var timers = TimeMock(Date.now());
+var allocCluster = require('./lib/test-cluster.js');
 
 function increment(rateLimiter, steve, bob, done) {
     if (steve) {
@@ -51,20 +47,19 @@ function increment(rateLimiter, steve, bob, done) {
 
 function wait(done) {
     timers.setTimeout(done, 500);
-    timers.advance(500);
 }
 
-test('rps counter works', function t(assert) {
-    var channel = new TChannel({
-        timers: timers,
-        statsd: nullStatsd(2)
-    });
-    var statsd = channel.statsd;
-    var rateLimiter = RateLimiter({
-        numOfBuckets: 2,
-        defaultTotalKillSwitchBuffer: 5,
-        channel: channel
-    });
+allocCluster.test('rps counter works', {
+    size: 1,
+    remoteConfig: {
+        'rateLimiting.rateLimiterBuckets': 2,
+        'rateLimiting.defaultTotalKillSwitchBuffer': 5
+    },
+    statsdSize: 100
+}, function t(cluster, assert) {
+    var app = cluster.apps[0];
+    var rateLimiter = app.clients.serviceProxy.rateLimiter;
+    var statsd = app.clients.statsd;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -77,8 +72,15 @@ test('rps counter works', function t(assert) {
     assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'request for bob');
     assert.equals(rateLimiter.ksCounters.bob.rps, 2, 'request for bob - kill switch');
 
-    channel.flushStats();
-    assert.deepEqual(statsd._buffer._elements, [{
+    app.clients.batchStats.flushStats();
+
+    var elems = statsd._buffer._elements;
+
+    var rateLimitStats = elems.filter(function isRateLimit(x) {
+        return x.name.indexOf('rate-limiting') > -1;
+    });
+
+    assert.deepEqual(rateLimitStats, [{
         type: 'g',
         name: 'tchannel.rate-limiting.total-rps-limit',
         value: 1000,
@@ -86,22 +88,23 @@ test('rps counter works', function t(assert) {
         time: null
     }], 'stats keys/values as expected');
 
-    rateLimiter.destroy();
     assert.end();
-    channel.close();
 });
 
-test('rps counter works in 1.5 seconds', function t(assert) {
-    var channel = new TChannel({
-        timers: timers,
-        statsd: nullStatsd(20)
-    });
-    var statsd = channel.statsd;
-    var rateLimiter = RateLimiter({
-        numOfBuckets: 2,
-        defaultTotalKillSwitchBuffer: 5,
-        channel: channel
-    });
+allocCluster.test('rps counter works in 1.5 seconds', {
+    size: 1,
+    remoteConfig: {
+        'rateLimiting.rateLimiterBuckets': 2,
+        'rateLimiting.defaultTotalKillSwitchBuffer': 5
+    },
+    statsdSize: 100,
+    whitelist: [
+        ['warn', 'no usable nodes at protocol period']
+    ]
+}, function t(cluster, assert) {
+    var app = cluster.apps[0];
+    var rateLimiter = app.clients.serviceProxy.rateLimiter;
+    var statsd = app.clients.statsd;
 
     series([
         increment.bind(null, rateLimiter, 'steve', 'bob'),
@@ -129,139 +132,111 @@ test('rps counter works in 1.5 seconds', function t(assert) {
             done();
         }
     ], function done() {
-        if (!rateLimiter.destroyed) {
-            channel.flushStats();
-            assert.deepEqual(statsd._buffer._elements, [{
-                type: 'g',
-                name: 'tchannel.rate-limiting.total-rps-limit',
-                value: 1000,
-                delta: null,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.total-rps',
-                value: null,
-                delta: 5,
-                time: null
-            }, {
-                type: 'g',
-                name: 'tchannel.rate-limiting.total-rps-limit',
-                value: 1000,
-                delta: null,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.kill-switch.total-rps',
-                value: null,
-                delta: 5,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.service-rps.steve',
-                value: null,
-                delta: 3,
-                time: null
-            }, {
-                type: 'g',
-                name: 'tchannel.rate-limiting.service-rps-limit.steve',
-                value: 100,
-                delta: null,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.service-rps.bob',
-                value: null,
-                delta: 2,
-                time: null
-            }, {
-                type: 'g',
-                name: 'tchannel.rate-limiting.service-rps-limit.bob',
-                value: 100,
-                delta: null,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
-                value: null,
-                delta: 3,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
-                value: null,
-                delta: 2,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.total-rps',
-                value: null,
-                delta: 2,
-                time: null
-            }, {
-                type: 'g',
-                name: 'tchannel.rate-limiting.total-rps-limit',
-                value: 1000,
-                delta: null,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.kill-switch.total-rps',
-                value: null,
-                delta: 2,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.service-rps.steve',
-                value: null,
-                delta: 1,
-                time: null
-            }, {
-                type: 'g',
-                name: 'tchannel.rate-limiting.service-rps-limit.steve',
-                value: 100,
-                delta: null,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.service-rps.bob',
-                value: null,
-                delta: 1,
-                time: null
-            }, {
-                type: 'g',
-                name: 'tchannel.rate-limiting.service-rps-limit.bob',
-                value: 100,
-                delta: null,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
-                value: null,
-                delta: 1,
-                time: null
-            }, {
-                type: 'c',
-                name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
-                value: null,
-                delta: 1,
-                time: null
-            }], 'stats keys/values as expected');
 
-            channel.close();
-            rateLimiter.destroy();
-            assert.end();
-        }
+        // Force flush of second stats with two refreshes
+        timers.clearTimeout(rateLimiter.refreshTimer);
+        rateLimiter.refresh();
+        timers.clearTimeout(rateLimiter.refreshTimer);
+        rateLimiter.refresh();
+        app.clients.batchStats.flushStats();
+
+        var elems = statsd._buffer._elements;
+
+        var rateLimitStats = elems.filter(function isRateLimit(x) {
+            return x.type !== 'g' && x.name.indexOf('rate-limiting') > -1;
+        });
+
+        var expected = [{
+            type: 'c',
+            name: 'tchannel.rate-limiting.total-rps',
+            value: null,
+            delta: 5,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.kill-switch.total-rps',
+            value: null,
+            delta: 5,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.service-rps.steve',
+            value: null,
+            delta: 3,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.service-rps.bob',
+            value: null,
+            delta: 2,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
+            value: null,
+            delta: 3,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
+            value: null,
+            delta: 2,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.total-rps',
+            value: null,
+            delta: 2,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.kill-switch.total-rps',
+            value: null,
+            delta: 2,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.service-rps.steve',
+            value: null,
+            delta: 1,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.service-rps.bob',
+            value: null,
+            delta: 1,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
+            value: null,
+            delta: 1,
+            time: null
+        }, {
+            type: 'c',
+            name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
+            value: null,
+            delta: 1,
+            time: null
+        }];
+
+        assert.deepEqual(rateLimitStats, expected,
+            'stats keys/values as expected');
+
+        assert.end();
     });
 });
 
-test('remove counter works', function t(assert) {
-    var channel = new TChannel({
-        timers: timers
-    });
-    var rateLimiter = RateLimiter({
-        channel: channel,
-        numOfBuckets: 2
-    });
+allocCluster.test('remove counter works', {
+    size: 1,
+    remoteConfig: {
+        'rateLimiting.rateLimiterBuckets': 2,
+        'rateLimiting.defaultTotalKillSwitchBuffer': 5
+    },
+    statsdSize: 100
+}, function t(cluster, assert) {
+    var app = cluster.apps[0];
+    var rateLimiter = app.clients.serviceProxy.rateLimiter;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -276,24 +251,23 @@ test('remove counter works', function t(assert) {
     assert.ok(!rateLimiter.ksCounters.steve, 'steve should be removed - kill switch');
     assert.equals(rateLimiter.serviceCounters.bob.rps, 2, 'request for bob');
 
-    rateLimiter.destroy();
-    channel.close();
     assert.end();
 });
 
-test('rate limit works', function t(assert) {
-    var channel = new TChannel({
-        timers: timers
-    });
-    var rateLimiter = RateLimiter({
-        channel: channel,
-        numOfBuckets: 2,
-        defaultTotalKillSwitchBuffer: 3,
-        rpsLimitForServiceName: {
+allocCluster.test('rate limit works', {
+    size: 1,
+    remoteConfig: {
+        'rateLimiting.rateLimiterBuckets': 2,
+        'rateLimiting.defaultTotalKillSwitchBuffer': 3,
+        'rateLimiting.totalRpsLimit': 3,
+        'rateLimiting.rpsLimitForServiceName': {
             steve: 2
-        },
-        totalRpsLimit: 3
-    });
+        }
+    },
+    statsdSize: 100
+}, function t(cluster, assert) {
+    var app = cluster.apps[0];
+    var rateLimiter = app.clients.serviceProxy.rateLimiter;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -318,21 +292,21 @@ test('rate limit works', function t(assert) {
     assert.ok(!rateLimiter.shouldRateLimitService('bob'), 'should not rate limit bob');
     assert.ok(!rateLimiter.shouldKillSwitchService('bob'), 'should not kill switch bob');
 
-    rateLimiter.destroy();
-    channel.close();
     assert.end();
 });
 
-test('rate exempt service works 1', function t(assert) {
-    var channel = new TChannel({
-        timers: timers
-    });
-    var rateLimiter = RateLimiter({
-        channel: channel,
-        totalRpsLimit: 2,
-        defaultTotalKillSwitchBuffer: 5,
-        exemptServices: ['steve']
-    });
+allocCluster.test('rate exempt service works 1', {
+    size: 1,
+    remoteConfig: {
+        'rateLimiting.rateLimiterBuckets': 2,
+        'rateLimiting.totalRpsLimit': 2,
+        'rateLimiting.defaultTotalKillSwitchBuffer': 3,
+        'rateLimiting.exemptServices': ['steve']
+    },
+    statsdSize: 100
+}, function t(cluster, assert) {
+    var app = cluster.apps[0];
+    var rateLimiter = app.clients.serviceProxy.rateLimiter;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -348,25 +322,26 @@ test('rate exempt service works 1', function t(assert) {
     assert.ok(!rateLimiter.shouldRateLimitService('steve'), 'should not rate limit steve');
     assert.ok(!rateLimiter.shouldKillSwitchService('steve'), 'should not kill switch steve');
     assert.ok(rateLimiter.shouldRateLimitTotalRequest('bob'), 'should rate limit bob');
+    assert.ok(rateLimiter.shouldKillSwitchTotalRequest('bob'), 'should kill switch bob');
 
-    rateLimiter.destroy();
-    channel.close();
     assert.end();
 });
 
-test('rate exempt service works 2', function t(assert) {
-    var channel = new TChannel({
-        timers: timers
-    });
-    var rateLimiter = RateLimiter({
-        channel: channel,
-        totalRpsLimit: 2,
-        defaultTotalKillSwitchBuffer: 1,
-        rpsLimitForServiceName: {
+allocCluster.test('rate exempt service works 2', {
+    size: 1,
+    remoteConfig: {
+        'rateLimiting.rateLimiterBuckets': 2,
+        'rateLimiting.totalRpsLimit': 2,
+        'rateLimiting.defaultTotalKillSwitchBuffer': 1,
+        'rateLimiting.rpsLimitForServiceName': {
             steve: 1,
             bob: 1
         }
-    });
+    },
+    statsdSize: 100
+}, function t(cluster, assert) {
+    var app = cluster.apps[0];
+    var rateLimiter = app.clients.serviceProxy.rateLimiter;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -394,6 +369,5 @@ test('rate exempt service works 2', function t(assert) {
     assert.ok(!rateLimiter.shouldRateLimitService('steve'), 'should not rate limit steve');
     assert.ok(rateLimiter.shouldRateLimitService('bob'), 'should rate limit bob');
 
-    rateLimiter.destroy();
     assert.end();
 });
