@@ -99,14 +99,16 @@ function ServiceDispatchHandler(options) {
 
     /* service peer state data structures
      *
-     * serviceName  :: string
-     * hostPort     :: string
-     * lastRefresh  :: number // timestamp
-     * exitServices :: Map<serviceName, lastRefresh>
-     * peersToReap  :: Map<hostPort, bool>
-     * knownPeers   :: Map<hostPort, bool>
+     * serviceName           :: string
+     * hostPort              :: string
+     * lastRefresh           :: number // timestamp
+     * exitServices          :: Map<serviceName, lastRefresh>
+     * peersToReap           :: Map<hostPort, lastRefresh>
+     * knownPeers            :: Map<hostPort, lastRefresh>
+     * connectedServicePeers :: Map<serviceName, Map<hostPort, lastRefresh>>
      */
     self.exitServices = Object.create(null);
+    self.connectedServicePeers = Object.create(null);
     self.peersToReap = Object.create(null);
     self.knownPeers = Object.create(null);
 
@@ -465,33 +467,51 @@ function refreshServicePeer(serviceName, hostPort) {
     self.exitServices[serviceName] = now;
 
     if (self.partialAffinityEnabled) {
-        self.refreshServicePeerPartially(serviceName, hostPort);
+        self.refreshServicePeerPartially(serviceName, hostPort, now);
         return;
     }
 
     // The old way: fully connect every egress to all affine peers.
-    self.addPeerIndex(serviceName, hostPort);
+    self.addPeerIndex(serviceName, hostPort, true, now);
     var peer = self.getServicePeer(serviceName, hostPort);
-    if (!peer.isConnected('out')) {
-        peer.connectTo();
-    }
+    self.ensurePeerConnected(serviceName, peer, 'service peer refresh', now);
 };
 
 ServiceDispatchHandler.prototype.addPeerIndex =
-function addPeerIndex(serviceName, hostPort) {
+function addPeerIndex(serviceName, hostPort, connected, now) {
     var self = this;
+
+    if (connected) {
+        addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
+    } else {
+        deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+    }
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
     // Mark known peers, so they are candidates for future reaping
-    addIndexEntry(self.knownPeers, hostPort, serviceName, true);
+    addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 };
 
 ServiceDispatchHandler.prototype.deletePeerIndex =
 function deletePeerIndex(serviceName, hostPort) {
     var self = this;
 
+    deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
     deleteIndexEntry(self.knownPeers, hostPort, serviceName);
+};
+
+ServiceDispatchHandler.prototype.ensurePeerConnected =
+function ensurePeerConnected(serviceName, peer, reason, now) {
+    var self = this;
+
+    addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+
+    if (peer.isConnected('out')) {
+        return;
+    }
+
+    peer.connectTo();
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
@@ -557,7 +577,7 @@ function computePartialRange(serviceName, hostPort) {
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeerPartially =
-function refreshServicePeerPartially(serviceName, hostPort) {
+function refreshServicePeerPartially(serviceName, hostPort, now) {
     var self = this;
 
     // guaranteed non-null by refreshServicePeer above; we call this only so
@@ -565,10 +585,25 @@ function refreshServicePeerPartially(serviceName, hostPort) {
     var chan = self.getServiceChannel(serviceName, false);
 
     var peer = chan.peers.get(hostPort);
+    var connectedPeers = self.connectedServicePeers[serviceName];
 
-    if (!peer) {
-        peer = self._getServicePeer(chan, hostPort);
+    // simply freshen if not new
+    if (peer) {
+        var connected = connectedPeers && connectedPeers[hostPort];
+        self.addPeerIndex(serviceName, peer.hostPort, connected, now);
+        if (connected) {
+            self.ensurePeerConnected(serviceName, peer, 'service peer affinity refresh', now);
+        }
+
+        self.logger.info('refreshed peer partially', self.extendLogInfo({
+            serviceName: serviceName,
+            serviceHostPort: hostPort,
+            isConnected: connected
+        }));
+        return;
     }
+
+    peer = self._getServicePeer(chan, hostPort);
 
     var range = self.computePartialRange(serviceName, hostPort);
     if (range.relayIndex < 0) {
@@ -589,20 +624,31 @@ function refreshServicePeerPartially(serviceName, hostPort) {
         }));
     }
 
-    self.logger.info('Refreshing service peer affinity', self.extendLogInfo({
+    var toConnect = [];
+    var isAffine = {};
+    var i;
+    var worker;
+    for (i = 0; i < range.affineWorkers.length; i++) {
+        worker = range.affineWorkers[i];
+        isAffine[worker] = true;
+        if (!connectedPeers || !connectedPeers[worker]) {
+            toConnect.push(worker);
+        }
+    }
+
+    self.logger.info('implementing affinity change', self.extendLogInfo({
         serviceName: serviceName,
-        serviceHostPort: hostPort,
-        partialRange: range
+        newPeer: hostPort,
+        partialRange: range,
+        toConnect: toConnect
     }));
 
-    self.addPeerIndex(serviceName, hostPort);
+    self.addPeerIndex(serviceName, hostPort, !!isAffine[hostPort], now);
     self._getServicePeer(chan, hostPort);
 
-    for (var i = 0; i < range.affineWorkers.length; i++) {
-        peer = self._getServicePeer(chan, range.affineWorkers[i]);
-        if (!peer.isConnected('out')) {
-            peer.connectTo();
-        }
+    for (i = 0; i < toConnect.length; i++) {
+        peer = self._getServicePeer(chan, toConnect[i]);
+        self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
     }
 
     // TODO Drop peers that no longer have affinity for this service, such
