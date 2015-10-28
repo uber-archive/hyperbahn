@@ -76,8 +76,6 @@ function ServiceDispatchHandler(options) {
     self.circuits = null;
     self.boundOnCircuitStateChange = onCircuitStateChange;
 
-    self.servicePurgePeriod = options.servicePurgePeriod ||
-        SERVICE_PURGE_PERIOD;
     self.rateLimiter = new RateLimiter({
         channel: self.channel,
         rpsLimitForServiceName: options.rpsLimitForServiceName,
@@ -133,6 +131,29 @@ function ServiceDispatchHandler(options) {
     });
     self.peerReaper.start();
 
+    self.servicePurger = new IntervalScan({
+        name: 'service-purge',
+        timers: self.channel.timers,
+        interval: options.servicePurgePeriod || SERVICE_PURGE_PERIOD,
+        each: function maybePurgeEachService(serviceName, lastRefresh) {
+            var now = self.channel.timers.now();
+            if (now - lastRefresh > self.servicePurgePeriod) {
+                delete self.exitServices[serviceName];
+                var chan = self.channel.subChannels[serviceName];
+                if (chan) {
+                    chan.close();
+                    delete self.channel.subChannels[serviceName];
+                    self.rateLimiter.removeServiceCounter(serviceName);
+                    self.rateLimiter.removeKillSwitchCounter(serviceName);
+                }
+            }
+        },
+        getCollection: function getExitServices() {
+            return self.exitServices;
+        }
+    });
+    self.servicePurger.start();
+
     self.destroyed = false;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
@@ -140,7 +161,6 @@ function ServiceDispatchHandler(options) {
     if (self.circuitsConfig && self.circuitsConfig.enabled) {
         self.enableCircuits();
     }
-    self.purgeServices();
 
     self.boundEmitPeriodicStats = emitPeriodicStats;
     function emitPeriodicStats() {
@@ -433,34 +453,6 @@ function createServiceChannel(serviceName) {
         mode === 'exit' && self.circuitsEnabled && self.circuits);
 
     return svcchan;
-};
-
-ServiceDispatchHandler.prototype.purgeServices =
-function purgeServices() {
-    var self = this;
-
-    var now = self.channel.timers.now();
-    var keys = Object.keys(self.exitServices);
-    for (var i = 0; i < keys.length; i++) {
-        var serviceName = keys[i];
-        if (now - self.exitServices[serviceName] > self.servicePurgePeriod) {
-            delete self.exitServices[serviceName];
-            var chan = self.channel.subChannels[serviceName];
-            if (chan) {
-                chan.close();
-                delete self.channel.subChannels[serviceName];
-                self.rateLimiter.removeServiceCounter(serviceName);
-                self.rateLimiter.removeKillSwitchCounter(serviceName);
-            }
-        }
-    }
-
-    self.servicePurgeTimer = self.channel.timers.setTimeout(
-        function purgeServices() {
-            self.purgeServices();
-        },
-        self.servicePurgePeriod
-    );
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeer =
@@ -1069,7 +1061,7 @@ function destroy() {
     }
     self.destroyed = true;
     self.peerReaper.stop();
-    self.channel.timers.clearTimeout(self.servicePurgeTimer);
+    self.servicePurger.stop();
     self.channel.timers.clearTimeout(self.periodicStatsTimer);
     self.rateLimiter.destroy();
 };
