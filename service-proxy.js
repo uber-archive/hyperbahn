@@ -20,7 +20,6 @@
 
 'use strict';
 
-/* global setImmediate */
 /* eslint-disable max-statements */
 
 var assert = require('assert');
@@ -29,6 +28,7 @@ var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd-clean').clean;
 var util = require('util');
+var IntervalScan = require('./lib/interval-scan.js');
 var sortedIndexOf = require('./lib/sorted-index-of');
 
 var RateLimiter = require('./rate_limiter.js');
@@ -112,8 +112,26 @@ function ServiceDispatchHandler(options) {
     self.peersToReap = Object.create(null);
     self.knownPeers = Object.create(null);
 
-    self.reapPeersTimer = null;
-    self.reapPeersPeriod = options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD;
+    self.peerReaper = new IntervalScan({
+        name: 'peer-reap',
+        timers: self.channel.timers,
+        interval: options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD,
+        each: function reapSinglePeer(hostPort, serviceNames) {
+            self.reapSinglePeer(hostPort, serviceNames);
+        },
+        getCollection: function getPeersToReap() {
+            var peersToReap = self.peersToReap;
+            self.peersToReap = self.knownPeers;
+            self.knownPeers = Object.create(null);
+            return peersToReap;
+        }
+    });
+    self.peerReaper.runBeginEvent.on(function onPeerReapBegin(run) {
+        self.logger.info('reaping dead peers', self.extendLogInfo({
+            numPeersToReap: run.keys.length
+        }));
+    });
+    self.peerReaper.start();
 
     self.destroyed = false;
 
@@ -123,11 +141,6 @@ function ServiceDispatchHandler(options) {
         self.enableCircuits();
     }
     self.purgeServices();
-
-    self.boundReapPeers = reapPeers;
-    function reapPeers() {
-        self.reapPeers();
-    }
 
     self.boundEmitPeriodicStats = emitPeriodicStats;
     function emitPeriodicStats() {
@@ -142,7 +155,6 @@ function ServiceDispatchHandler(options) {
         self.updateServiceChannels();
     }
 
-    self.requestReapPeers();
     self.emitPeriodicStats();
 }
 
@@ -900,87 +912,15 @@ ServiceDispatchHandler.prototype.setReapPeersPeriod =
 function setReapPeersPeriod(period) {
     // period === 0 means never / disabled, and is the default
     var self = this;
-    if (self.reapPeersPeriod === period) {
-        return;
-    }
-    self.reapPeersPeriod = period;
 
+    self.peerReaper.setInterval(period);
     self.logger.info('set peer reap period', self.extendLogInfo({
-        period: self.reapPeersPeriod
+        period: self.peerReaper.interval
     }));
-
-    if (self.reapPeersTimer) {
-        self.channel.timers.clearTimeout(self.reapPeersTimer);
-        self.reapPeersTimer = null;
-    }
-
-    self.requestReapPeers();
-};
-
-ServiceDispatchHandler.prototype.requestReapPeers =
-function requestReapPeers() {
-    var self = this;
-
-    if (self.destroyed) {
-        return;
-    }
-
-    if (self.reapPeersTimer || self.reapPeersPeriod === 0) {
-        return;
-    }
-
-    self.reapPeersTimer = self.channel.timers.setTimeout(self.boundReapPeers, self.reapPeersPeriod);
-};
-
-ServiceDispatchHandler.prototype.reapPeers =
-function reapPeers(callback) {
-    var self = this;
-
-    if (self.reapPeersTimer) {
-        self.channel.timers.clearTimeout(self.reapPeersTimer);
-        self.reapPeersTimer = null;
-    }
-
-    var peersToReap = Object.keys(self.peersToReap);
-
-    if (peersToReap.length === 0) {
-        finish();
-        return;
-    }
-
-    self.logger.info('reaping dead peers', self.extendLogInfo({
-        numPeersToReap: peersToReap.length
-    }));
-
-    nextPeer(0, finish);
-
-    function nextPeer(i, done) {
-        if (i >= peersToReap.length) {
-            finish();
-            return;
-        }
-        self.reapSinglePeer(peersToReap[i]);
-        setImmediate(deferNextPeer);
-
-        function deferNextPeer() {
-            nextPeer(i + 1, done);
-        }
-    }
-
-    function finish() {
-        self.peersToReap = self.knownPeers;
-        self.knownPeers = Object.create(null);
-
-        self.requestReapPeers();
-
-        if (callback) {
-            callback();
-        }
-    }
 };
 
 ServiceDispatchHandler.prototype.reapSinglePeer =
-function reapSinglePeer(hostPort) {
+function reapSinglePeer(hostPort, serviceNames) {
     var self = this;
 
     if (self.knownPeers[hostPort]) {
@@ -992,7 +932,6 @@ function reapSinglePeer(hostPort) {
         return;
     }
 
-    var serviceNames = Object.keys(self.peersToReap[hostPort]);
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
         var svcchan = self.getServiceChannel(serviceName);
@@ -1132,8 +1071,8 @@ function destroy() {
         return;
     }
     self.destroyed = true;
+    self.peerReaper.stop();
     self.channel.timers.clearTimeout(self.servicePurgeTimer);
-    self.channel.timers.clearTimeout(self.reapPeersTimer);
     self.channel.timers.clearTimeout(self.periodicStatsTimer);
     self.rateLimiter.destroy();
 };
