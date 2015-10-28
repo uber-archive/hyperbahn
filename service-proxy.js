@@ -983,7 +983,7 @@ ServiceDispatchHandler.prototype.reapSinglePeer =
 function reapSinglePeer(hostPort) {
     var self = this;
 
-    if (!self.peersToReap[hostPort]) {
+    if (self.knownPeers[hostPort]) {
         return;
     }
 
