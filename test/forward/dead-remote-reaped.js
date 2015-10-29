@@ -21,6 +21,7 @@
 'use strict';
 
 var allocCluster = require('../lib/test-cluster.js');
+var collectParallel = require('collect-parallel/array');
 var CountedReadySignal = require('ready-signal/counted');
 
 allocCluster.test('dead exit peers get reaped', {
@@ -74,23 +75,7 @@ allocCluster.test('dead exit peers get reaped', {
             return;
         }
 
-        var todo = cluster.apps.length;
-
-        // Reap peers
-        for (i = 0; i < cluster.apps.length; i++) {
-            app = cluster.apps[i];
-            serviceProxy = app.clients.serviceProxy;
-            serviceProxy.reapPeers(doneReapPeers);
-        }
-
-        function doneReapPeers() {
-            todo--;
-            if (todo <= 0) {
-                assert.ok(todo === 0);
-
-                afterReapPeers();
-            }
-        }
+        reapClusterPears(cluster, assert, afterReapPeers);
     }
 
     function afterReapPeers() {
@@ -148,3 +133,20 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
 });
+
+function reapClusterPears(cluster, assert, callback) {
+    collectParallel(
+        cluster.apps,
+        function reapEach(app, i, done) {
+            var serviceProxy = app.clients.serviceProxy;
+            serviceProxy.reapPeers(done);
+        },
+        function finish(_, results) {
+            for (var i = 0; i < results.length; i++) {
+                var res = results[i];
+                assert.ifError(res.err, 'no error from reaping app ' + i);
+            }
+            callback();
+        }
+    );
+}
