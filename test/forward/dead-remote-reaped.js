@@ -22,7 +22,6 @@
 
 var allocCluster = require('../lib/test-cluster.js');
 var collectParallel = require('collect-parallel/array');
-var CountedReadySignal = require('ready-signal/counted');
 
 allocCluster.test('dead exit peers get reaped', {
     size: 10,
@@ -55,19 +54,26 @@ allocCluster.test('dead exit peers get reaped', {
         }
 
         // Some of the peers re-register
-        var ready = CountedReadySignal(activeNum);
-        for (i = 0; i < activeNum; i++) {
-            alice = cluster.namedRemotes[i];
-            cluster.sendRegister(alice.channel, {
-                serviceName: alice.serviceName
-            }, ready.signal);
-        }
-        ready(afterReRegister);
+        collectParallel(
+            cluster.namedRemotes.slice(0, activeNum),
+            function reregEach(alice, i, done) {
+                cluster.sendRegister(alice.channel, {
+                    serviceName: alice.serviceName
+                }, done);
+            },
+            afterReRegister
+        );
     }
 
-    function afterReRegister(err) {
-        if (err) {
-            assert.end(err);
+    function afterReRegister(_, results) {
+        var done = false;
+        for (var i = 0; i < results.length; i++) {
+            var res = results[i];
+            done = done || !!res.err;
+            assert.ifError(res.err, 'no unexpected error from rereg ' + i);
+        }
+        if (done) {
+            assert.end();
             return;
         }
 
@@ -97,19 +103,26 @@ allocCluster.test('dead exit peers get reaped', {
         }
 
         // But then everybody registers again!
-        var ready = CountedReadySignal(cluster.namedRemotes.length);
-        for (i = 0; i < cluster.namedRemotes.length; i++) {
-            alice = cluster.namedRemotes[i];
-            cluster.sendRegister(alice.channel, {
-                serviceName: alice.serviceName
-            }, ready.signal);
-        }
-        ready(afterResurrection);
+        collectParallel(
+            cluster.namedRemotes,
+            function reregEach(alice, i, done) {
+                cluster.sendRegister(alice.channel, {
+                    serviceName: alice.serviceName
+                }, done);
+            },
+            afterResurrection
+        );
     }
 
-    function afterResurrection(err) {
-        if (err) {
-            assert.end(err);
+    function afterResurrection(_, results) {
+        var done = false;
+        for (var i = 0; i < results.length; i++) {
+            var res = results[i];
+            done = done || !!res.err;
+            assert.ifError(res.err, 'no unexpected error from resurrection ' + i);
+        }
+        if (done) {
+            assert.end();
             return;
         }
 
