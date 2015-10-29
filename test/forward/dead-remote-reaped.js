@@ -30,8 +30,7 @@ allocCluster.test('dead exit peers get reaped', {
 }, function t(cluster, assert) {
     var i;
     var alice;
-    var serviceProxy;
-    var app;
+    var activeNum = 3;
 
     // Verify that hyperban is connected to all the alices
     for (i = 0; i < cluster.namedRemotes.length; i++) {
@@ -43,31 +42,28 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     // Reap peers that have not registered (nobody)
-    for (i = 0; i < cluster.apps.length; i++) {
-        app = cluster.apps[i];
-        serviceProxy = app.clients.serviceProxy;
-        serviceProxy.reapPeers();
-    }
+    reapClusterPears(cluster, assert, initialReapDone);
 
-    // Verify that all alices are still connected
-    for (i = 0; i < cluster.namedRemotes.length; i++) {
-        alice = cluster.namedRemotes[i];
-        cluster.checkExitPeers(assert, {
-            serviceName: alice.serviceName,
-            hostPort: alice.hostPort
-        });
-    }
+    function initialReapDone() {
+        // Verify that all alices are still connected
+        for (i = 0; i < cluster.namedRemotes.length; i++) {
+            alice = cluster.namedRemotes[i];
+            cluster.checkExitPeers(assert, {
+                serviceName: alice.serviceName,
+                hostPort: alice.hostPort
+            });
+        }
 
-    // Some of the peers re-register
-    var activeNum = 3;
-    var ready = CountedReadySignal(activeNum);
-    for (i = 0; i < activeNum; i++) {
-        alice = cluster.namedRemotes[i];
-        cluster.sendRegister(alice.channel, {
-            serviceName: alice.serviceName
-        }, ready.signal);
+        // Some of the peers re-register
+        var ready = CountedReadySignal(activeNum);
+        for (i = 0; i < activeNum; i++) {
+            alice = cluster.namedRemotes[i];
+            cluster.sendRegister(alice.channel, {
+                serviceName: alice.serviceName
+            }, ready.signal);
+        }
+        ready(afterReRegister);
     }
-    ready(afterReRegister);
 
     function afterReRegister(err) {
         if (err) {
@@ -101,7 +97,7 @@ allocCluster.test('dead exit peers get reaped', {
         }
 
         // But then everybody registers again!
-        ready = CountedReadySignal(cluster.namedRemotes.length);
+        var ready = CountedReadySignal(cluster.namedRemotes.length);
         for (i = 0; i < cluster.namedRemotes.length; i++) {
             alice = cluster.namedRemotes[i];
             cluster.sendRegister(alice.channel, {
