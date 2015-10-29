@@ -549,17 +549,12 @@ function computePartialRange(serviceName, hostPort) {
 
     // Compute the range of workers that this relay should be connected to.
     range.ratio = range.workers.length / range.relays.length;
+
+    range.length = Math.ceil(self.minPeersPerWorker * range.ratio); // how many peers we are going to connect to
+    range.length = Math.max(self.minPeersPerRelay, range.length); // please always have this many
+    range.length = Math.min(range.workers.length, range.length); // you can't have more than there are
     range.start = Math.floor(range.relayIndex * range.ratio);
-    range.length = Math.ceil(
-        Math.min(
-            range.workers.length,
-            Math.max(
-                self.minPeersPerRelay,
-                self.minPeersPerWorker * range.ratio
-            )
-        )
-    );
-    range.stop = (range.start + range.length) % range.workers.length;
+    range.stop = Math.ceil(range.relayIndex * range.ratio + range.length) % range.workers.length;
 
     if (range.start === range.stop) {
         // fully connected
