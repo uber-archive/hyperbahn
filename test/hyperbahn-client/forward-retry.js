@@ -95,6 +95,7 @@ function runTests(HyperbahnCluster) {
                         // TODO: would be great to have an explicit network error
                         // for that
                         assert.ok(
+                            outreq.err.type === 'tchannel.socket' ||
                             outreq.err.type === 'tchannel.network' ||
                             outreq.err.type === 'tchannel.connection.reset',
                             'expected socket error from forward node');
