@@ -27,31 +27,17 @@ allocCluster.test('dead exit peers get reaped', {
     size: 10,
     namedRemotes: ['alice', 'alice', 'alice', 'alice', 'alice', 'alice', 'alice']
 }, function t(cluster, assert) {
-    var i;
-    var alice;
     var activeNum = 3;
 
     // Verify that hyperban is connected to all the alices
-    for (i = 0; i < cluster.namedRemotes.length; i++) {
-        alice = cluster.namedRemotes[i];
-        cluster.checkExitPeers(assert, {
-            serviceName: alice.serviceName,
-            hostPort: alice.hostPort
-        });
-    }
+    checkAllExitPeers(cluster, assert, null);
 
     // Reap peers that have not registered (nobody)
     reapClusterPears(cluster, assert, initialReapDone);
 
     function initialReapDone() {
         // Verify that all alices are still connected
-        for (i = 0; i < cluster.namedRemotes.length; i++) {
-            alice = cluster.namedRemotes[i];
-            cluster.checkExitPeers(assert, {
-                serviceName: alice.serviceName,
-                hostPort: alice.hostPort
-            });
-        }
+        checkAllExitPeers(cluster, assert, null);
 
         // Some of the peers re-register
         collectParallel(
@@ -81,26 +67,20 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterReapPeers() {
-
-        // Some of the peers remain
-        for (i = 0; i < activeNum; i++) {
-            alice = cluster.namedRemotes[i];
-            cluster.checkExitPeers(assert, {
-                serviceName: alice.serviceName,
-                hostPort: alice.hostPort,
-                isDead: false // NOT DEAD YET
-                // I FEEL HAPPY
-            });
-        }
-        // Others not so much
-        for (i = activeNum; i < cluster.namedRemotes.length; i++) {
-            alice = cluster.namedRemotes[i];
-            cluster.checkExitPeers(assert, {
-                serviceName: alice.serviceName,
-                hostPort: alice.hostPort,
-                isDead: true
-            });
-        }
+        checkAllExitPeers(cluster, assert, [
+            // Some of the peers remain
+            false,
+            false,
+            false,
+            // Others not so much
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+        ]);
 
         // But then everybody registers again!
         collectParallel(
@@ -127,13 +107,7 @@ allocCluster.test('dead exit peers get reaped', {
         }
 
         // Verify that all the peers have rejoined the fray.
-        for (i = 0; i < cluster.namedRemotes.length; i++) {
-            alice = cluster.namedRemotes[i];
-            cluster.checkExitPeers(assert, {
-                serviceName: alice.serviceName,
-                hostPort: alice.hostPort
-            });
-        }
+        checkAllExitPeers(cluster, assert, null);
 
         // And they all lived happily ever after.
         // The end.
@@ -158,4 +132,15 @@ function reapClusterPears(cluster, assert, callback) {
             callback();
         }
     );
+}
+
+function checkAllExitPeers(cluster, assert, isDead) {
+    for (var i = 0; i < cluster.namedRemotes.length; i++) {
+        var alice = cluster.namedRemotes[i];
+        cluster.checkExitPeers(assert, {
+            serviceName: alice.serviceName,
+            hostPort: alice.hostPort,
+            isDead: isDead && isDead[i]
+        });
+    }
 }
