@@ -914,9 +914,6 @@ function setReapPeersPeriod(period) {
     var self = this;
 
     self.peerReaper.setInterval(period);
-    self.logger.info('set peer reap period', self.extendLogInfo({
-        period: self.peerReaper.interval
-    }));
 };
 
 ServiceDispatchHandler.prototype.reapSinglePeer =
