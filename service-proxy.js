@@ -92,9 +92,6 @@ function ServiceDispatchHandler(options) {
     self.minPeersPerRelay = options.minPeersPerRelay || DEFAULT_MIN_PEERS_PER_RELAY;
     self.drainTimeout = options.drainTimeout || DEFAULT_DRAIN_TIMEOUT;
 
-    self.periodicStatsTimer = null;
-    self.statsPeriod = options.statsPeriod || DEFAULT_STATS_PERIOD;
-
     /* service peer state data structures
      *
      * serviceName           :: string
@@ -154,17 +151,27 @@ function ServiceDispatchHandler(options) {
     });
     self.servicePurger.start();
 
+    self.statEmitter = new IntervalScan({
+        name: 'channel-stat-emit',
+        timers: self.channel.timers,
+        interval: options.statsPeriod || DEFAULT_STATS_PERIOD,
+        each: function emitEachSubChannelStats(serviceName, serviceChannel) {
+            // TODO: only if it's a service channel (relay handler, maybe check
+            // for exit mode?)
+            self.emitPeriodicServiceStats(serviceChannel, serviceName);
+        },
+        getCollection: function getSubChannels() {
+            return self.channel.subChannels;
+        }
+    });
+    self.statEmitter.start();
+
     self.destroyed = false;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
 
     if (self.circuitsConfig && self.circuitsConfig.enabled) {
         self.enableCircuits();
-    }
-
-    self.boundEmitPeriodicStats = emitPeriodicStats;
-    function emitPeriodicStats() {
-        self.emitPeriodicStats();
     }
 
     function onCircuitStateChange(stateChange) {
@@ -174,8 +181,6 @@ function ServiceDispatchHandler(options) {
     function onMembershipChanged() {
         self.updateServiceChannels();
     }
-
-    self.emitPeriodicStats();
 }
 
 util.inherits(ServiceDispatchHandler, EventEmitter);
@@ -876,30 +881,6 @@ function isExitFor(serviceName) {
     return chan.serviceProxyMode === 'exit';
 };
 
-ServiceDispatchHandler.prototype.emitPeriodicStats =
-function emitPeriodicStats() {
-    var self = this;
-    self.periodicStatsTimer = null;
-
-    var serviceNames = Object.keys(self.channel.subChannels);
-    for (var index = 0; index < serviceNames.length; index++) {
-        var serviceName = serviceNames[index];
-        var serviceChannel = self.channel.subChannels[serviceName];
-        self.emitPeriodicServiceStats(serviceChannel, serviceName);
-    }
-
-    self.requestPeriodicStats();
-};
-
-ServiceDispatchHandler.prototype.requestPeriodicStats =
-function requestPeriodicStats() {
-    var self = this;
-    if (self.periodicStatsTimer || self.destroyed) {
-        return;
-    }
-    self.periodicStatsTimer = self.channel.timers.setTimeout(self.boundEmitPeriodicStats, self.statsPeriod);
-};
-
 ServiceDispatchHandler.prototype.setReapPeersPeriod =
 function setReapPeersPeriod(period) {
     // period === 0 means never / disabled, and is the default
@@ -1062,7 +1043,7 @@ function destroy() {
     self.destroyed = true;
     self.peerReaper.stop();
     self.servicePurger.stop();
-    self.channel.timers.clearTimeout(self.periodicStatsTimer);
+    self.statEmitter.stop();
     self.rateLimiter.destroy();
 };
 
