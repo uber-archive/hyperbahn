@@ -80,9 +80,6 @@ allocCluster.test('dead exit peers get reaped', {
             true,
             true,
             true,
-            true,
-            true,
-            true,
             true
         ]);
 
