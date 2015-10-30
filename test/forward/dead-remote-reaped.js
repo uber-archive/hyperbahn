@@ -122,7 +122,7 @@ function reapClusterPears(cluster, assert, callback) {
         cluster.apps,
         function reapEach(app, i, done) {
             var serviceProxy = app.clients.serviceProxy;
-            serviceProxy.reapPeers(done);
+            serviceProxy.peerReaper.run(done);
         },
         function finish(_, results) {
             for (var i = 0; i < results.length; i++) {
