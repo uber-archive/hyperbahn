@@ -25,7 +25,11 @@ var collectParallel = require('collect-parallel/array');
 
 allocCluster.test('dead exit peers get reaped', {
     size: 10,
-    namedRemotes: ['alice', 'alice', 'alice', 'alice', 'alice', 'alice', 'alice']
+    namedRemotes: ['alice', 'alice', 'alice', 'alice', 'alice', 'alice', 'alice'],
+    whitelist: [
+        ['info', 'Refreshing service peer affinity'],
+        ['info', 'reaping dead peers']
+    ]
 }, function t(cluster, assert) {
     var activeNum = 3;
 
