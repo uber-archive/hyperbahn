@@ -89,3 +89,10 @@ CollapsedAssert.prototype.report = function report(realAssert, message) {
         realAssert[method].apply(realAssert, command);
     }
 };
+
+CollapsedAssert.prototype.comment =
+function comment(msg) {
+    var self = this;
+
+    self._commands.push(['comment', msg]);
+};
