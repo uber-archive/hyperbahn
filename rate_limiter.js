@@ -207,7 +207,7 @@ function refresh() {
     }
 
     self.refreshTimer = self.timers.setTimeout(
-        function refresh() {
+        function refreshAgain() {
             self.refresh();
         },
         self.refreshDelay

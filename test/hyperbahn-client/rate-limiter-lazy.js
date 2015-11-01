@@ -95,7 +95,7 @@ function runTests(HyperbahnCluster) {
                 send.bind(null, opts),
                 send.bind(null, opts),
                 function check(done) {
-                    cluster.apps.forEach(function check(app) {
+                    cluster.apps.forEach(function checkApp(app) {
                         var relayChannel = app.clients.tchannel;
                         assert.equals(relayChannel.handler.rateLimiter.totalRequestCounter.rps, 3, 'total request');
                         assert.equals(relayChannel.handler.rateLimiter.serviceCounters.steve.rps, 3, 'request for steve');
