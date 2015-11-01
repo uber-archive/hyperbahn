@@ -84,7 +84,7 @@ TestCluster.test = tapeCluster(tape, TestCluster);
 
 module.exports = TestCluster;
 
- /*eslint complexity: 13*/
+/*eslint complexity: [2, 15] */
 function TestCluster(opts) {
     if (!(this instanceof TestCluster)) {
         return new TestCluster(opts);
