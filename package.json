@@ -70,7 +70,7 @@
     "check-cover": "istanbul check-coverage || echo coverage failed",
     "check-ls": "npm ls --loglevel=http --parseable 1>/dev/null && echo '# npm is in a good state'",
     "cover": "npm run check-files && npm run test-cover -s && npm run check-cover -s",
-    "lint": "standard -v --reporter stylish && echo '# linter passed'",
+    "lint": "eslint $(git ls-files | grep '.js$') && echo '# linter passed'",
     "shrinkwrap": "node bin/shrinkwrap.js --dev",
     "travis": "npm run test",
     "test": "npm run check-licence && npm run check-ls -s && npm run lint -s && npm run cover && npm run check-benchmark -s",
