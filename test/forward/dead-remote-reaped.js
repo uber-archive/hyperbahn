@@ -40,6 +40,8 @@ allocCluster.test('dead exit peers get reaped', {
     reapClusterPears(cluster, assert, initialReapDone);
 
     function initialReapDone() {
+        assert.comment('- initialReapDone');
+
         // Verify that all alices are still connected
         checkAllExitPeers(cluster, assert, null);
 
@@ -56,6 +58,8 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterReRegister(_, results) {
+        assert.comment('- afterReRegister');
+
         var done = false;
         for (var i = 0; i < results.length; i++) {
             var res = results[i];
@@ -96,6 +100,8 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterResurrection(_, results) {
+        assert.comment('- afterResurrection');
+
         var done = false;
         for (var i = 0; i < results.length; i++) {
             var res = results[i];
@@ -138,6 +144,7 @@ function reapClusterPears(cluster, assert, callback) {
 function checkAllExitPeers(cluster, assert, isDead) {
     for (var i = 0; i < cluster.namedRemotes.length; i++) {
         var alice = cluster.namedRemotes[i];
+        assert.comment('-- checkExitPeers for ' + i);
         cluster.checkExitPeers(assert, {
             serviceName: alice.serviceName,
             hostPort: alice.hostPort,
