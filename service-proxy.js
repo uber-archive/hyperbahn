@@ -731,7 +731,7 @@ function updateServiceChannel(svcchan) {
     var exitNodes = self.egressNodes.exitsFor(svcchan.serviceName);
     var isExit = self.egressNodes.isExitFor(svcchan.serviceName);
     if (isExit && svcchan.serviceProxyMode === 'forward') {
-        self.changeToExit(exitNodes, svcchan);
+        self.changeToExit(svcchan);
     } else if (!isExit) {
         if (svcchan.serviceProxyMode === 'exit') {
             self.changeToForward(exitNodes, svcchan);
@@ -742,7 +742,7 @@ function updateServiceChannel(svcchan) {
 };
 
 ServiceDispatchHandler.prototype.changeToExit =
-function changeToExit(exitNodes, svcchan) {
+function changeToExit(svcchan) {
     var self = this;
 
     var oldMode = svcchan.serviceProxyMode;
