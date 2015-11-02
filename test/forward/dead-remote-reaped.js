@@ -33,11 +33,17 @@ allocCluster.test('dead exit peers get reaped', {
 }, function t(cluster, assert) {
     var activeNum = 3;
 
-    // Verify that hyperban is connected to all the alices
-    checkAllExitPeers(cluster, assert, null);
+    pruneClusterPears(cluster, assert, initialPruneDone);
 
-    // Reap peers that have not registered (nobody)
-    reapClusterPears(cluster, assert, initialReapDone);
+    function initialPruneDone() {
+        assert.comment('- initialPruneDone');
+
+        // Verify that hyperban is connected to all the alices
+        checkAllExitPeers(cluster, assert, null);
+
+        // Reap peers that have not registered (nobody)
+        reapClusterPears(cluster, assert, initialReapDone);
+    }
 
     function initialReapDone() {
         assert.comment('- initialReapDone');
@@ -75,6 +81,14 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterReapPeers() {
+        assert.comment('- afterReapPeers');
+
+        pruneClusterPears(cluster, assert, afterReapPrunePeers);
+    }
+
+    function afterReapPrunePeers() {
+        assert.comment('- afterReapPrunePeers');
+
         checkAllExitPeers(cluster, assert, [
             // Some of the peers remain
             false,
@@ -113,6 +127,12 @@ allocCluster.test('dead exit peers get reaped', {
             return;
         }
 
+        pruneClusterPears(cluster, assert, afterResPruneDone);
+    }
+
+    function afterResPruneDone() {
+        assert.comment('- afterResPruneDone');
+
         // Verify that all the peers have rejoined the fray.
         checkAllExitPeers(cluster, assert, null);
 
@@ -135,6 +155,23 @@ function reapClusterPears(cluster, assert, callback) {
             for (var i = 0; i < results.length; i++) {
                 var res = results[i];
                 assert.ifError(res.err, 'no error from reaping app ' + i);
+            }
+            callback();
+        }
+    );
+}
+
+function pruneClusterPears(cluster, assert, callback) {
+    collectParallel(
+        cluster.apps,
+        function pruneEach(app, i, done) {
+            var serviceProxy = app.clients.serviceProxy;
+            serviceProxy.peerPruner.run(done);
+        },
+        function finish(_, results) {
+            for (var i = 0; i < results.length; i++) {
+                var res = results[i];
+                assert.ifError(res.err, 'no error from pruning app ' + i);
             }
             callback();
         }
