@@ -526,7 +526,7 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
-function computePartialRange(serviceName, hostPort) {
+function computePartialRange(serviceName) {
     var self = this;
 
     var serviceChannel = self.getOrCreateServiceChannel(serviceName);
@@ -611,7 +611,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     peer = self._getServicePeer(chan, hostPort);
 
-    var range = self.computePartialRange(serviceName, hostPort);
+    var range = self.computePartialRange(serviceName);
     if (range.relayIndex < 0) {
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
             serviceName: serviceName,
