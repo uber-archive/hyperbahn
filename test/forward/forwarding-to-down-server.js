@@ -99,15 +99,18 @@ allocCluster.test('forwarding to a down service', {
                     cassert.equal(logLine.levelName, 'info');
                 }
 
-                cassert.equal(
-                    logErr.socketRemoteAddr, steve.hostPort,
-                    'expected exception to steve'
-                );
-                cassert.ok(
+                var expectedAddr =
+                    logErr.socketRemoteAddr === steve.hostPort;
+                // if (!expectedAddr) console.error('WRU', steve.hostPort, logErr);
+                cassert.ok(expectedAddr, 'expected exception to steve');
+
+                var expectedType =
                     logErr.fullType === 'tchannel.socket~!~error.wrapped-io.connect.ECONNREFUSED' ||
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET',
-                    'Expected exception to be network error'
-                );
+                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET';
+                if (!expectedType) {
+                    assert.comment('unexpected error type ' + logErr.fullType);
+                }
+                cassert.ok(expectedType, 'Expected exception to be network error');
             } else {
                 cassert.ok(false, 'unexpected log line');
             }
