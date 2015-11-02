@@ -40,6 +40,7 @@
     "run-series": "1.1.2",
     "safe-json-parse": "4.0.0",
     "static-config": "2.1.0",
+    "tape": "^4.2.2",
     "tape-cluster": "2.0.1",
     "tchannel": "3.5.28",
     "uber-statsd-client": "1.4.0",
