@@ -84,7 +84,14 @@ allocCluster.test('forwarding to a down service', {
         for (var i = 0; i < logLines.length; i++) {
             var logLine = logLines[i];
             var logErr = logLine.meta.error;
-            if (logLine.msg === 'error while forwarding') {
+            if (logLine.msg === 'forwarding error frame') {
+                cassert.equal(logLine.meta.isErrorFrame, true,
+                    'expected error frame');
+                cassert.equal(logLine.meta.serviceName, 'steve',
+                    'expected steve error');
+            } else if (logLine.msg === 'Refreshing service peer affinity') {
+                cassert.ok(true, 'expected peer affinity refresh');
+            } else if (logLine.msg === 'error while forwarding') {
                 cassert.equal(logLine.levelName, 'warn');
                 cassert.equal(
                     logErr.socketRemoteAddr, steve.hostPort,
@@ -106,13 +113,6 @@ allocCluster.test('forwarding to a down service', {
                     logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET',
                     'Expected exception to be network error'
                 );
-            } else if (logLine.msg === 'forwarding error frame') {
-                cassert.equal(logLine.meta.isErrorFrame, true,
-                    'expected error frame');
-                cassert.equal(logLine.meta.serviceName, 'steve',
-                    'expected steve error');
-            } else if (logLine.msg === 'Refreshing service peer affinity') {
-                cassert.ok(true, 'expected peer affinity refresh');
             } else {
                 cassert.ok(false, 'unexpected log line');
             }
