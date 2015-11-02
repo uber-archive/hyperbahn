@@ -122,9 +122,11 @@ function ServiceDispatchHandler(options) {
         }
     });
     self.peerReaper.runBeginEvent.on(function onPeerReapBegin(run) {
-        self.logger.info('reaping dead peers', self.extendLogInfo({
-            numPeersToReap: run.keys.length
-        }));
+        if (run.keys.length) {
+            self.logger.info('reaping dead peers', self.extendLogInfo({
+                numPeersToReap: run.keys.length
+            }));
+        }
     });
     self.peerReaper.start();
 
