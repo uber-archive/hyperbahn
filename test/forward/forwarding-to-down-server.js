@@ -20,6 +20,8 @@
 
 'use strict';
 
+/* eslint-disable complexity */ // Didn't need it anyway
+
 var CollapsedAssert = require('../lib/collapsed-assert.js');
 var allocCluster = require('../lib/test-cluster.js');
 
@@ -84,35 +86,38 @@ allocCluster.test('forwarding to a down service', {
         for (var i = 0; i < logLines.length; i++) {
             var logLine = logLines[i];
             var logErr = logLine.meta.error;
-            if (logLine.msg === 'error while forwarding') {
-                cassert.equal(logLine.levelName, 'warn');
-                cassert.equal(
-                    logErr.socketRemoteAddr, steve.hostPort,
-                    'expected exception to steve'
-                );
-                cassert.ok(
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.connect.ECONNREFUSED' ||
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET',
-                    'Expected exception to be network error'
-                );
-            } else if (logLine.msg === 'resetting connection') {
-                cassert.equal(logLine.levelName, 'info');
-                cassert.equal(
-                    logErr.socketRemoteAddr, steve.hostPort,
-                    'expected exception to steve'
-                );
-                cassert.ok(
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.connect.ECONNREFUSED' ||
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET',
-                    'Expected exception to be network error'
-                );
-            } else if (logLine.msg === 'forwarding error frame') {
+            if (logLine.msg === 'forwarding error frame') {
                 cassert.equal(logLine.meta.isErrorFrame, true,
                     'expected error frame');
                 cassert.equal(logLine.meta.serviceName, 'steve',
                     'expected steve error');
             } else if (logLine.msg === 'Refreshing service peer affinity') {
                 cassert.ok(true, 'expected peer affinity refresh');
+            } else if (logLine.msg === 'error while forwarding' ||
+                       logLine.msg === 'resetting connection') {
+                if (logLine.msg === 'error while forwarding') {
+                    cassert.equal(logLine.levelName, 'warn');
+                } else if (logLine.msg === 'resetting connection') {
+                    cassert.equal(logLine.levelName, 'info');
+                }
+
+                var expectedAddr =
+                    logErr.socketRemoteAddr === steve.hostPort ||
+                    logErr.outRequestAddr === steve.hostPort;
+                // if (!expectedAddr) console.error('WRU', steve.hostPort, logErr);
+                cassert.ok(expectedAddr, 'expected exception to steve');
+
+                var expectedType =
+                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.connect.ECONNREFUSED' ||
+                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET' ||
+                    logErr.fullType === 'tchannel.socket~!~error.wrapped-unknown' ||
+                    logErr.fullType === 'tchannel.socket-closed' ||
+                    logErr.fullType === 'tchannel.connection.reset~!~tchannel.socket~!~error.wrapped-io.read.ECONNRESET' ||
+                    logErr.fullType === 'tchannel.connection.reset~!~tchannel.socket~!~error.wrapped-unknown';
+                if (!expectedType) {
+                    assert.comment('unexpected error type ' + logErr.fullType);
+                }
+                cassert.ok(expectedType, 'Expected exception to be network error');
             } else {
                 cassert.ok(false, 'unexpected log line');
             }
