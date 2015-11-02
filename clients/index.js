@@ -334,7 +334,6 @@ ApplicationClients.prototype.destroy = function destroy() {
     self.tchannel.timers.clearTimeout(self.lazyTimeout);
     self.batchStats.destroy();
 
-
     self.repl.close();
     self._controlServer.close();
 

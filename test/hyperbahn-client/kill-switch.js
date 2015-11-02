@@ -20,11 +20,7 @@
 
 'use strict';
 
-var EventEmitter = require('tchannel/lib/event_emitter.js');
-var test = require('tape');
-var TChannel = require('tchannel');
-
-var TestCluster = require('../lib/test-cluster.js')
+var TestCluster = require('../lib/test-cluster.js');
 
 TestCluster.test('set cn/service', {
     size: 1
