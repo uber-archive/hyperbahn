@@ -20,22 +20,17 @@
 
 'use strict';
 
-var NullLogtron = require('null-logtron');
-var NullStatsd = require('uber-statsd-client/null');
-
 var allocCluster = require('./lib/test-cluster.js');
 
 allocCluster.test('server writes to access', {
-    clients: {
-        logger: NullLogtron(),
-        statsd: NullStatsd()
-    }
+    size: 1,
+    statsdSize: 30
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
     var statsd = app.clients.statsd;
 
     app.client.sendHealth(function onResponse(err, resp) {
-        app.clients.tchannel.flushStats();
+        app.clients.batchStats.flushStats();
 
         assert.ifError(err);
         if (!err) {

@@ -38,6 +38,7 @@ var nodeAssert = require('assert');
 var TChannelJSON = require('tchannel/as/json');
 var tapeCluster = require('tape-cluster');
 var extend = require('xtend');
+var NullStatsd = require('uber-statsd-client/null');
 
 var TCReporter = require('tchannel/tcollector/reporter');
 var loadTChannelTestConfig = require('tchannel/test/lib/load_config.js');
@@ -130,6 +131,7 @@ function TestCluster(opts) {
 
     self.tchannelJSON = TChannelJSON();
     self.logger = DebugLogtron('autobahn');
+    self.statsd = NullStatsd(opts.statsdSize || 5);
 
     if (self.opts.whitelist) {
         for (var i = 0; i < self.opts.whitelist.length; i++) {
@@ -466,6 +468,8 @@ function createApplication(hostPort, cb) {
     localOpts.clients = localOpts.clients || {};
     localOpts.clients.logger =
         localOpts.clients.logger || self.logger;
+    localOpts.clients.statsd =
+        localOpts.clients.statsd || self.statsd;
     localOpts.rateLimiterBuckets = rateLimiterBuckets;
     localOpts.defaultTotalKillSwitchBuffer = defaultTotalKillSwitchBuffer;
 

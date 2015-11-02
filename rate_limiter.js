@@ -22,7 +22,8 @@
 
 /* eslint max-statements: [2, 40] */
 var assert = require('assert');
-var stat = require('tchannel/lib/stat');
+
+var stat = require('./stat-tags.js');
 
 var DEFAULT_SERVICE_RPS_LIMIT = 100;
 var DEFAULT_TOTAL_RPS_LIMIT = 1000;
@@ -81,6 +82,7 @@ function RateLimiter(options) {
     self.channel = options.channel;
     assert(self.channel && !self.channel.topChannel, 'RateLimiter requires top channel');
 
+    self.batchStats = options.batchStats;
     self.timers = self.channel.timers;
 
     self.numOfBuckets = options.numOfBuckets || DEFAULT_BUCKET_NUMBER;
@@ -123,21 +125,21 @@ function refreshCounter(counter, rpsStatsName, rpsLimitStatsName, createStatsTag
     if (self.cycle === self.numOfBuckets) {
         var statsTag = createStatsTag(tagName);
         if (rpsStatsName && counter.rps) {
-            self.channel.emitFastStat(self.channel.buildStat(
+            self.batchStats.pushStat(
                 rpsStatsName,
                 'counter',
                 counter.rps,
                 statsTag
-            ));
+            );
         }
 
         if (rpsLimitStatsName) {
-            self.channel.emitFastStat(self.channel.buildStat(
+            self.batchStats.pushStat(
                 rpsLimitStatsName,
                 'gauge',
                 counter.rpsLimit,
                 statsTag
-            ));
+            );
         }
     }
     counter.refresh();
@@ -439,12 +441,12 @@ function shouldRateLimitService(serviceName) {
     assert(counter, 'cannot find counter for ' + serviceName);
     var result = counter.rps > counter.rpsLimit;
     if (result) {
-        self.channel.emitFastStat(self.channel.buildStat(
+        self.batchStats.pushStat(
             'tchannel.rate-limiting.service-busy',
             'counter',
             1,
             new stat.RateLimiterServiceTags(serviceName)
-        ));
+        );
     }
     return result;
 };
@@ -459,12 +461,12 @@ function shouldKillSwitchService(serviceName) {
     assert(counter, 'cannot find kill-switch counter for ' + serviceName);
     var result = counter.rps > counter.rpsLimit;
     if (result) {
-        self.channel.emitFastStat(self.channel.buildStat(
+        self.batchStats.pushStat(
             'tchannel.rate-limiting.service-kill-switched',
             'counter',
             1,
             new stat.RateLimiterServiceTags(serviceName)
-        ));
+        );
     }
     return result;
 };
@@ -480,12 +482,12 @@ function shouldRateLimitTotalRequest(serviceName) {
     }
 
     if (result) {
-        self.channel.emitFastStat(self.channel.buildStat(
+        self.batchStats.pushStat(
             'tchannel.rate-limiting.total-busy',
             'counter',
             1,
             new stat.RateLimiterServiceTags(serviceName)
-        ));
+        );
     }
 
     return result;
@@ -502,12 +504,12 @@ function shouldKillSwitchTotalRequest(serviceName) {
     }
 
     if (result) {
-        self.channel.emitFastStat(self.channel.buildStat(
+        self.batchStats.pushStat(
             'tchannel.rate-limiting.total-kill-switched',
             'counter',
             1,
             new stat.RateLimiterServiceTags(serviceName)
-        ));
+        );
     }
 
     return result;

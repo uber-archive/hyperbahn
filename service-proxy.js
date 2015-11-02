@@ -26,7 +26,7 @@ var assert = require('assert');
 var Buffer = require('buffer').Buffer;
 var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
-var clean = require('tchannel/lib/statsd-clean').clean;
+var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
 var IntervalScan = require('./lib/interval-scan.js');
 var sortedIndexOf = require('./lib/sorted-index-of');
@@ -63,6 +63,7 @@ function ServiceDispatchHandler(options) {
     assert(options, 'service dispatch handler options not actually optional');
     self.channel = options.channel;
     self.logger = options.logger || self.channel.logger;
+    self.batchStats = options.batchStats;
     self.statsd = options.statsd;
     self.egressNodes = options.egressNodes;
     self.createdAt = self.channel.timers.now();
@@ -78,6 +79,7 @@ function ServiceDispatchHandler(options) {
 
     self.rateLimiter = new RateLimiter({
         channel: self.channel,
+        batchStats: self.batchStats,
         rpsLimitForServiceName: options.rpsLimitForServiceName,
         exemptServices: options.exemptServices,
         totalRpsLimit: options.totalRpsLimit,
