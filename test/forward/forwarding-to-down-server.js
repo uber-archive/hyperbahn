@@ -20,6 +20,8 @@
 
 'use strict';
 
+/* eslint-disable complexity */ // Didn't need it anyway
+
 var CollapsedAssert = require('../lib/collapsed-assert.js');
 var allocCluster = require('../lib/test-cluster.js');
 
