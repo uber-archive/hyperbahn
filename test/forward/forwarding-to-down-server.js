@@ -91,19 +91,14 @@ allocCluster.test('forwarding to a down service', {
                     'expected steve error');
             } else if (logLine.msg === 'Refreshing service peer affinity') {
                 cassert.ok(true, 'expected peer affinity refresh');
-            } else if (logLine.msg === 'error while forwarding') {
-                cassert.equal(logLine.levelName, 'warn');
-                cassert.equal(
-                    logErr.socketRemoteAddr, steve.hostPort,
-                    'expected exception to steve'
-                );
-                cassert.ok(
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.connect.ECONNREFUSED' ||
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET',
-                    'Expected exception to be network error'
-                );
-            } else if (logLine.msg === 'resetting connection') {
-                cassert.equal(logLine.levelName, 'info');
+            } else if (logLine.msg === 'error while forwarding' ||
+                       logLine.msg === 'resetting connection') {
+                if (logLine.msg === 'error while forwarding') {
+                    cassert.equal(logLine.levelName, 'warn');
+                } else if (logLine.msg === 'resetting connection') {
+                    cassert.equal(logLine.levelName, 'info');
+                }
+
                 cassert.equal(
                     logErr.socketRemoteAddr, steve.hostPort,
                     'expected exception to steve'
