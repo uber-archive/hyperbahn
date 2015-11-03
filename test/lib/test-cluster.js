@@ -154,7 +154,9 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
     var i = 0;
     for (i = 0; i < self.size; i++) {
-        self.apps[i] = self.createApplication('127.0.0.1:0', ready.signal);
+        var app = self.createApplication('127.0.0.1:0');
+        self.apps[i] = app;
+        app.partialBootstrap(ready.signal);
     }
     for (i = 0; i < self.dummySize; i++) {
         self.dummies[i] = self.createDummy(ready.signal);
@@ -430,7 +432,7 @@ TestCluster.prototype.close = function close(cb) {
 };
 
 TestCluster.prototype.createApplication =
-function createApplication(hostPort, cb) {
+function createApplication(hostPort) {
     var self = this;
     var parts = hostPort.split(':');
     var host = parts[0];
@@ -477,7 +479,6 @@ function createApplication(hostPort, cb) {
     // TODO add timeout to gaurd against this edge case
     var app = TestApplication(localOpts);
     app.remoteConfigFile = remoteConfigFile;
-    app.partialBootstrap(cb);
     return app;
 };
 
