@@ -773,6 +773,8 @@ function updateServiceChannel(svcchan, now) {
     if (isExit) {
         if (svcchan.serviceProxyMode === 'forward') {
             self.changeToExit(svcchan);
+        } else {
+            self.updateServiceNodes(svcchan, now);
         }
     } else if (!isExit) {
         if (svcchan.serviceProxyMode === 'exit') {
@@ -801,6 +803,17 @@ function changeToExit(svcchan) {
         newMode: 'exit',
         serviceName: svcchan.serviceName
     }));
+};
+
+ServiceDispatchHandler.prototype.updateServiceNodes =
+function updateServiceNodes(svcchan, now) {
+    var self = this;
+
+    if (self.partialAffinityEnabled) {
+        self.ensurePartialConnections(
+            svcchan, svcchan.serviceName,
+            'hyperbahn membership change', now);
+    }
 };
 
 ServiceDispatchHandler.prototype.changeToForward =
