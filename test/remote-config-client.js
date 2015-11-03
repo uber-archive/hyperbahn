@@ -23,7 +23,8 @@
 var test = require('tape');
 
 var remoteConfigFile = require('./lib/remote-config-file.js')();
-var setTimeout = require('timers').setTimeout;
+
+var MAX_TIME = 100;
 
 test('creating a RemoteConfig', function t(assert) {
     remoteConfigFile.clear();
@@ -60,15 +61,18 @@ test('will allow namespaces', function t(assert) {
 });
 
 test('will update on starting up', function t(assert) {
+    assert.timeoutAfter(MAX_TIME);
+
     remoteConfigFile.clear();
     var config = remoteConfigFile.create({
         pollInterval: 5
     });
 
-    var updated;
     config.on('change:foo', function onUpdate() {
         assert.equals(config.get('foo', '~na~'), 'bar', 'property should have been updated');
-        updated = true;
+        assert.pass('the update event should have been emitted');
+        config.destroy();
+        assert.end();
     });
 
     remoteConfigFile.write({
@@ -76,34 +80,26 @@ test('will update on starting up', function t(assert) {
     });
 
     config.startPolling();
-    setTimeout(check, 50);
-    function check() {
-        assert.ok(updated, 'the update event should have been emitted');
-        config.destroy();
-        assert.end();
-    }
 });
 
 test('will alert on property change', function t(assert) {
+    assert.timeoutAfter(MAX_TIME);
+
     remoteConfigFile.clear();
     var config = remoteConfigFile.create({
         pollInterval: 5
     });
     var before = config.get('foo', '~na~');
-    var updated;
     config.on('change:foo', function onUpdate() {
         assert.notEquals(before, config.get('foo', '~na~'), 'property should have been updated');
-        updated = true;
+        assert.pass('the update event should have been emitted');
+        config.destroy();
+        assert.end();
     });
+
     config.startPolling();
+
     remoteConfigFile.write({
         'foo': 'baz'
     });
-
-    setTimeout(check, 50);
-    function check() {
-        assert.ok(updated, 'the update event should have been emitted');
-        config.destroy();
-        assert.end();
-    }
 });
