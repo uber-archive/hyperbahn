@@ -664,7 +664,6 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     }));
 
     self.addPeerIndex(serviceName, hostPort, !!isAffine[hostPort], now);
-    self._getServicePeer(chan, hostPort);
 
     for (i = 0; i < toConnect.length; i++) {
         peer = self._getServicePeer(chan, toConnect[i]);
