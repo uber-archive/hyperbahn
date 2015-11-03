@@ -26,6 +26,7 @@ var console = require('console');
 var process = require('process');
 var fs = require('fs');
 
+var collectParallel = require('collect-parallel/array');
 var CountedReadySignal = require('ready-signal/counted');
 var EventEmitter = require('events').EventEmitter;
 var tape = require('tape');
@@ -147,50 +148,23 @@ inherits(TestCluster, EventEmitter);
 TestCluster.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
 
-    var ready = CountedReadySignal(self.size + self.dummySize);
+    self.grow(self.size, onRingpopReady);
 
-    ready(onReady);
+    function onRingpopReady(err) {
+        if (err) {
+            cb(err);
+            return;
+        }
 
-    // bob and steve
-
-    var i = 0;
-    for (i = 0; i < self.size; i++) {
-        var app = self.createApplication('127.0.0.1:0');
-        self.apps[i] = app;
-        app.partialBootstrap(ready.signal);
-    }
-    for (i = 0; i < self.dummySize; i++) {
-        self.dummies[i] = self.createDummy(ready.signal);
+        // bob and steve
+        var ready = CountedReadySignal(self.dummySize);
+        ready(onReady);
+        for (var i = 0; i < self.dummySize; i++) {
+            self.dummies[i] = self.createDummy(ready.signal);
+        }
     }
 
     function onReady() {
-        var ringpopBootstrapped = CountedReadySignal(self.size);
-
-        ringpopBootstrapped(onRingpopBootstrapped);
-
-        for (i = 0; i < self.apps.length; i++) {
-            self.hostPortList[i] = self.apps[i].hostPort;
-        }
-
-        for (i = 0; i < self.apps.length; i++) {
-            self.apps[i].clients.autobahnHostPortList = self.hostPortList;
-            self.apps[i].clients.setupRingpop(bootstrapDone);
-        }
-
-        function bootstrapDone(err) {
-            if (err) {
-                return cb(err);
-            }
-
-            ringpopBootstrapped.signal();
-        }
-    }
-
-    function onRingpopBootstrapped() {
-        self.waitForRingpop(onConvergence);
-    }
-
-    function onConvergence() {
         self.remotes.tcollector = self.createRemote({
             serviceName: 'tcollector',
             trace: false
@@ -219,7 +193,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
             traceSample: 1
         }, remotesDone.signal);
 
-        for (i = 0; i < self.namedRemotesConfig.length; i++) {
+        for (var i = 0; i < self.namedRemotesConfig.length; i++) {
             var serviceName = self.namedRemotesConfig[i];
             self.namedRemotes[i] = self.createRemote({
                 serviceName: serviceName,
@@ -233,6 +207,54 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
     function onRemotes() {
         self.emit('listening');
         cb();
+    }
+};
+
+TestCluster.prototype.grow =
+function grow(n, callback) {
+    var self = this;
+
+    var newApps = createApps();
+
+    collectParallel(newApps, partialBootstrapEach, partialBootstrapsDone);
+
+    function createApps() {
+        var apps = [];
+        var i = 0;
+        for (i = 0; i < self.size; i++) {
+            var app = self.createApplication('127.0.0.1:0');
+            app.clusterAppsIndex = i;
+            self.apps[i] = app;
+            apps.push(app);
+        }
+        return apps;
+    }
+
+    function partialBootstrapEach(app, _, done) {
+        app.partialBootstrap(function bootstrapped() {
+            self.hostPortList[app.clusterAppsIndex] = app.hostPort;
+            done(null);
+        });
+    }
+
+    function partialBootstrapsDone(_, results) {
+        collectParallel(newApps, finishEachBootstrap, bootstrapFinished);
+    }
+
+    function finishEachBootstrap(app, _, done) {
+        app.clients.autobahnHostPortList = self.hostPortList;
+        app.clients.setupRingpop(done);
+    }
+
+    function bootstrapFinished(_, results) {
+        for (var i = 0; i < results.length; i++) {
+            var res = results[i];
+            if (res.err) {
+                callback(res.err);
+                return;
+            }
+        }
+        self.waitForRingpop(callback);
     }
 };
 
