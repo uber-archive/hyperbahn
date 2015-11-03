@@ -231,13 +231,24 @@ function grow(n, callback) {
     }
 
     function partialBootstrapEach(app, _, done) {
-        app.partialBootstrap(function bootstrapped() {
+        app.partialBootstrap(function bootstrapped(err) {
+            if (err) {
+                done(err);
+                return;
+            }
             self.hostPortList[app.clusterAppsIndex] = app.hostPort;
             done(null);
         });
     }
 
     function partialBootstrapsDone(_, results) {
+        for (var i = 0; i < results.length; i++) {
+            var res = results[i];
+            if (res.err) {
+                callback(res.err);
+                return;
+            }
+        }
         collectParallel(newApps, finishEachBootstrap, bootstrapFinished);
     }
 
