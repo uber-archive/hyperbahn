@@ -99,16 +99,21 @@ function ServiceDispatchHandler(options) {
      * serviceName           :: string
      * hostPort              :: string
      * lastRefresh           :: number // timestamp
+     * relaysFor             :: Map<serviceName, List<hostPort>>
      * exitServices          :: Map<serviceName, lastRefresh>
      * peersToReap           :: Map<hostPort, lastRefresh>
      * knownPeers            :: Map<hostPort, lastRefresh>
      * connectedServicePeers :: Map<serviceName, Map<hostPort, lastRefresh>>
+     *
+     * relaysFor is a map of service name to list of other exit nodes in SORTED
+     * order ONLY for services which this ServiceProxy is an exit.
      *
      * On every advertise knownPeers is updated.
      *
      * However every reap period, knownPeers gets rolled over into peersToReap
      * and emptied, so it represents the "peers seen this reap round"
      */
+    self.relaysFor = {};
     self.exitServices = Object.create(null);
     self.connectedServicePeers = Object.create(null);
     self.peersToReap = Object.create(null);
@@ -551,9 +556,10 @@ function computePartialRange(serviceName) {
         affineWorkers: []
     };
 
-    // Obtain and sort the affine worker and relay lists.
-    range.relays = Object.keys(self.egressNodes.exitsFor(serviceName));
-    range.relays.sort();
+    // Obtain and sort the (cached) affine relay list
+    range.relays = self.getRelaysFor(serviceName);
+
+    // Obtain and sort the affine worker list
     range.workers = serviceChannel.peers.keys();
     range.workers.sort();
 
@@ -765,18 +771,43 @@ function updateServiceChannels() {
     }
 };
 
+ServiceDispatchHandler.prototype.getRelaysFor =
+function getRelaysFor(serviceName) {
+    var self = this;
+
+    var relays = self.relaysFor[serviceName];
+    if (!relays) {
+        var exitNodes = self.egressNodes.exitsFor(serviceName);
+        relays = Object.keys(exitNodes);
+        relays.sort();
+        self.relaysFor[serviceName] = relays;
+    }
+    return relays;
+};
+
 ServiceDispatchHandler.prototype.updateServiceChannel =
 function updateServiceChannel(svcchan, now) {
     var self = this;
+
     var exitNodes = self.egressNodes.exitsFor(svcchan.serviceName);
     var isExit = self.egressNodes.isExitFor(svcchan.serviceName);
     if (isExit) {
+        if (self.partialAffinityEnabled) {
+            var relays = Object.keys(exitNodes);
+            relays.sort();
+            self.relaysFor[svcchan.serviceName] = relays;
+        }
+
         if (svcchan.serviceProxyMode === 'forward') {
             self.changeToExit(svcchan);
         } else {
             self.updateServiceNodes(svcchan, now);
         }
     } else if (!isExit) {
+        if (self.partialAffinityEnabled) {
+            delete self.relaysFor[svcchan.serviceName];
+        }
+
         if (svcchan.serviceProxyMode === 'exit') {
             self.changeToForward(exitNodes, svcchan);
         } else {
