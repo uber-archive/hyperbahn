@@ -103,6 +103,11 @@ function ServiceDispatchHandler(options) {
      * peersToReap           :: Map<hostPort, lastRefresh>
      * knownPeers            :: Map<hostPort, lastRefresh>
      * connectedServicePeers :: Map<serviceName, Map<hostPort, lastRefresh>>
+     *
+     * On every advertise knownPeers is updated.
+     *
+     * However every reap period, knownPeers gets rolled over into peersToReap
+     * and emptied, so it represents the "peers seen this reap round"
      */
     self.exitServices = Object.create(null);
     self.connectedServicePeers = Object.create(null);
@@ -494,10 +499,12 @@ ServiceDispatchHandler.prototype.addPeerIndex =
 function addPeerIndex(serviceName, hostPort, connected, now) {
     var self = this;
 
-    if (connected) {
+    if (connected === true) {
         addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
-    } else {
+    } else if (connected === false) {
         deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+    } else if (connected !== null) {
+        throw new Error('invalid connected, expected true, false, or null');
     }
 
     // Unmark recently seen peers, so they don't get reaped
@@ -644,6 +651,11 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         }
     }
 
+    if (!toConnect.length) {
+        self.addPeerIndex(serviceName, hostPort, !!isAffine[hostPort], now);
+        return;
+    }
+
     self.logger.info('implementing affinity change', self.extendLogInfo({
         serviceName: serviceName,
         newPeer: hostPort,
@@ -652,7 +664,6 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     }));
 
     self.addPeerIndex(serviceName, hostPort, !!isAffine[hostPort], now);
-    self._getServicePeer(chan, hostPort);
 
     for (i = 0; i < toConnect.length; i++) {
         peer = self._getServicePeer(chan, toConnect[i]);
@@ -730,8 +741,10 @@ function updateServiceChannel(svcchan) {
     var self = this;
     var exitNodes = self.egressNodes.exitsFor(svcchan.serviceName);
     var isExit = self.egressNodes.isExitFor(svcchan.serviceName);
-    if (isExit && svcchan.serviceProxyMode === 'forward') {
-        self.changeToExit(exitNodes, svcchan);
+    if (isExit) {
+        if (svcchan.serviceProxyMode === 'forward') {
+            self.changeToExit(svcchan);
+        }
     } else if (!isExit) {
         if (svcchan.serviceProxyMode === 'exit') {
             self.changeToForward(exitNodes, svcchan);
@@ -742,7 +755,7 @@ function updateServiceChannel(svcchan) {
 };
 
 ServiceDispatchHandler.prototype.changeToExit =
-function changeToExit(exitNodes, svcchan) {
+function changeToExit(svcchan) {
     var self = this;
 
     var oldMode = svcchan.serviceProxyMode;
