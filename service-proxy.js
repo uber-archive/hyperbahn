@@ -901,7 +901,7 @@ function updateServiceChannel(svcchan, now) {
         }
 
         if (svcchan.serviceProxyMode === 'exit') {
-            self.changeToForward(exitNodes, svcchan);
+            self.changeToForward(exitNodes, svcchan, now);
         } else {
             self.updateExitNodes(exitNodes, svcchan);
         }
@@ -940,13 +940,22 @@ function updateServiceNodes(svcchan, now) {
 };
 
 ServiceDispatchHandler.prototype.changeToForward =
-function changeToForward(exitNodes, svcchan) {
+function changeToForward(exitNodes, svcchan, now) {
     var self = this;
+
     var oldMode = svcchan.serviceProxyMode;
     svcchan.serviceProxyMode = 'forward';
 
-    // TODO make sure we close all connections.
+    var i;
+    var peers = svcchan.peers.values();
     svcchan.peers.clear();
+    for (i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        self.ensurePeerDisconnected(
+            svcchan.serviceName, peer,
+            'hyperbahn membership change', now);
+    }
+
     // TODO: transmit prior known registration data to new owner(s) to
     // speed convergence / deal with transitions better:
     //     var oldHostPorts = svcchan.peers.keys();
@@ -954,7 +963,7 @@ function changeToForward(exitNodes, svcchan) {
     //     svcchan.peers.clear();
     //     ... send rpc to new exit nodes
     var exitNames = Object.keys(exitNodes);
-    for (var i = 0; i < exitNames.length; i++) {
+    for (i = 0; i < exitNames.length; i++) {
         self._getServicePeer(svcchan, exitNames[i]);
     }
     self.roleTransitionEvent.emit(self, {
