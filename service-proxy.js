@@ -499,10 +499,12 @@ ServiceDispatchHandler.prototype.addPeerIndex =
 function addPeerIndex(serviceName, hostPort, connected, now) {
     var self = this;
 
-    if (connected) {
+    if (connected === true) {
         addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
-    } else {
+    } else if (connected === false) {
         deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+    } else if (connected !== null) {
+        throw new Error('invalid connected, expected true, false, or null');
     }
 
     // Unmark recently seen peers, so they don't get reaped
