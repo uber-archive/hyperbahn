@@ -321,15 +321,12 @@ function bootstrap(cb) {
     }
 };
 
-ApplicationClients.prototype.destroy = function destroy() {
+ApplicationClients.prototype.destroy = function destroy(callback) {
     var self = this;
 
     self.serviceProxy.destroy();
     self.remoteConfig.destroy();
     self.ringpop.destroy();
-    if (!self.tchannel.destroyed) {
-        self.tchannel.close();
-    }
     self.processReporter.destroy();
     self.tchannel.timers.clearTimeout(self.lazyTimeout);
     self.batchStats.destroy();
@@ -339,6 +336,12 @@ ApplicationClients.prototype.destroy = function destroy() {
 
     if (self.logger.destroy) {
         self.logger.destroy();
+    }
+
+    if (!self.tchannel.destroyed) {
+        self.tchannel.close(callback);
+    } else if (callback) {
+        callback(null);
     }
 };
 
