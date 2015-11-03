@@ -722,12 +722,14 @@ function noop() {}
 ServiceDispatchHandler.prototype.updateServiceChannels =
 function updateServiceChannels() {
     var self = this;
+
+    var now = self.channel.timers.now();
     var serviceNames = Object.keys(self.channel.subChannels);
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
         var chan = self.channel.subChannels[serviceName];
         if (chan.serviceProxyMode) {
-            self.updateServiceChannel(chan);
+            self.updateServiceChannel(chan, now);
         }
     }
 
@@ -737,7 +739,7 @@ function updateServiceChannels() {
 };
 
 ServiceDispatchHandler.prototype.updateServiceChannel =
-function updateServiceChannel(svcchan) {
+function updateServiceChannel(svcchan, now) {
     var self = this;
     var exitNodes = self.egressNodes.exitsFor(svcchan.serviceName);
     var isExit = self.egressNodes.isExitFor(svcchan.serviceName);
