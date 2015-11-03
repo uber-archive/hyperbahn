@@ -130,7 +130,7 @@ function partialBootstrap(listener) {
     }
 };
 
-TestApplication.prototype.destroy = function destroy(opts) {
+TestApplication.prototype.destroy = function destroy(opts, callback) {
     var self = this;
 
     if (self.forceDestroyed) {
@@ -138,7 +138,7 @@ TestApplication.prototype.destroy = function destroy(opts) {
         return;
     }
 
-    Application.prototype.destroy.call(self, opts);
+    Application.prototype.destroy.call(self, opts, callback);
     self.client.destroy();
 };
 
