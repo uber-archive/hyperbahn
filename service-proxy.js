@@ -649,6 +649,11 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         }
     }
 
+    if (!toConnect.length) {
+        self.addPeerIndex(serviceName, hostPort, !!isAffine[hostPort], now);
+        return;
+    }
+
     self.logger.info('implementing affinity change', self.extendLogInfo({
         serviceName: serviceName,
         newPeer: hostPort,
