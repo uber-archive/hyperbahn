@@ -41,6 +41,7 @@ var DEFAULT_MIN_PEERS_PER_WORKER = 5;
 var DEFAULT_MIN_PEERS_PER_RELAY = 5;
 var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
 var DEFAULT_REAP_PEERS_PERIOD = 5 * 60 * 1000; // every 5 minutes
+var DEFAULT_PRUNE_PEERS_PERIOD = 2 * 60 * 1000; // every 2 minutes
 
 // our call SLA is 30 seconds currently
 var DEFAULT_DRAIN_TIMEOUT = 30 * 1000;
@@ -118,6 +119,29 @@ function ServiceDispatchHandler(options) {
     self.connectedServicePeers = Object.create(null);
     self.peersToReap = Object.create(null);
     self.knownPeers = Object.create(null);
+    self.peersToPrune = Object.create(null);
+
+    self.peerPruner = new IntervalScan({
+        name: 'peer-prune',
+        timers: self.channel.timers,
+        interval: options.prunePeersPeriod || DEFAULT_PRUNE_PEERS_PERIOD,
+        each: function pruneEachPeer(hostPort, pruneInfo) {
+            self.pruneSinglePeer(hostPort, pruneInfo);
+        },
+        getCollection: function getPeersToPrune() {
+            var peersToPrune = self.peersToPrune;
+            self.peersToPrune = Object.create(null);
+            return peersToPrune;
+        }
+    });
+    self.peerPruner.runBeginEvent.on(function onPeerReapBegin(run) {
+        if (run.keys.length) {
+            self.logger.info('pruning peers', self.extendLogInfo({
+                numPeersToPrune: run.keys.length
+            }));
+        }
+    });
+    self.peerPruner.start();
 
     // Populated by remote-config
     self.peerHeapEnabledServices = Object.create(null);
@@ -520,6 +544,7 @@ function refreshServicePeer(serviceName, hostPort) {
 
     // Update secondary indices
     addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
+    delete self.peersToPrune[hostPort];
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
@@ -543,9 +568,17 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
     var self = this;
 
     addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+    delete self.peersToPrune[peer.hostPort];
 
     if (peer.isConnected('out')) {
         return;
+    }
+
+    if (peer.draining) {
+        self.logger.info('canceling peer drain', self.extendLogInfo(
+            peer.extendLogInfo(peer.draining.extendLogInfo({}))
+        ));
+        peer.clearDrain();
     }
 
     peer.connectTo();
@@ -627,6 +660,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         // Update secondary indices
         if (connected) {
             addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+            delete self.peersToPrune[hostPort];
         } else {
             deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
         }
@@ -665,6 +699,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         // ensurePeerDisconnected were called for the advertising peer
         if (result.isAffine[hostPort]) {
             addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
+            delete self.peersToPrune[hostPort];
         } else {
             deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
         }
@@ -1008,6 +1043,57 @@ function setReapPeersPeriod(period) {
     self.peerReaper.setInterval(period);
 };
 
+ServiceDispatchHandler.prototype.setPrunePeersPeriod =
+function setPrunePeersPeriod(period) {
+    // period === 0 means never / disabled, and is the default
+    var self = this;
+
+    self.peerPruner.setInterval(period);
+};
+
+ServiceDispatchHandler.prototype.pruneSinglePeer =
+function pruneSinglePeer(hostPort, pruneInfo) {
+    var self = this;
+
+    var peer = self.channel.peers.get(hostPort);
+    if (!peer) {
+        return;
+    }
+
+    if (peer.draining) {
+        self.logger.info('skipping peer prune drain, already draining', self.extendLogInfo({
+            peer: peer.hostPort,
+            priorDrainReason: peer.drainReason
+        }));
+        return;
+    }
+
+    peer.drain({
+        goal: peer.DRAIN_GOAL_CLOSE_DRAINED,
+        reason: 'peer pruned because ' + pruneInfo.reason,
+        direction: 'out',
+        timeout: self.drainTimeout
+    }, thenResetPeer);
+
+    // TODO: stat?
+    self.logger.info('draining pruned peer', self.extendLogInfo(
+        peer.extendLogInfo(peer.draining.extendLogInfo({}))
+    ));
+
+    function thenResetPeer(err) {
+        if (err) {
+            self.logger.warn(
+                'error closing drained pruned peer connections',
+                self.extendLogInfo(
+                    peer.extendLogInfo(peer.draining.extendLogInfo({
+                        error: err
+                    }))
+                ));
+        }
+        peer.clearDrain();
+    }
+};
+
 ServiceDispatchHandler.prototype.reapSinglePeer =
 function reapSinglePeer(hostPort, serviceNames) {
     var self = this;
@@ -1019,6 +1105,21 @@ function reapSinglePeer(hostPort, serviceNames) {
     var peer = self.channel.peers.get(hostPort);
     if (!peer) {
         return;
+    }
+
+    if (peer.draining) {
+        if (peer.draining.reason.indexOf('peer pruned') !== 0) {
+            self.logger.warn('skipping peer reap due to unknown drain state',
+                self.extendLogInfo(
+                    peer.extendLogInfo(peer.draining.extendLogInfo({}))
+                ));
+            return;
+        }
+        self.logger.info('peer reaper canceling peer prune drain',
+            self.extendLogInfo(
+                peer.extendLogInfo(peer.draining.extendLogInfo({}))
+            ));
+        peer.clearDrain();
     }
 
     for (var i = 0; i < serviceNames.length; i++) {
@@ -1146,6 +1247,7 @@ function destroy() {
         return;
     }
     self.destroyed = true;
+    self.peerPruner.stop();
     self.peerReaper.stop();
     self.servicePurger.stop();
     self.statEmitter.stop();
