@@ -220,8 +220,9 @@ function grow(n, callback) {
 
     function createApps() {
         var apps = [];
-        var i = 0;
-        for (i = 0; i < self.size; i++) {
+        var i = self.apps.length;
+        var j = 0;
+        for (; j < n; i++, j++) {
             var app = self.createApplication('127.0.0.1:0');
             app.clusterAppsIndex = i;
             self.apps[i] = app;
