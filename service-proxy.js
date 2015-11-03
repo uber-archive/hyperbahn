@@ -620,29 +620,55 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     peer = self._getServicePeer(chan, hostPort);
 
+    // to update knownPeers and peersToReap
+    self.addPeerIndex(serviceName, hostPort, null, now);
+
+    var result = self.ensurePartialConnections(
+        chan, serviceName,
+        'advertise from ' + hostPort, now);
+
+    if (result && result.noop) {
+        // if ensurePartialConnections did no work, we call addPeerIndex to
+        // make sure connectedServicePeers and connectedPeerServices are up to
+        // date, since neither ensurePeerConnected nor ensurePeerDisconnected
+        // were called for the advertising peer
+        self.addPeerIndex(serviceName, hostPort, !!result.isAffine[hostPort], now);
+    }
+};
+
+ServiceDispatchHandler.prototype.ensurePartialConnections =
+function ensurePartialConnections(chan, serviceName, reason, now) {
+    var self = this;
+
     var range = self.computePartialRange(serviceName);
     if (range.relayIndex < 0) {
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
             serviceName: serviceName,
-            workerHostPort: hostPort,
+            reason: reason,
             partialRange: range
         }));
         // TODO: upgrade two-in-a-row or more to an error
-        return;
+        return null;
     }
 
     if (!range.affineWorkers.length) {
         self.logger.error('empty affineWorkers, this should not happen', self.extendLogInfo({
             serviceName: serviceName,
-            advertisingPeer: hostPort,
+            reason: reason,
             partialRange: range
         }));
     }
 
+    var connectedPeers = self.connectedServicePeers[serviceName];
     var toConnect = [];
     var isAffine = {};
     var i;
     var worker;
+    var result = {
+        noop: false,
+        toConnect: toConnect,
+        isAffine: isAffine
+    };
     for (i = 0; i < range.affineWorkers.length; i++) {
         worker = range.affineWorkers[i];
         isAffine[worker] = true;
@@ -652,19 +678,18 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     }
 
     if (!toConnect.length) {
-        self.addPeerIndex(serviceName, hostPort, !!isAffine[hostPort], now);
-        return;
+        result.noop = true;
+        return result;
     }
 
     self.logger.info('implementing affinity change', self.extendLogInfo({
         serviceName: serviceName,
-        newPeer: hostPort,
+        reason: reason,
         partialRange: range,
         toConnect: toConnect
     }));
 
-    self.addPeerIndex(serviceName, hostPort, !!isAffine[hostPort], now);
-
+    var peer;
     for (i = 0; i < toConnect.length; i++) {
         peer = self._getServicePeer(chan, toConnect[i]);
         self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
@@ -672,6 +697,8 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     // TODO Drop peers that no longer have affinity for this service, such
     // that they may be elligible for having their connections reaped.
+
+    return result;
 };
 
 ServiceDispatchHandler.prototype.removeServicePeer =
@@ -722,12 +749,14 @@ function noop() {}
 ServiceDispatchHandler.prototype.updateServiceChannels =
 function updateServiceChannels() {
     var self = this;
+
+    var now = self.channel.timers.now();
     var serviceNames = Object.keys(self.channel.subChannels);
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
         var chan = self.channel.subChannels[serviceName];
         if (chan.serviceProxyMode) {
-            self.updateServiceChannel(chan);
+            self.updateServiceChannel(chan, now);
         }
     }
 
@@ -737,13 +766,15 @@ function updateServiceChannels() {
 };
 
 ServiceDispatchHandler.prototype.updateServiceChannel =
-function updateServiceChannel(svcchan) {
+function updateServiceChannel(svcchan, now) {
     var self = this;
     var exitNodes = self.egressNodes.exitsFor(svcchan.serviceName);
     var isExit = self.egressNodes.isExitFor(svcchan.serviceName);
     if (isExit) {
         if (svcchan.serviceProxyMode === 'forward') {
             self.changeToExit(svcchan);
+        } else {
+            self.updateServiceNodes(svcchan, now);
         }
     } else if (!isExit) {
         if (svcchan.serviceProxyMode === 'exit') {
@@ -772,6 +803,17 @@ function changeToExit(svcchan) {
         newMode: 'exit',
         serviceName: svcchan.serviceName
     }));
+};
+
+ServiceDispatchHandler.prototype.updateServiceNodes =
+function updateServiceNodes(svcchan, now) {
+    var self = this;
+
+    if (self.partialAffinityEnabled) {
+        self.ensurePartialConnections(
+            svcchan, svcchan.serviceName,
+            'hyperbahn membership change', now);
+    }
 };
 
 ServiceDispatchHandler.prototype.changeToForward =
