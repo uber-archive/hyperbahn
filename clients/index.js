@@ -364,6 +364,7 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateKillSwitches();
     self.updateReservoir();
     self.updateReapPeersPeriod();
+    self.updatePrunePeersPeriod();
     self.updatePartialAffinityEnabled();
     self.setMaximumRelayTTL();
     self.updatePeerHeapEnabled();
@@ -434,6 +435,13 @@ function updateReapPeersPeriod() {
     var self = this;
     var period = self.remoteConfig.get('peerReaper.period', 0);
     self.serviceProxy.setReapPeersPeriod(period);
+};
+
+ApplicationClients.prototype.updatePrunePeersPeriod =
+function updatePrunePeersPeriod() {
+    var self = this;
+    var period = self.remoteConfig.get('peerPruner.period', 0);
+    self.serviceProxy.setPrunePeersPeriod(period);
 };
 
 ApplicationClients.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled() {
