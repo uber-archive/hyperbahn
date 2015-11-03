@@ -25,6 +25,8 @@ var test = require('tape');
 var remoteConfigFile = require('./lib/remote-config-file.js')();
 var setTimeout = require('timers').setTimeout;
 
+var MAX_TIME = 50;
+
 test('creating a RemoteConfig', function t(assert) {
     remoteConfigFile.clear();
     var config = remoteConfigFile.create();
@@ -76,7 +78,7 @@ test('will update on starting up', function t(assert) {
     });
 
     config.startPolling();
-    setTimeout(check, 50);
+    setTimeout(check, MAX_TIME);
     function check() {
         assert.ok(updated, 'the update event should have been emitted');
         config.destroy();
@@ -100,7 +102,7 @@ test('will alert on property change', function t(assert) {
         'foo': 'baz'
     });
 
-    setTimeout(check, 50);
+    setTimeout(check, MAX_TIME);
     function check() {
         assert.ok(updated, 'the update event should have been emitted');
         config.destroy();
