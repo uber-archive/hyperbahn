@@ -24,7 +24,7 @@ var test = require('tape');
 
 var remoteConfigFile = require('./lib/remote-config-file.js')();
 
-var MAX_TIME = 50;
+var MAX_TIME = 100;
 
 test('creating a RemoteConfig', function t(assert) {
     remoteConfigFile.clear();
