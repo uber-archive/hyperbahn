@@ -429,7 +429,8 @@ ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimi
     }
 };
 
-ApplicationClients.prototype.updateReapPeersPeriod = function updateReapPeersPeriod() {
+ApplicationClients.prototype.updateReapPeersPeriod =
+function updateReapPeersPeriod() {
     var self = this;
     var period = self.remoteConfig.get('peerReaper.period', 0);
     self.serviceProxy.setReapPeersPeriod(period);
