@@ -783,6 +783,22 @@ function ensurePartialConnections(chan, serviceName, reason, now) {
     return result;
 };
 
+ServiceDispatchHandler.prototype.ensurePeerDisconnected =
+function ensurePeerDisconnected(serviceName, peer, reason, now) {
+    var self = this;
+
+    deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
+    deleteIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName);
+
+    var peerServices = self.connectedPeerServices[peer.hostPort];
+    if (!peerServices || isObjectEmpty(peerServices)) {
+        self.peersToPrune[peer.hostPort] = {
+            lastRefresh: now,
+            reason: reason
+        };
+    }
+};
+
 ServiceDispatchHandler.prototype.removeServicePeer =
 function removeServicePeer(serviceName, hostPort) {
     var self = this;
