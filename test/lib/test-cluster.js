@@ -121,7 +121,8 @@ function TestCluster(opts) {
     self.dummies = [];
     // The hostPorts for each member of the ring.
     self.hostPortList = [];
-    self.ringpopHosts = [];
+    self.ringpopHosts = self.hostPortList;
+
     // Bob and Steve
     self.remotes = {};
     // Names of additional remotes (from opts.namedRemotes)
@@ -170,8 +171,6 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
         for (i = 0; i < self.apps.length; i++) {
             self.hostPortList[i] = self.apps[i].hostPort;
         }
-
-        self.ringpopHosts = self.hostPortList;
 
         for (i = 0; i < self.apps.length; i++) {
             self.apps[i].clients.autobahnHostPortList = self.hostPortList;
