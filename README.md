@@ -1,6 +1,6 @@
 # hyperbahn
 
-Service discovery and routing solution.
+Service discovery and routing for large scale microservice operations
 
 ## Overview
 
