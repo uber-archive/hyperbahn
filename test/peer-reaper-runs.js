@@ -22,9 +22,9 @@
 
 var setTimeout = require('timers').setTimeout;
 
-var allocCluster = require('../lib/test-cluster.js');
+var allocCluster = require('./lib/test-cluster.js');
 
-allocCluster.test('can register', {
+allocCluster.test('peer reaper runs', {
     size: 5,
     dummies: 3,
     remoteConfig: {
