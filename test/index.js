@@ -89,6 +89,7 @@ require('./register/happy-path.js');
 require('./register/validation-errors.js');
 require('./register/register-where-entry-node-is-exit-node.js');
 require('./register/register-when-exit-node-is-down.js');
+require('./register/peer-reaper-runs.js');
 
 require('./time-series/making-requests-with-a-single-busy-hyperbahn-worker.js');
 require('./time-series/requesting-a-service-with-spiky-traffic.js');
