@@ -99,3 +99,4 @@ require('./remote-config.js');
 require('./rate-limiter.js');
 require('./sorted-index-of.js');
 require('./partial-affinity.js');
+require('./peer-reaper-runs.js');
