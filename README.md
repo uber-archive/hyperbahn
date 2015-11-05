@@ -46,7 +46,7 @@ Register a service on Hyperbahn in just three steps:
  2. Listen on an arbitrary (could be random) port
  3. Connect to and advertise on Hyperbahn
 
-Or use a service over Hyperbah in only two steps:
+Or use a service over Hyperbahn in only two steps:
 
  1. Instantiate Hyperbahn client (if you're also a service, you re-use the one
    you've already setup and registered over)
