@@ -35,6 +35,7 @@ consumer, Hyperbahn comes with many features to make application development eas
  - **Rate Limiting** - Shield services from excessive calls.
  - **Circuit Breaking** - Prevent cascading failure and cut off broken clients. Build
    fast failure into all layers of the network.
+ - **Distributed Tracing** - Understand the entire call flow using Zipkin.
 
 
 ## Advertise on a Hyperbahn Cluster
