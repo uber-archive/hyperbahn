@@ -195,7 +195,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
         // In response to artificial advertisement
         self.serviceNames.forEach(function eachServiceName(serviceName, index2) {
             if (egressNodes.isExitFor(serviceName)) {
-                self.serviceChannels[index2].forEach(function each(serviceChannel) {
+                self.serviceChannels[index2].forEach(function eachService(serviceChannel) {
                     relayChannel.handler.getServicePeer(serviceName, serviceChannel.hostPort);
                 });
             }
@@ -205,7 +205,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
     // Create and connect service channels
     self.subChannels = [];
     self.subChannelsByName = {};
-    self.serviceChannels.forEach(function each(channels, serviceIndex) {
+    self.serviceChannels.forEach(function eachService(channels, serviceIndex) {
         var serviceName = self.serviceNames[serviceIndex];
         var subChannels = channels.map(function mappy(channel, channelIndex) {
             var subChannel = channel.makeSubChannel({
@@ -235,7 +235,7 @@ RelayNetwork.prototype.forEachSubChannel = function forEachSubChannel(callback) 
     var self = this;
     self.subChannels.forEach(function each(subChannels, serviceIndex) {
         var serviceName = self.serviceNames[serviceIndex];
-        subChannels.forEach(function each(subChannel, instanceIndex) {
+        subChannels.forEach(function eachChannel(subChannel, instanceIndex) {
             callback(subChannel, serviceName, instanceIndex);
         });
     });
@@ -264,7 +264,7 @@ RelayNetwork.prototype.connectServices = function connectServices(callback) {
     var plans = [];
 
     self.relayChannels.forEach(function each(relayChannel, relayIndex) {
-        self.serviceNames.forEach(function each(serviceName) {
+        self.serviceNames.forEach(function eachService(serviceName) {
             if (self.egressNodesForRelay[relayIndex].isExitFor(serviceName)) {
                 plans.push(planToConnect(
                     relayChannel,

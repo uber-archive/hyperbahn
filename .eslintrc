@@ -1,4 +1,5 @@
 {
+    "extends": ["perf-standard"],
     "rules": {
         "max-params": [2, 5],
         "max-len": [0],
