@@ -1,0 +1,4 @@
+{
+    "peer-heap.enabled.global": true,
+    "peer-heap.enabled.services": {"fooasdf": true}
+}
