@@ -317,7 +317,17 @@ function handleRequest(req, buildRes) {
     if (self.rateLimiterEnabled) {
         var rateLimitReason = self.rateLimit(req.headers && req.headers.cn, req.serviceName);
         if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
-            req.connection.ops.popInReq(req.id);
+            if (req.connection &&
+                req.connection.ops) {
+                req.connection.ops.popInReq(req.id);
+            } else {
+                // TODO: needed because TChannelSelfConnection, we can drop
+                // this once self connection is dead
+                self.logger.warn('rate limiter unable to pop in req, because self connection',
+                    self.extendLogInfo(req.extendLogInfo({
+                        rateLimitReason: RATE_LIMIT_KILLSWITCH
+                    })));
+            }
             return;
         } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
             var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
