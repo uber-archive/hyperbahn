@@ -1,72 +1,81 @@
-# hyperbahn
+# Hyperbahn
 
+<<<<<<< HEAD
 Service discovery and routing for large scale microservice operations
+=======
+Service discovery and routing for large-scale microservice operations.
+* Unanswered questions? Open a new [Github issue][issues].
+* Hyperbahn will be on [Uber's Open Source site][oss] soon!
+>>>>>>> docs
 
 ## Overview
 
-Hyperbahn is a service discovery and routing network. Its aim is to simplify
-reliably talking to any service without having to know where the service is
-running.
+Hyperbahn enables service discovery and routing for large-scale systems
+comprised of many microservices. Distributed, fault tolerant, and highly
+available, it lets one service find and communicate with others simply and
+reliably without having to know where those services run.
 
 Hyperbahn is an overlay network of routers designed to support the
-[TChannel RPC protocol][tchannel]. Hyperbahn itself is a [ringpop][ringpop]
-based mesh network of router nodes that dynamically converge and gossip known
-services onto a consistent hash ring topology.
+[TChannel RPC protocol][tchannel]. Hyperbahn itself is based on
+[Ringpop][ringpop]. Its router nodes dynamically converge and gossip
+known services onto a consistent hash ring topology, forming a
+mesh of services that can send requests to each other without human
+intervention or knowledge of specific ports and addresses.
 
 Hyperbahn and TChannel clients are currently supported
 in Go, Python, and Node.js.
 
 ## Hyperbahn Features
 
-Hyperbahn provides many scaling and fault tolerance features including:
+Whether you're making your service available to others, or you're a service
+consumer, Hyperbahn comes with many features to make application development easier:
 
- - timeouts to transitively enforce your service's SLA
- - retries to eliminate transient failures within a request timeout window
- - load balancing so that calls are spread out evenly across your service
- - rate limiting to shield your service from excessive calls
- - circuit breaking to prevent cascading failure
- - circuit breaking to cut off broken clients
+ - **Configuration Discovery** - Stop managing host/port files or configurations.
+ - **Timeouts** - Transitively enforce services' SLAs. Every request
+   must specify a timeout, moving towards a fast failure model.
+ - **Retries** - Eliminate transient failures within a request timeout window.
+ - **Load Balancing** - Spread calls evenly across a service, and distribute outgoing
+   requests evenly over connected Hyperbahn nodes.
+ - **Rate Limiting** - Shield services from excessive calls.
+ - **Circuit Breaking** - Prevent cascading failure and cut off broken clients. Build
+   fast failure into all layers of the network.
+ - **Distributed Tracing** - Understand the entire call flow using Zipkin.
 
-To register a service on Hyperbahn:
 
- - instantiate Hyperbahn client
- - listen on an arbitrary (could be random) port
- - connect to and advertise on Hyperbahn
+## Advertise on a Hyperbahn Cluster
 
-As a service consumer you get the following built in to TChannel/Hyperbahn
-client libraries:
+Register a service on Hyperbahn in just three steps:
 
- - configuration discovery: no more host/port files or configuration to manage
- - timeouts: every request must specify a timeout, moving towards a fast
-   failure model
- - load balancing: outgoing requests are spread evenly over connected Hyperbahn
-   nodes
- - circuit breaking: fast failure at all layers of the network
+ 1. Instantiate Hyperbahn client
+ 2. Listen on an arbitrary (could be random) port
+ 3. Connect to and advertise on Hyperbahn
 
-To use a service over Hyperbahn:
+Or use a service over Hyperbahn in only two steps:
 
- - instantiate Hyperbahn client (if you're also a service, you re-use the one
+ 1. Instantiate Hyperbahn client (if you're also a service, you re-use the one
    you've already setup and registered over)
- - send a request to the desired service and endpoint name
+ 2. Send a request to the desired service and endpoint name
 
-## Local quickstart
+## Local Quick Start
 
- - `git clone git@github.com:uber/hyperbahn`
- - `cd hyperbahn`
- - `./hyperbahn-dev.sh`
+Hyperbahn is designed for large-scale microservice operations. However, you
+might want to develop and test (or just try it out) locally.
+To get started with Hyperbahn, set up a Hyperbahn cluster on your local machine.
 
-This will spawn a 3 window tmux session with a two-node hyperbahn
-cluster running. It will also run `npm install` if necessary and install
-tcurl globally if possible and fallback to local installation if the npm
-global folder is not writeable. The third window runs the health checks
-of both nodes using tcurl to double check that the hyperbahn cluster is
-healthy.
+ 1. `git clone git@github.com:uber/hyperbahn`
+ 2. `cd hyperbahn`
+ 3. `./hyperbahn-dev.sh`
 
-To exit run `tmux kill-session -t hyperbahn` in a seperate shell.
+You'll now have a two-node Hyperbahn cluster running. In one of the tmux
+windows, you should see the health checks of both nodes. Double check that the
+Hyperbahn cluster is healthy. If not, troubleshoot or report your issue.
 
-## Getting your app on Hyperbahn
+To exit, run `tmux kill-session -t hyperbahn` in a seperate shell.
 
-We have an open source quick start template for nodejs.
+## Getting Your App on Hyperbahn
+
+The open source quick start template for Node.js (below) will start
+a "Hello, world!" TChannel app in Node.js that registers with Hyperbahn.
 
  - `npm install tchannel-gen --global`
  - `cd ~/projects`
@@ -77,14 +86,12 @@ We have an open source quick start template for nodejs.
  - `tcurl -p localhost:9000 my-service MyService::health_v1 -t ./thrift/service.thrift`
  - `tcurl -p 127.0.0.1:21300 my-service MyService::health_v1 -t ./thrift/service.thrift`
 
-What this does is start a hello world tchannel app in nodejs that
-registers with hyperbahn.
-
 You can `tcurl` it directly at `localhost:9000` or `tcurl` it through
-hyperbahn at `127.0.0.1:21300`.
+Hyperbahn at `127.0.0.1:21300`. If you're unfamiliar with `tcurl`, the
+command-line tool to call TChannel servers, learn about it [here][tcurl].
 
-Because the service is available on Hyperbahn anyone can talk to it
-if they can talk to Hyperbahn.
+Once a service is available on Hyperbahn, any other service on that Hyperbahn
+cluster can talk to it.
 
 ## Installation
 
@@ -101,3 +108,6 @@ if they can talk to Hyperbahn.
 
   [tchannel]: https://github.com/uber/tchannel
   [ringpop]: https://github.com/uber/ringpop-node
+  [issues]: https://github.com/uber/hyperbahn/issues
+  [oss]: http://uber.github.io/
+  [tcurl]: https://github.com/uber/tcurl
