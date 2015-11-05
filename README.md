@@ -1,8 +1,6 @@
 # Hyperbahn
-
-Service discovery and routing for large scale microservice operations
-=======
 Service discovery and routing for large-scale microservice operations.
+
 * Unanswered questions? Open a new [Github issue][issues].
 * Hyperbahn will be on [Uber's Open Source site][oss] soon!
 
