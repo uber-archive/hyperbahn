@@ -365,6 +365,17 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateReservoir();
     self.updateReapPeersPeriod();
     self.updatePartialAffinityEnabled();
+    self.setMaximumRelayTTL();
+};
+
+ApplicationClients.prototype.setMaximumRelayTTL =
+function setMaximumRelayTTL() {
+    var self = this;
+
+    var maximumRelayTTL = self.remoteConfig.get(
+        'relay.maximum-ttl', 2 * 60 * 1000
+    );
+    self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
 };
 
 ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
