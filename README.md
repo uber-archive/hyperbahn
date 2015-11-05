@@ -1,12 +1,10 @@
 # Hyperbahn
 
-<<<<<<< HEAD
 Service discovery and routing for large scale microservice operations
 =======
 Service discovery and routing for large-scale microservice operations.
 * Unanswered questions? Open a new [Github issue][issues].
 * Hyperbahn will be on [Uber's Open Source site][oss] soon!
->>>>>>> docs
 
 ## Overview
 
@@ -27,7 +25,7 @@ in Go, Python, and Node.js.
 
 ## Hyperbahn Features
 
-Whether you're making your service available to others, or you're a service
+Whether you're making your service available to others or you're a service
 consumer, Hyperbahn comes with many features to make application development easier:
 
  - **Configuration Discovery** - Stop managing host/port files or configurations.
@@ -52,7 +50,7 @@ Register a service on Hyperbahn in just three steps:
 
 Or use a service over Hyperbahn in only two steps:
 
- 1. Instantiate Hyperbahn client (if you're also a service, you re-use the one
+ 1. Instantiate Hyperbahn client (if the client is also a service, you reuse the one
    you've already setup and registered over)
  2. Send a request to the desired service and endpoint name
 
