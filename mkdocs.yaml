@@ -1,0 +1,12 @@
+site_name: Hyperbahn
+repo_url: https://github.com/uber/hyperbahn
+
+pages:
+- Home: index.md
+
+theme: readthedocs
+
+markdown_extensions:
+  - toc:
+      permalink: 
+  - admonition:
