@@ -495,5 +495,7 @@ ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches() 
 ApplicationClients.prototype.updatePeerHeapEnabled = function updatePeerHeapEnabled() {
     var self = this;
     var peerHeapConfig = self.remoteConfig.get('peer-heap.enabled.services', {});
-    self.serviceProxy.setPeerHeapEnabledServices(peerHeapConfig);
+    var peerHeapGlobalConfig = self.remoteConfig.get('peer-heap.enabled.global', false);
+
+    self.serviceProxy.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
 };

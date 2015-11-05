@@ -121,6 +121,7 @@ function ServiceDispatchHandler(options) {
 
     // Populated by remote-config
     self.peerHeapEnabledServices = Object.create(null);
+    self.peerHeapEnabledGlobal = false;
 
     self.peerReaper = new IntervalScan({
         name: 'peer-reap',
@@ -459,9 +460,14 @@ function createServiceChannel(serviceName) {
     var isExit = self.egressNodes.isExitFor(serviceName);
     var mode = isExit ? 'exit' : 'forward';
 
+    var choosePeerWithHeap = self.peerHeapEnabledGlobal;
+    if (serviceName in self.peerHeapEnabledServices) {
+        choosePeerWithHeap = self.peerHeapEnabledServices[serviceName];
+    }
+
     var options = {
         serviceName: serviceName,
-        choosePeerWithHeap: !!self.peerHeapEnabledServices[serviceName]
+        choosePeerWithHeap: choosePeerWithHeap
     };
 
     if (self.serviceReqDefaults[serviceName]) {
@@ -1255,21 +1261,23 @@ function extendLogInfo(info) {
     return info;
 };
 
-ServiceDispatchHandler.prototype.setPeerHeapEnabledServices =
-function setPeerHeapEnabledServices(peerHeapEnabledServices) {
+ServiceDispatchHandler.prototype.setPeerHeapEnabled =
+function setPeerHeapEnabled(peerHeapEnabledServices, peerHeapEnabledGlobal) {
     var self = this;
 
     assert(typeof peerHeapEnabledServices === 'object');
     self.peerHeapEnabledServices = peerHeapEnabledServices;
+    self.peerHeapEnabledGlobal = peerHeapEnabledGlobal;
 
-    var keys = Object.keys(self.peerHeapEnabledServices);
+    var keys = Object.keys(self.channel.subChannels);
     var i;
     for (i = 0; i < keys.length; i++) {
         var serviceName = keys[i];
-        var enabled = self.peerHeapEnabledServices[serviceName];
-        if (typeof self.channel.subChannels[serviceName] === 'object') {
-            self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
+        var enabled = self.peerHeapEnabledGlobal;
+        if (serviceName in self.peerHeapEnabledServices) {
+            enabled = self.peerHeapEnabledServices[serviceName];
         }
+        self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
     }
 };
 
