@@ -5,7 +5,6 @@ find test \
     -name '*.js' \
     -not -path 'test/lib/*' \
     -not -path 'test/time-series/constant-low-volume*' \
-    -not -path 'test/todo.js' \
     -not -path 'test/index.js' \
     -not -path 'test/reap-time.js' |
 while read FILE; do

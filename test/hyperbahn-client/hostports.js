@@ -73,7 +73,7 @@ function runTests(HyperbahnCluster) {
                 assert.end(err);
             }
             assert.ok(res, 'should be a result');
-            assert.ok(!res.ok, 'result should be not ok');
+            assert.ok(!res.ok, 'result should not be ok');
             assert.equals(res.body.message, 'no peer available for matt', 'error message as expected');
             assert.end();
         }
@@ -156,7 +156,7 @@ function runTests(HyperbahnCluster) {
             if (err) {
                 assert.end(err);
             }
-            assert.ok(!res.ok, 'should be not ok');
+            assert.ok(!res.ok, 'should not be ok');
             assert.equals(res.body.message, 'invalid service name: ', 'error message as expected');
             assert.end();
         }
