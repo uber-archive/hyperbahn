@@ -68,7 +68,6 @@ require('./hosts/no-body.js');
 require('./hosts/missing-service-name.js');
 require('./hosts/invalid-service-name.js');
 
-require('./hyperbahn-client/todo.js');
 require('./hyperbahn-client/kill-switch.js');
 require('./hyperbahn-client/egress-nodes.js');
 
