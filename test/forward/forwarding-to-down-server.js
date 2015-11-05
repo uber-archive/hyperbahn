@@ -86,6 +86,7 @@ allocCluster.test('forwarding to a down service', {
         for (var i = 0; i < logLines.length; i++) {
             var logLine = logLines[i];
             var logErr = logLine.meta.error;
+            var logMeta = logLine.meta;
             if (logLine.msg === 'forwarding error frame') {
                 cassert.equal(logLine.meta.isErrorFrame, true,
                     'expected error frame');
@@ -103,7 +104,8 @@ allocCluster.test('forwarding to a down service', {
 
                 var expectedAddr =
                     logErr.socketRemoteAddr === steve.hostPort ||
-                    logErr.outRequestAddr === steve.hostPort;
+                    logErr.outRequestAddr === steve.hostPort ||
+                    logMeta.remoteName === steve.hostPort;
                 // if (!expectedAddr) console.error('WRU', steve.hostPort, logErr);
                 cassert.ok(expectedAddr, 'expected exception to steve');
 
