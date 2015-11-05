@@ -37,7 +37,7 @@ else
     git push origin --tags
 fi
 
-git archive --prefix=package/ --format tgz master >package.tgz
+git archive --prefix=package/ --format tgz HEAD >package.tgz
 ${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
 rm package.tgz
 npm cache clean hyperbahn
