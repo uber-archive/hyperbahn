@@ -30,7 +30,12 @@ fi
 
 npm version "$1"
 
-git push origin master --tags
+if head_ref=$(git symbolic-ref HEAD 2>/dev/null); then
+    branch_name=${head_ref##*/}
+    git push origin "$branch_name" --tags
+else
+    git push origin --tags
+fi
 
 git archive --prefix=package/ --format tgz master >package.tgz
 ${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
