@@ -85,8 +85,8 @@ You can `tcurl` it directly at `localhost:9000` or `tcurl` it through
 Hyperbahn at `127.0.0.1:21300`. If you're unfamiliar with `tcurl`, the
 command-line tool to call TChannel servers, learn about it [here][tcurl].
 
-Once a service is available on Hyperbahn, any other service on Hyperbahn
-can talk to it.
+Once a service is available on Hyperbahn, any other service on that Hyperbahn
+cluster can talk to it.
 
 ## Installation
 
