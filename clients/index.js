@@ -366,6 +366,7 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updateReapPeersPeriod();
     self.updatePartialAffinityEnabled();
     self.setMaximumRelayTTL();
+    self.updatePeerHeapEnabled();
 };
 
 ApplicationClients.prototype.setMaximumRelayTTL =
@@ -489,4 +490,10 @@ ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches() 
             self.serviceProxy.blockRemoteConfig(edge[0], edge[1]);
         }
     }
+};
+
+ApplicationClients.prototype.updatePeerHeapEnabled = function updatePeerHeapEnabled() {
+    var self = this;
+    var peerHeapConfig = self.remoteConfig.get('peer-heap.enabled.services', {});
+    self.serviceProxy.setPeerHeapEnabledServices(peerHeapConfig);
 };
