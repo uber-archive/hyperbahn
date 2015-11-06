@@ -510,12 +510,13 @@ function refreshServicePeer(serviceName, hostPort) {
     // Reset the expiration time for this service peer
     self.exitServices[serviceName] = now;
 
+    // -- The new way: partially connect egress nodes to ranges of service peers.
     if (self.partialAffinityEnabled) {
         self.refreshServicePeerPartially(serviceName, hostPort, now);
         return;
     }
 
-    // The old way: fully connect every egress to all affine peers.
+    // -- The old way: fully connect every egress to all affine peers.
     self.addPeerIndex(serviceName, hostPort, true, now);
     var peer = self.getServicePeer(serviceName, hostPort);
     self.ensurePeerConnected(serviceName, peer, 'service peer refresh', now);
