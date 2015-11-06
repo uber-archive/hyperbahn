@@ -1058,9 +1058,13 @@ function reapSinglePeer(hostPort, serviceNames) {
 
     function thenDeleteIt(err) {
         if (err) {
-            self.logger.warn('error closing reaped peer, deleting it anyhow', self.extendLogInfo({
-                error: err
-            }));
+            self.logger.warn(
+                'error closing reaped peer, deleting it anyhow',
+                self.extendLogInfo(
+                    peer.extendLogInfo(peer.draining.extendLogInfo({
+                        error: err
+                    }))
+                ));
         }
         self.channel.peers.delete(hostPort);
     }
