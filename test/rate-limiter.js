@@ -147,77 +147,77 @@ allocCluster.test('rps counter works in 1.5 seconds', {
         });
 
         var expected = [{
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.total-rps',
             value: null,
-            delta: 5,
-            time: null
+            delta: null,
+            time: 5
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.kill-switch.total-rps',
             value: null,
-            delta: 5,
-            time: null
+            delta: null,
+            time: 5
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.service-rps.steve',
             value: null,
-            delta: 3,
-            time: null
+            delta: null,
+            time: 3
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.service-rps.bob',
             value: null,
-            delta: 2,
-            time: null
+            delta: null,
+            time: 2
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
             value: null,
-            delta: 3,
-            time: null
+            delta: null,
+            time: 3
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
             value: null,
-            delta: 2,
-            time: null
+            delta: null,
+            time: 2
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.total-rps',
             value: null,
-            delta: 2,
-            time: null
+            delta: null,
+            time: 2
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.kill-switch.total-rps',
             value: null,
-            delta: 2,
-            time: null
+            delta: null,
+            time: 2
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.service-rps.steve',
             value: null,
-            delta: 1,
-            time: null
+            delta: null,
+            time: 1
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.service-rps.bob',
             value: null,
-            delta: 1,
-            time: null
+            delta: null,
+            time: 1
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
             value: null,
-            delta: 1,
-            time: null
+            delta: null,
+            time: 1
         }, {
-            type: 'c',
+            type: 'ms',
             name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
             value: null,
-            delta: 1,
-            time: null
+            delta: null,
+            time: 1
         }];
 
         assert.deepEqual(rateLimitStats, expected,

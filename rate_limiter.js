@@ -127,7 +127,7 @@ function refreshCounter(counter, rpsStatsName, rpsLimitStatsName, createStatsTag
         if (rpsStatsName && counter.rps) {
             self.batchStats.pushStat(
                 rpsStatsName,
-                'counter',
+                'timing',
                 counter.rps,
                 statsTag
             );
