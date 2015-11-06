@@ -1024,37 +1024,16 @@ function reapSinglePeer(hostPort, serviceNames) {
     }
 
     peer.drain({
+        goal: peer.DRAIN_GOAL_CLOSE_PEER,
         reason: 'reaped for expired advertisement',
         direction: 'both',
         timeout: self.drainTimeout
-    }, disconnectDrainDone);
+    }, thenDeleteIt);
 
     // TODO: stat?
     self.logger.info('reaping dead peer', self.extendLogInfo(
         peer.extendLogInfo(peer.draining.extendLogInfo({}))
     ));
-
-    function disconnectDrainDone(err) {
-        if (err &&
-            err.type === 'tchannel.drain.peer.timed-out') {
-            // TODO: stat?
-            self.logger.warn('forcibly closing reaped peer', self.extendLogInfo({
-                timeout: err.timeout,
-                elapsed: err.elapsed
-            }));
-            err = null;
-        }
-        thenCloseIt(err);
-    }
-
-    function thenCloseIt(err) {
-        if (err) {
-            self.logger.warn('error draining reaped peer, force closing', self.extendLogInfo({
-                error: err
-            }));
-        }
-        peer.close(thenDeleteIt);
-    }
 
     function thenDeleteIt(err) {
         if (err) {
