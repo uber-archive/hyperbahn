@@ -243,7 +243,7 @@ function runTests(HyperbahnCluster) {
                         serviceName: steve.serviceName
                     }), 'echo', null, 'hello', function onResponse(err, res) {
                         assert.ok(err && err.type === 'tchannel.busy' &&
-                            err.message === 'steve is rate-limited by the rps of 2',
+                            err.message === 'steve is rate-limited by the service rps of 2',
                             'should be rate limited');
 
                         done();
