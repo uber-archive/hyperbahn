@@ -510,33 +510,24 @@ function refreshServicePeer(serviceName, hostPort) {
     // Reset the expiration time for this service peer
     self.exitServices[serviceName] = now;
 
+    // -- The new way: partially connect egress nodes to ranges of service peers.
     if (self.partialAffinityEnabled) {
         self.refreshServicePeerPartially(serviceName, hostPort, now);
         return;
     }
 
-    // The old way: fully connect every egress to all affine peers.
-    self.addPeerIndex(serviceName, hostPort, true, now);
-    var peer = self.getServicePeer(serviceName, hostPort);
-    self.ensurePeerConnected(serviceName, peer, 'service peer refresh', now);
-};
+    // -- The old way: fully connect every egress to all affine peers.
 
-ServiceDispatchHandler.prototype.addPeerIndex =
-function addPeerIndex(serviceName, hostPort, connected, now) {
-    var self = this;
-
-    if (connected === true) {
-        addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
-    } else if (connected === false) {
-        deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
-    } else if (connected !== null) {
-        throw new Error('invalid connected, expected true, false, or null');
-    }
+    // Update secondary indices
+    addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
     // Mark known peers, so they are candidates for future reaping
     addIndexEntry(self.knownPeers, hostPort, serviceName, now);
+
+    var peer = self.getServicePeer(serviceName, hostPort);
+    self.ensurePeerConnected(serviceName, peer, 'service peer refresh', now);
 };
 
 ServiceDispatchHandler.prototype.deletePeerIndex =
@@ -632,7 +623,19 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     // simply freshen if not new
     if (peer) {
         var connected = connectedPeers && connectedPeers[hostPort];
-        self.addPeerIndex(serviceName, peer.hostPort, connected, now);
+
+        // Update secondary indices
+        if (connected) {
+            addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+        } else {
+            deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
+        }
+
+        // Unmark recently seen peers, so they don't get reaped
+        deleteIndexEntry(self.peersToReap, peer.hostPort, serviceName);
+        // Mark known peers, so they are candidates for future reaping
+        addIndexEntry(self.knownPeers, peer.hostPort, serviceName, now);
+
         if (connected) {
             self.ensurePeerConnected(serviceName, peer, 'service peer affinity refresh', now);
         }
@@ -647,19 +650,24 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     peer = self._getServicePeer(chan, hostPort);
 
-    // to update knownPeers and peersToReap
-    self.addPeerIndex(serviceName, hostPort, null, now);
+    // Unmark recently seen peers, so they don't get reaped
+    deleteIndexEntry(self.peersToReap, hostPort, serviceName);
+    // Mark known peers, so they are candidates for future reaping
+    addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 
     var result = self.ensurePartialConnections(
         chan, serviceName,
         'advertise from ' + hostPort, now);
 
     if (result && result.noop) {
-        // if ensurePartialConnections did no work, we call addPeerIndex to
-        // make sure connectedServicePeers and connectedPeerServices are up to
-        // date, since neither ensurePeerConnected nor ensurePeerDisconnected
-        // were called for the advertising peer
-        self.addPeerIndex(serviceName, hostPort, !!result.isAffine[hostPort], now);
+        // if ensurePartialConnections did no work, we need to freshen the
+        // secondary indices since neither ensurePeerConnected nor
+        // ensurePeerDisconnected were called for the advertising peer
+        if (result.isAffine[hostPort]) {
+            addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
+        } else {
+            deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+        }
     }
 };
 
