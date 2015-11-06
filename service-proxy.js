@@ -1023,13 +1023,16 @@ function reapSinglePeer(hostPort, serviceNames) {
         self.deletePeerIndex(serviceName, hostPort);
     }
 
-    // TODO: info log/stat
-
     peer.drain({
         reason: 'reaped for expired advertisement',
         direction: 'both',
         timeout: self.drainTimeout
     }, disconnectDrainDone);
+
+    // TODO: stat?
+    self.logger.info('reaping dead peer', self.extendLogInfo(
+        peer.extendLogInfo(peer.draining.extendLogInfo({}))
+    ));
 
     function disconnectDrainDone(err) {
         if (err &&
