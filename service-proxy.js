@@ -284,7 +284,7 @@ function handleLazily(conn, reqFrame) {
                     serviceCounters: self.rateLimiter.serviceCounters,
                     edgeCounters: self.rateLimiter.edgeCounters
                 })));
-            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the rps of ' + serviceLimit);
+            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
             return true;
         }
     }
