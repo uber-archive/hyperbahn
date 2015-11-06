@@ -40,7 +40,7 @@ var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 var DEFAULT_MIN_PEERS_PER_WORKER = 5;
 var DEFAULT_MIN_PEERS_PER_RELAY = 5;
 var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
-var DEFAULT_REAP_PEERS_PERIOD = 0; // never
+var DEFAULT_REAP_PEERS_PERIOD = 5 * 60 * 1000; // every 5 minutes
 
 // our call SLA is 30 seconds currently
 var DEFAULT_DRAIN_TIMEOUT = 30 * 1000;
