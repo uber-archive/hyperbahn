@@ -119,6 +119,10 @@ function ServiceDispatchHandler(options) {
     self.peersToReap = Object.create(null);
     self.knownPeers = Object.create(null);
 
+    // Populated by remote-config
+    self.peerHeapEnabledServices = Object.create(null);
+    self.peerHeapEnabledGlobal = false;
+
     self.peerReaper = new IntervalScan({
         name: 'peer-reap',
         timers: self.channel.timers,
@@ -456,9 +460,16 @@ function createServiceChannel(serviceName) {
     var isExit = self.egressNodes.isExitFor(serviceName);
     var mode = isExit ? 'exit' : 'forward';
 
+    var choosePeerWithHeap = self.peerHeapEnabledGlobal;
+    if (serviceName in self.peerHeapEnabledServices) {
+        choosePeerWithHeap = self.peerHeapEnabledServices[serviceName];
+    }
+
     var options = {
-        serviceName: serviceName
+        serviceName: serviceName,
+        choosePeerWithHeap: choosePeerWithHeap
     };
+
     if (self.serviceReqDefaults[serviceName]) {
         options.requestDefaults = self.serviceReqDefaults[serviceName];
     }
@@ -1248,6 +1259,26 @@ function extendLogInfo(info) {
     info.minPeersPerRelay = self.minPeersPerRelay;
 
     return info;
+};
+
+ServiceDispatchHandler.prototype.setPeerHeapEnabled =
+function setPeerHeapEnabled(peerHeapEnabledServices, peerHeapEnabledGlobal) {
+    var self = this;
+
+    assert(typeof peerHeapEnabledServices === 'object');
+    self.peerHeapEnabledServices = peerHeapEnabledServices;
+    self.peerHeapEnabledGlobal = peerHeapEnabledGlobal;
+
+    var keys = Object.keys(self.channel.subChannels);
+    var i;
+    for (i = 0; i < keys.length; i++) {
+        var serviceName = keys[i];
+        var enabled = self.peerHeapEnabledGlobal;
+        if (serviceName in self.peerHeapEnabledServices) {
+            enabled = self.peerHeapEnabledServices[serviceName];
+        }
+        self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
+    }
 };
 
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.
