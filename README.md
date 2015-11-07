@@ -1,8 +1,11 @@
 # Hyperbahn
-Service discovery and routing for large-scale microservice operations.
 
-* Unanswered questions? Open a new [Github issue][issues].
-* Hyperbahn will be on [Uber's Open Source site][oss] soon!
+Service discovery and routing for large-scale microservice operations
+
+* IRC: #hyperbahn on Freenode
+* Questions: Open a [Github issue][issues]
+* Uber's [OSS website][oss]
+
 
 ## Overview
 
@@ -26,7 +29,8 @@ in Go, Python, and Node.js.
 Whether you're making your service available to others or you're a service
 consumer, Hyperbahn comes with many features to make application development easier:
 
- - **Configuration Discovery** - Stop managing host/port files or configurations.
+ - **Configuration Discovery** - Free yourself from managing host/port files or
+   configurations.
  - **Timeouts** - Transitively enforce services' SLAs. Every request
    must specify a timeout, moving towards a fast failure model.
  - **Retries** - Eliminate transient failures within a request timeout window.
