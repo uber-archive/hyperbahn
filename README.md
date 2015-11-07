@@ -2,7 +2,7 @@
 
 Service discovery and routing for large-scale microservice operations
 
-* IRC: #hyperbahn on Freenode
+* IRC: `#hyperbahn` on Freenode
 * Questions: Open a [Github issue][issues]
 * Uber's [OSS website][oss]
 
