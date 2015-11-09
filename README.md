@@ -104,7 +104,7 @@ cluster can talk to it.
  - `npm install`
  - `npm test`
 
-# MIT Licenced
+# MIT Licensed
 
   [tchannel]: https://github.com/uber/tchannel
   [ringpop]: https://github.com/uber/ringpop-node
