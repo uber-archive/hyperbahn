@@ -27,10 +27,10 @@ var nodeAssert = require('assert');
 var path = require('path');
 var StaticConfig = require('static-config');
 
-var Application = require('../../app.js');
+var Application = require('../../../app.js');
 var TestRing = require('./test-ring.js');
-var TestClient = require('./test-client.js');
-var getPeerInfo = require('../../peer-info.js');
+var TestClient = require('../test-cluster/test-client.js');
+var getPeerInfo = require('../../../peer-info.js');
 
 module.exports = TestApplication;
 
@@ -62,7 +62,7 @@ function TestApplication(opts) {
     opts.clients = opts.clients || {};
     nodeAssert(opts.clients.logger, 'expected a logger');
 
-    var configDir = path.join(__dirname, '..', '..', 'config');
+    var configDir = path.join(__dirname, '..', '..', '..', 'config');
     var config = StaticConfig({
         files: [
             path.join(configDir, 'production.json'),

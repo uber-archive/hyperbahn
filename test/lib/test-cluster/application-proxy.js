@@ -20,4 +20,27 @@
 
 'use strict';
 
-module.exports = require('./test-cluster/cluster-proxy.js');
+var TestClient = require('./test-client.js');
+
+module.exports = TestApplicationProxy;
+
+function TestApplicationProxy(opts) {
+    if (!(this instanceof TestApplicationProxy)) {
+        return new TestApplicationProxy(opts);
+    }
+
+    var self = this;
+
+    self.hostPort = opts.hostPort;
+
+    // Instance of TestClient
+    self.client = new TestClient({
+        hostPort: self.hostPort
+    });
+}
+
+TestApplicationProxy.prototype.destroy = function destroy() {
+    var self = this;
+
+    self.client.destroy();
+};

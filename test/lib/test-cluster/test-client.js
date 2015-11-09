@@ -19,6 +19,7 @@
 // THE SOFTWARE.
 
 'use strict';
+
 var fs = require('fs');
 var path = require('path');
 
@@ -39,8 +40,8 @@ function TestClient(opts) {
 
     var self = this;
 
-    self.app = opts.app;
-    self.hostPort = opts.app.hostPort;
+    // self.app = opts.app;
+    self.hostPort = opts.hostPort;
 
     // The tchannel for this TestClient is internal.
     // Its a tchannel created purely for the purposes of
@@ -147,7 +148,10 @@ TestClient.prototype.sendHealth = function sendHealth(cb) {
 
 TestClient.prototype.sendHealthThrift = function sendHealthThrift(cb) {
     var self = this;
-    var healthSpec = fs.readFileSync(path.join(__dirname, '../../node_modules/tchannel/as/meta.thrift'), 'utf8');
+    var healthSpec = fs.readFileSync(path.join(
+        __dirname, '..', '..', '..', 'node_modules',
+        'tchannel', 'as', 'meta.thrift'
+    ), 'utf8');
 
     thriftSend(self, {
         endpoint: 'Meta::health',
