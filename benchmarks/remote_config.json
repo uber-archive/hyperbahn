@@ -9,7 +9,7 @@
     },
     {
         "key": "peer-heap.enabled.global",
-        "value": true,
+        "value": true
     },
     {
         "key": "rateLimiting.enabled",
