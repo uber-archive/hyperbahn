@@ -247,6 +247,8 @@ function handleLazily(conn, reqFrame) {
         return false;
     }
 
+    reqFrame._cachedHeaders = res.value;
+
     var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
     var cn = cnBuf && cnBuf.toString();
     if (!cn) {
