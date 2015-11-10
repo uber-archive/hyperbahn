@@ -4,6 +4,14 @@
         "value": true
     },
     {
+        "key": "lazy.handling.enabled",
+        "value": true
+    },
+    {
+        "key": "peer-heap.enabled.global",
+        "value": true,
+    },
+    {
         "key": "rateLimiting.enabled",
         "value": true
     },
