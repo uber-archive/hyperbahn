@@ -70,7 +70,7 @@ HyperbahnWorker.prototype.start = function start() {
             throw err;
         }
 
-        console.log('done!');
+        console.log('done!', self.app.clients.tchannel.address());
 
         var serviceProxy = self.app.clients.serviceProxy;
         for (var i = 0; i < self.serviceNames.length; i++) {
