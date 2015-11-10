@@ -54,7 +54,7 @@ TimeSeriesCluster.test('testing worker with low rate limit', {
         size: 10,
         remoteConfig: {
             'rateLimiting.enabled': true,
-            'rateLimiting.totalRpsLimit': 200,
+            'rateLimiting.totalRpsLimit': 800,
             'rateLimiting.rpsLimitForServiceName': {
                 'time-series-server': 800
             }
