@@ -25,7 +25,7 @@ var assert = require('assert');
 
 var stat = require('./stat-tags.js');
 
-var DEFAULT_SERVICE_RPS_LIMIT = 100;
+var DEFAULT_SERVICE_RPS_LIMIT = 50000;
 var DEFAULT_TOTAL_RPS_LIMIT = 1000;
 var DEFAULT_BUCKET_NUMBER = 20;
 

@@ -83,6 +83,23 @@ HyperbahnWorker.prototype.start = function start() {
                 );
             }
         }
+
+        self.printRPS();
+    }
+};
+
+HyperbahnWorker.prototype.printRPS = function printRPS() {
+    var self = this;
+
+    setTimeout(printTheRPS, 1000);
+
+    function printTheRPS() {
+        var rate = self.app.clients.tchannel.successCount;
+        self.app.clients.tchannel.successCount = 0;
+
+        console.log('RPS[relay]:', rate);
+
+        setTimeout(printTheRPS, 1000);
     }
 };
 
