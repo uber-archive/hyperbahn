@@ -28,7 +28,8 @@ allocCluster.test('dead exit peers get reaped', {
     namedRemotes: ['alice', 'alice', 'alice', 'alice', 'alice', 'alice', 'alice'],
     whitelist: [
         ['info', 'Refreshing service peer affinity'],
-        ['info', 'reaping dead peers']
+        ['info', 'reaping dead peers'],
+        ['info', 'reaping dead peer']
     ]
 }, function t(cluster, assert) {
     var activeNum = 3;
