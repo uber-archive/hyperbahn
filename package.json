@@ -42,7 +42,7 @@
     "static-config": "2.1.0",
     "tape": "^4.2.2",
     "tape-cluster": "2.0.1",
-    "tchannel": "git+ssh://git@github.com/uber/tchannel-node.git#0e6f6dfb2c52af2ff5cfa56fc73ca6767e2133be",
+    "tchannel": "git+ssh://git@github.com/uber/tchannel-node.git#perf",
     "uber-statsd-client": "1.4.0",
     "uncaught-exception": "5.0.0",
     "xtend": "4.0.0"
