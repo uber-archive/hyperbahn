@@ -51,6 +51,7 @@ function HyperbahnWorker(opts) {
             port: Number(opts.port)
         }
     });
+    console.log('created app', opts.port);
 
     self.relays = opts.relays.split(',');
 }
@@ -61,12 +62,15 @@ HyperbahnWorker.prototype.start = function start() {
     // attach before throwing exception
     process.on('uncaughtException', self.app.clients.onError);
 
+    console.log('bootstrapped!');
     self.app.bootstrapAndListen(onAppReady);
 
     function onAppReady(err) {
         if (err) {
             throw err;
         }
+
+        console.log('done!');
 
         var serviceProxy = self.app.clients.serviceProxy;
         for (var i = 0; i < self.serviceNames.length; i++) {
