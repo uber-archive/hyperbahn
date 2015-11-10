@@ -21,6 +21,7 @@
 'use strict';
 
 var tapeCluster = require('tape-cluster');
+var format = require('util').format;
 var setTimeout = require('timers').setTimeout;
 var parallel = require('run-parallel');
 var tape = require('tape');
@@ -252,14 +253,11 @@ TimeSeriesCluster.prototype.close = function close(cb) {
 };
 
 TimeSeriesCluster.prototype.assertRange = function assertRange(assert, options) {
-    assert.ok(options.value >= options.min,
-        'in batch ( ' + options.index + ' ) count (' +
-        options.value + ') for' + options.description +
-        ' should be greater than >= ' + options.min);
-    assert.ok(options.value <= options.max,
-        'in batch ( ' + options.index + ' ) count (' +
-        options.value + ') for' + options.description +
-        ' should be less than <= ' + options.max);
+    var desc = format(
+        'in batch (%s) count (%s) for%s',
+        options.index, options.value, options.description);
+    assert.ok(options.value >= options.min, desc + ' should be >= ' + options.min);
+    assert.ok(options.value <= options.max, desc + ' should be <= ' + options.max);
 };
 
 TimeSeriesCluster.prototype.takeHeaps =
