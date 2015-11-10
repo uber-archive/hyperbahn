@@ -29,7 +29,9 @@ allocCluster.test('dead exit peers get reaped', {
     whitelist: [
         ['info', 'Refreshing service peer affinity'],
         ['info', 'reaping dead peers'],
-        ['info', 'reaping dead peer']
+        ['info', 'reaping dead peer'],
+        ['info', 'pruning peers'],
+        ['info', 'draining pruned peer']
     ]
 }, function t(cluster, assert) {
     var activeNum = 3;
