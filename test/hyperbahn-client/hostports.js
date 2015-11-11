@@ -194,9 +194,10 @@ function runTests(HyperbahnCluster) {
                 'Parsing error was: missing required field "query" with id 1 on discover_args') !== -1,
                 'error message should be a parsing failure');
 
-            var items = cluster.logger.items();
-            assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
-                'Do not miss the error log');
+            var items = cluster.logger.items().filter(function only(log) {
+                return log.msg === 'Got unexpected invalid thrift for arg3';
+            });
+            assert.ok(items.length > 0, 'Do not miss the error log');
 
             assert.end();
         }
@@ -235,9 +236,10 @@ function runTests(HyperbahnCluster) {
                     'Parsing error was: missing required field "serviceName" with id 1 on DiscoveryQuery.') !== -1,
                 'error message should be a parsing failure');
 
-            var items = cluster.logger.items();
-            assert.ok(items.length > 0 && items[0].msg === 'Got unexpected invalid thrift for arg3',
-                'Do not miss the error log');
+            var items = cluster.logger.items().filter(function only(log) {
+                return log.msg === 'Got unexpected invalid thrift for arg3';
+            });
+            assert.ok(items.length > 0, 'Do not miss the error log');
 
             assert.end();
         }
