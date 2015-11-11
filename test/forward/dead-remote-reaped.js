@@ -227,7 +227,6 @@ function checkAllExitPeers(cluster, assert, isDead) {
         });
         peersInfo.serviceNames = Object.keys(peersInfo.seenServiceName);
 
-        assert.comment('peersInfo: ' + JSON.stringify(peersInfo));
         if (isDead && isDead[i]) {
             assert.equal(
                 peersInfo.serviceNames.length, 0,
