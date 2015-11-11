@@ -92,8 +92,9 @@ allocCluster.test('forwarding to a down service', {
                     'expected error frame');
                 cassert.equal(logLine.meta.serviceName, 'steve',
                     'expected steve error');
-            } else if (logLine.msg === 'Refreshing service peer affinity') {
-                cassert.ok(true, 'expected peer affinity refresh');
+            } else if (logLine.msg === 'Refreshing service peer affinity' ||
+                       logLine.msg === 'implementing affinity change') {
+                cassert.ok(true, 'expected partial affinity logs');
             } else if (logLine.msg === 'error while forwarding' ||
                        logLine.msg === 'resetting connection') {
                 if (logLine.msg === 'error while forwarding') {
@@ -121,7 +122,7 @@ allocCluster.test('forwarding to a down service', {
                 }
                 cassert.ok(expectedType, 'Expected exception to be network error');
             } else {
-                cassert.ok(false, 'unexpected log line');
+                cassert.ok(false, 'unexpected log line: ' + logLine.msg);
             }
         }
         cassert.report(assert, 'logs should be correct');
