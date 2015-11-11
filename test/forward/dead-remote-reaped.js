@@ -40,6 +40,7 @@ allocCluster.test('dead exit peers get reaped', {
         ['info', 'pruning ex-affinity peers'],
         ['info', 'draining ex-affinity peer'],
         ['info', 'draining peer'],
+        ['info', 'stopping peer drain'],
         ['info', 'Refreshing service peer affinity'],
         ['info', 'reaping dead peers'],
         ['info', 'reaping dead peer'],
