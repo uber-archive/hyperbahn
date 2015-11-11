@@ -592,6 +592,24 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
     peer.connectTo();
 };
 
+ServiceDispatchHandler.prototype.getPartialRange =
+function getPartialRange(serviceName, reason) {
+    var self = this;
+
+    var range = self.computePartialRange(serviceName);
+    if (range.relayIndex < 0) {
+        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
+            serviceName: serviceName,
+            reason: reason,
+            partialRange: range
+        }));
+        // TODO: upgrade two-in-a-row or more to an error
+        return null;
+    }
+
+    return range;
+};
+
 ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName) {
     var self = this;
@@ -725,14 +743,8 @@ ServiceDispatchHandler.prototype.ensurePartialConnections =
 function ensurePartialConnections(chan, serviceName, reason, now) {
     var self = this;
 
-    var range = self.computePartialRange(serviceName);
-    if (range.relayIndex < 0) {
-        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
-            serviceName: serviceName,
-            reason: reason,
-            partialRange: range
-        }));
-        // TODO: upgrade two-in-a-row or more to an error
+    var range = self.getPartialRange(serviceName, reason);
+    if (!range) {
         return null;
     }
 
