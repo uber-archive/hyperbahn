@@ -191,14 +191,54 @@ function pruneClusterPears(cluster, assert, callback) {
     );
 }
 
+var getPeerInfo = require('../../peer-info.js');
+
 function checkAllExitPeers(cluster, assert, isDead) {
-    for (var i = 0; i < cluster.namedRemotes.length; i++) {
-        var alice = cluster.namedRemotes[i];
+    cluster.namedRemotes.forEach(function eachRemote(alice, i) {
         assert.comment('-- checkExitPeers for ' + i);
-        cluster.checkExitPeers(assert, {
-            serviceName: alice.serviceName,
-            hostPort: alice.hostPort,
-            isDead: isDead && isDead[i]
+
+        var app = cluster.apps[0];
+        var exitShard = app.clients.egressNodes.exitsFor(alice.serviceName);
+        var exitApps = cluster.apps.filter(function isExit(someApp) {
+            return !!exitShard[someApp.tchannel.hostPort];
         });
-    }
+
+        var peersInfo = {
+            seenServiceName: {},
+            numExistantPeers: 0,
+            connected: {
+                out: false,
+                in: false
+            }
+        };
+
+        exitApps.forEach(function anyAppPeerInfo(exitApp) {
+            var peer = exitApp.tchannel.peers.get(alice.hostPort);
+            if (!peer) {
+                return;
+            }
+            peersInfo.numExistantPeers++;
+            var peerInfo = getPeerInfo(peer);
+            peerInfo.serviceNames.forEach(function eachServiceName(serviceName) {
+                peersInfo.seenServiceName[serviceName] = true;
+            });
+            peersInfo.connected.out = peersInfo.connected.out || peerInfo.connected.out;
+            peersInfo.connected.in = peersInfo.connected.in || peerInfo.connected.in;
+        });
+        peersInfo.serviceNames = Object.keys(peersInfo.seenServiceName);
+
+        assert.comment('peersInfo: ' + JSON.stringify(peersInfo));
+        if (isDead && isDead[i]) {
+            assert.equal(
+                peersInfo.serviceNames.length, 0,
+                'peer has no services');
+        } else {
+            assert.ok(peersInfo.numExistantPeers > 0,
+                      'should have a peer on every exitApp');
+            assert.ok(
+                peersInfo.connected.out ||
+                peersInfo.connected.in,
+                'exitApp is connected to peer');
+        }
+    });
 }
