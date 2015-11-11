@@ -34,6 +34,8 @@ allocCluster.test('find connections for service', {
     setup();
 
     function setup() {
+        assert.comment('-- setup');
+
         collectParallel(
             dummies,
             function registerEach(dummy, i, done) {
@@ -52,6 +54,8 @@ allocCluster.test('find connections for service', {
     }
 
     function runTest() {
+        assert.comment('-- runTest');
+
         cluster.checkExitPeers(assert, {
             serviceName: 'Dummy',
             hostPort: dummies[0].hostPort
@@ -63,6 +67,8 @@ allocCluster.test('find connections for service', {
     }
 
     function onResults(err, resp) {
+        assert.comment('-- onResults');
+
         if (err) {
             finish(err);
             return;
@@ -99,6 +105,7 @@ allocCluster.test('find connections for service', {
     }
 
     function finish(err) {
+        assert.comment('-- finish');
         assert.ifError(err);
 
         assert.end();
