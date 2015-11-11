@@ -578,7 +578,8 @@ function checkExitPeers(assert, opts) {
         });
     }
 
-    exitApps.forEach(function checkApp(exitApp) {
+    exitApps.forEach(function checkApp(exitApp, i) {
+        cassert.comment('--- check peers for exitApp[' + i + ']');
         exitApp.checkExitPeers(cassert, opts);
     });
 
