@@ -28,16 +28,35 @@ allocCluster.test('dead exit peers get reaped', {
     namedRemotes: ['alice', 'alice', 'alice', 'alice', 'alice', 'alice', 'alice'],
     whitelist: [
         ['info', 'Refreshing service peer affinity'],
-        ['info', 'reaping dead peers']
+        ['info', 'reaping dead peers'],
+        ['info', 'reaping dead peer'],
+        ['info', 'pruning peers'],
+        ['info', 'draining pruned peer']
     ]
 }, function t(cluster, assert) {
     var activeNum = 3;
 
-    // Verify that hyperban is connected to all the alices
-    checkAllExitPeers(cluster, assert, null);
+    // for more determinism
+    cluster.namedRemotes.sort(function byHostPort(a, b) {
+        if (a.hostPort < b.hostPort) {
+            return -1;
+        } else if (a.hostPort > b.hostPort) {
+            return 1;
+        }
+        return 0;
+    });
 
-    // Reap peers that have not registered (nobody)
-    reapClusterPears(cluster, assert, initialReapDone);
+    pruneClusterPears(cluster, assert, initialPruneDone);
+
+    function initialPruneDone() {
+        assert.comment('- initialPruneDone');
+
+        // Verify that hyperban is connected to all the alices
+        checkAllExitPeers(cluster, assert, null);
+
+        // Reap peers that have not registered (nobody)
+        reapClusterPears(cluster, assert, initialReapDone);
+    }
 
     function initialReapDone() {
         assert.comment('- initialReapDone');
@@ -75,6 +94,14 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterReapPeers() {
+        assert.comment('- afterReapPeers');
+
+        pruneClusterPears(cluster, assert, afterReapPrunePeers);
+    }
+
+    function afterReapPrunePeers() {
+        assert.comment('- afterReapPrunePeers');
+
         checkAllExitPeers(cluster, assert, [
             // Some of the peers remain
             false,
@@ -113,6 +140,12 @@ allocCluster.test('dead exit peers get reaped', {
             return;
         }
 
+        pruneClusterPears(cluster, assert, afterResPruneDone);
+    }
+
+    function afterResPruneDone() {
+        assert.comment('- afterResPruneDone');
+
         // Verify that all the peers have rejoined the fray.
         checkAllExitPeers(cluster, assert, null);
 
@@ -141,14 +174,71 @@ function reapClusterPears(cluster, assert, callback) {
     );
 }
 
+function pruneClusterPears(cluster, assert, callback) {
+    collectParallel(
+        cluster.apps,
+        function pruneEach(app, i, done) {
+            var serviceProxy = app.clients.serviceProxy;
+            serviceProxy.peerPruner.run(done);
+        },
+        function finish(_, results) {
+            for (var i = 0; i < results.length; i++) {
+                var res = results[i];
+                assert.ifError(res.err, 'no error from pruning app ' + i);
+            }
+            callback();
+        }
+    );
+}
+
+var getPeerInfo = require('../../peer-info.js');
+
 function checkAllExitPeers(cluster, assert, isDead) {
-    for (var i = 0; i < cluster.namedRemotes.length; i++) {
-        var alice = cluster.namedRemotes[i];
+    cluster.namedRemotes.forEach(function eachRemote(alice, i) {
         assert.comment('-- checkExitPeers for ' + i);
-        cluster.checkExitPeers(assert, {
-            serviceName: alice.serviceName,
-            hostPort: alice.hostPort,
-            isDead: isDead && isDead[i]
+
+        var app = cluster.apps[0];
+        var exitShard = app.clients.egressNodes.exitsFor(alice.serviceName);
+        var exitApps = cluster.apps.filter(function isExit(someApp) {
+            return !!exitShard[someApp.tchannel.hostPort];
         });
-    }
+
+        var peersInfo = {
+            seenServiceName: {},
+            numExistantPeers: 0,
+            connected: {
+                out: false,
+                in: false
+            }
+        };
+
+        exitApps.forEach(function anyAppPeerInfo(exitApp) {
+            var peer = exitApp.tchannel.peers.get(alice.hostPort);
+            if (!peer) {
+                return;
+            }
+            peersInfo.numExistantPeers++;
+            var peerInfo = getPeerInfo(peer);
+            peerInfo.serviceNames.forEach(function eachServiceName(serviceName) {
+                peersInfo.seenServiceName[serviceName] = true;
+            });
+            peersInfo.connected.out = peersInfo.connected.out || peerInfo.connected.out;
+            peersInfo.connected.in = peersInfo.connected.in || peerInfo.connected.in;
+        });
+        peersInfo.serviceNames = Object.keys(peersInfo.seenServiceName);
+
+        assert.comment('peersInfo: ' + JSON.stringify(peersInfo));
+        if (isDead && isDead[i]) {
+            assert.equal(
+                peersInfo.serviceNames.length, 0,
+                'peer has no services');
+        } else {
+            assert.ok(peersInfo.numExistantPeers > 0,
+                      'should have a peer on every exitApp');
+            assert.ok(
+                peersInfo.connected.out ||
+                peersInfo.connected.in,
+                'exitApp is connected to peer');
+        }
+    });
 }
