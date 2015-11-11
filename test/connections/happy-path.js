@@ -25,7 +25,12 @@ var allocCluster = require('../lib/test-cluster.js');
 
 allocCluster.test('find connections for service', {
     size: 10,
-    dummySize: 5
+    dummySize: 5,
+    whitelist: [
+        ['info', 'pruning peers'],
+        ['info', 'draining peer'],
+        ['info', 'draining pruned peer']
+    ]
 }, function t(cluster, assert) {
     var apps = cluster.apps;
     var dummies = cluster.dummies;
