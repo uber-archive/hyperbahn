@@ -62,8 +62,7 @@ allocCluster.test('find connections for service', {
 
     function onResults(err, resp) {
         if (err) {
-            assert.ifError(err);
-            assert.end();
+            finish(err);
             return;
         }
 
@@ -93,6 +92,12 @@ allocCluster.test('find connections for service', {
                     'exit instance is connected');
             });
         });
+
+        finish(null);
+    }
+
+    function finish(err) {
+        assert.ifError(err);
 
         assert.end();
     }
