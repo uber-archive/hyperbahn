@@ -592,6 +592,24 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
     peer.connectTo();
 };
 
+ServiceDispatchHandler.prototype.getPartialRange =
+function getPartialRange(serviceName, reason) {
+    var self = this;
+
+    var range = self.computePartialRange(serviceName);
+    if (range.relayIndex < 0) {
+        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
+            serviceName: serviceName,
+            reason: reason,
+            partialRange: range
+        }));
+        // TODO: upgrade two-in-a-row or more to an error
+        return null;
+    }
+
+    return range;
+};
+
 ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName) {
     var self = this;
@@ -680,12 +698,34 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         // Mark known peers, so they are candidates for future reaping
         addIndexEntry(self.knownPeers, peer.hostPort, serviceName, now);
 
+        // TODO: this audit shouldn't be necessary once we understand and fix
+        // why it was needed in the first place
+        var range = self.getPartialRange(serviceName, 'refresh partial peer audit');
+        if (range) {
+            var shouldConnect = range.affineWorkers.indexOf(hostPort) >= 0;
+            var isConnected = !!connected;
+            if (isConnected !== shouldConnect) {
+                self.logger.warn('partial affinity audit fail', self.extendLogInfo({
+                    serviceName: serviceName,
+                    serviceHostPort: hostPort,
+                    isConnected: isConnected,
+                    shouldConnect: shouldConnect,
+                    connectedPeers: connectedPeers,
+                    partialRange: range
+                }));
+                connected = now;
+            }
+        }
+
         if (connected) {
             self.ensurePeerConnected(serviceName, peer, 'service peer affinity refresh', now);
+        } else {
+            self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity refresh', now);
         }
 
         self.logger.info('refreshed peer partially', self.extendLogInfo({
             serviceName: serviceName,
+            connectedPeers: connectedPeers,
             serviceHostPort: hostPort,
             isConnected: connected
         }));
@@ -722,14 +762,8 @@ ServiceDispatchHandler.prototype.ensurePartialConnections =
 function ensurePartialConnections(chan, serviceName, reason, now) {
     var self = this;
 
-    var range = self.computePartialRange(serviceName);
-    if (range.relayIndex < 0) {
-        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
-            serviceName: serviceName,
-            reason: reason,
-            partialRange: range
-        }));
-        // TODO: upgrade two-in-a-row or more to an error
+    var range = self.getPartialRange(serviceName, reason);
+    if (!range) {
         return null;
     }
 
