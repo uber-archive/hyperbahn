@@ -20,7 +20,7 @@
 
 'use strict';
 
-var makeCountedReadySignal = require('ready-signal/counted');
+var collectParallel = require('collect-parallel/array');
 var allocCluster = require('../lib/test-cluster.js');
 
 allocCluster.test('find connections for service', {
@@ -34,19 +34,21 @@ allocCluster.test('find connections for service', {
     setup();
 
     function setup() {
-        var ready = makeCountedReadySignal(dummies.length);
-        for (var i = 0; i < dummies.length; i++) {
-            cluster.sendRegister(dummies[i], {
-                serviceName: 'Dummy'
-            }, onRegister);
-        }
-        ready(runTest);
-    }
-
-    function onRegister(err, resp) {
-        assert.ifError(err);
-
-        ready.signal();
+        collectParallel(
+            dummies,
+            function registerEach(dummy, i, done) {
+                cluster.sendRegister(dummy, {
+                    serviceName: 'Dummy'
+                }, done);
+            },
+            function finishRegister(_, results) {
+                for (var i = 0; i < results.length; i++) {
+                    var res = results[i];
+                    assert.ifError(res.err, 'no unexpected error from register ' + i);
+                }
+                runTest();
+            }
+        );
     }
 
     function runTest() {
