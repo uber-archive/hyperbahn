@@ -682,6 +682,8 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
         if (connected) {
             self.ensurePeerConnected(serviceName, peer, 'service peer affinity refresh', now);
+        } else {
+            self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity refresh', now);
         }
 
         self.logger.info('refreshed peer partially', self.extendLogInfo({
