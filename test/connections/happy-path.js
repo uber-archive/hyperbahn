@@ -30,6 +30,7 @@ allocCluster.test('find connections for service', {
     var apps = cluster.apps;
     var dummies = cluster.dummies;
     var entryNode = apps[0];
+    var isPartial = entryNode.clients.serviceProxy.partialAffinityEnabled;
 
     setup();
 
@@ -101,8 +102,13 @@ allocCluster.test('find connections for service', {
                        exitInstance.connected.in;
             });
 
-            assert.ok(areConnected.every(boolEye),
-                      'all exit instances are connected');
+            if (isPartial) {
+                assert.ok(areConnected.some(boolEye),
+                          'some exit instances are connected');
+            } else {
+                assert.ok(areConnected.every(boolEye),
+                          'all exit instances are connected');
+            }
         });
 
         finish(null);
