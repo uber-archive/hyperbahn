@@ -95,16 +95,14 @@ allocCluster.test('find connections for service', {
             }
 
             var exitInstances = body[key].instances;
-
-            Object.keys(exitInstances).forEach(function checkInst(key2) {
+            var areConnected = Object.keys(exitInstances).map(function getInstanceConnected(key2) {
                 var exitInstance = exitInstances[key2];
-
-                var isConnected = exitInstance.connected.out ||
-                    exitInstance.connected.in;
-
-                assert.equal(isConnected, true,
-                    'exit instance is connected');
+                return exitInstance.connected.out ||
+                       exitInstance.connected.in;
             });
+
+            assert.ok(areConnected.every(boolEye),
+                      'all exit instances are connected');
         });
 
         finish(null);
@@ -133,4 +131,8 @@ function pruneClusterPears(cluster, assert, callback) {
             callback();
         }
     );
+}
+
+function boolEye(x) {
+    return !!x;
 }
