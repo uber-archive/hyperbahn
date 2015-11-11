@@ -29,6 +29,7 @@ allocCluster.test('find connections for service', {
 }, function t(cluster, assert) {
     var apps = cluster.apps;
     var dummies = cluster.dummies;
+    var entryNode = apps[0];
 
     setup();
 
@@ -49,8 +50,6 @@ allocCluster.test('find connections for service', {
     }
 
     function runTest() {
-        var entryNode = apps[0];
-
         cluster.checkExitPeers(assert, {
             serviceName: 'Dummy',
             hostPort: dummies[0].hostPort
