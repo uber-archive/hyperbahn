@@ -56,6 +56,12 @@ allocCluster.test('find connections for service', {
     function runTest() {
         assert.comment('-- runTest');
 
+        pruneClusterPears(cluster, assert, runTestPruneDone);
+    }
+
+    function runTestPruneDone() {
+        assert.comment('-- runTestPruneDone');
+
         cluster.checkExitPeers(assert, {
             serviceName: 'Dummy',
             hostPort: dummies[0].hostPort
@@ -111,3 +117,20 @@ allocCluster.test('find connections for service', {
         assert.end();
     }
 });
+
+function pruneClusterPears(cluster, assert, callback) {
+    collectParallel(
+        cluster.apps,
+        function pruneEach(app, i, done) {
+            var serviceProxy = app.clients.serviceProxy;
+            serviceProxy.peerPruner.run(done);
+        },
+        function finish(_, results) {
+            for (var i = 0; i < results.length; i++) {
+                var res = results[i];
+                assert.ifError(res.err, 'no error from pruning app ' + i);
+            }
+            callback();
+        }
+    );
+}
