@@ -30,15 +30,17 @@ allocCluster.test('find connections for service', {
     var apps = cluster.apps;
     var dummies = cluster.dummies;
 
-    // setup
-    var ready = makeCountedReadySignal(dummies.length);
-    for (var i = 0; i < dummies.length; i++) {
-        cluster.sendRegister(dummies[i], {
-            serviceName: 'Dummy'
-        }, onRegister);
-    }
+    setup();
 
-    ready(runTest);
+    function setup() {
+        var ready = makeCountedReadySignal(dummies.length);
+        for (var i = 0; i < dummies.length; i++) {
+            cluster.sendRegister(dummies[i], {
+                serviceName: 'Dummy'
+            }, onRegister);
+        }
+        ready(runTest);
+    }
 
     function onRegister(err, resp) {
         assert.ifError(err);
