@@ -688,6 +688,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
         self.logger.info('refreshed peer partially', self.extendLogInfo({
             serviceName: serviceName,
+            connectedPeers: connectedPeers,
             serviceHostPort: hostPort,
             isConnected: connected
         }));
