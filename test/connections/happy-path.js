@@ -58,42 +58,42 @@ allocCluster.test('find connections for service', {
         entryNode.client.getConnections({
             serviceName: 'Dummy'
         }, onResults);
+    }
 
-        function onResults(err, resp) {
-            if (err) {
-                assert.ifError(err);
-                assert.end();
+    function onResults(err, resp) {
+        if (err) {
+            assert.ifError(err);
+            assert.end();
+            return;
+        }
+
+        var exitHosts = entryNode.hostsFor('Dummy');
+
+        var body = resp.body;
+        assert.deepEqual(
+            exitHosts.sort(),
+            Object.keys(body).sort(),
+            'got expected exit hosts back');
+
+        Object.keys(body).forEach(function checkInstances(key) {
+            if (body[key].err) {
+                assert.ifError(body[key].err);
                 return;
             }
 
-            var exitHosts = entryNode.hostsFor('Dummy');
+            var exitInstances = body[key].instances;
 
-            var body = resp.body;
-            assert.deepEqual(
-                exitHosts.sort(),
-                Object.keys(body).sort(),
-                'got expected exit hosts back');
+            Object.keys(exitInstances).forEach(function checkInst(key2) {
+                var exitInstance = exitInstances[key2];
 
-            Object.keys(body).forEach(function checkInstances(key) {
-                if (body[key].err) {
-                    assert.ifError(body[key].err);
-                    return;
-                }
+                var isConnected = exitInstance.connected.out ||
+                    exitInstance.connected.in;
 
-                var exitInstances = body[key].instances;
-
-                Object.keys(exitInstances).forEach(function checkInst(key2) {
-                    var exitInstance = exitInstances[key2];
-
-                    var isConnected = exitInstance.connected.out ||
-                        exitInstance.connected.in;
-
-                    assert.equal(isConnected, true,
-                        'exit instance is connected');
-                });
+                assert.equal(isConnected, true,
+                    'exit instance is connected');
             });
+        });
 
-            assert.end();
-        }
+        assert.end();
     }
 });
