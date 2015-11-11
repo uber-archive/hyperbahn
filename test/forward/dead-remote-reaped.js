@@ -20,8 +20,13 @@
 
 'use strict';
 
+/* eslint-disable no-console */
+/* global console */
+
 var allocCluster = require('../lib/test-cluster.js');
 var collectParallel = require('collect-parallel/array');
+
+var DUMP_LOGS = false;
 
 allocCluster.test('dead exit peers get reaped', {
     size: 10,
@@ -49,6 +54,7 @@ allocCluster.test('dead exit peers get reaped', {
     pruneClusterPears(cluster, assert, initialPruneDone);
 
     function initialPruneDone() {
+        takeLogs();
         assert.comment('- initialPruneDone');
 
         // Verify that hyperban is connected to all the alices
@@ -59,6 +65,7 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function initialReapDone() {
+        takeLogs();
         assert.comment('- initialReapDone');
 
         // Verify that all alices are still connected
@@ -77,6 +84,7 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterReRegister(_, results) {
+        takeLogs();
         assert.comment('- afterReRegister');
 
         var done = false;
@@ -94,12 +102,14 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterReapPeers() {
+        takeLogs();
         assert.comment('- afterReapPeers');
 
         pruneClusterPears(cluster, assert, afterReapPrunePeers);
     }
 
     function afterReapPrunePeers() {
+        takeLogs();
         assert.comment('- afterReapPrunePeers');
 
         checkAllExitPeers(cluster, assert, [
@@ -127,6 +137,7 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterResurrection(_, results) {
+        takeLogs();
         assert.comment('- afterResurrection');
 
         var done = false;
@@ -144,6 +155,7 @@ allocCluster.test('dead exit peers get reaped', {
     }
 
     function afterResPruneDone() {
+        takeLogs();
         assert.comment('- afterResPruneDone');
 
         // Verify that all the peers have rejoined the fray.
@@ -155,7 +167,27 @@ allocCluster.test('dead exit peers get reaped', {
 
     }
 
+    function takeLogs() {
+        var logs = cluster.logger._backend.records.slice(0);
+        cluster.logger._backend.records.length = 0;
+        if (DUMP_LOGS) {
+            logs2console(logs);
+        }
+        return logs;
+    }
 });
+
+function logs2console(logs) {
+    console.log(
+        logs.map(function each(log) {
+            var data = log._logData;
+            return data.time + ' ' +
+                data.level.toUpperCase() + ' ' +
+                data.msg + ' ' +
+                JSON.stringify(data.fields);
+        }).join('\n')
+    );
+}
 
 function reapClusterPears(cluster, assert, callback) {
     collectParallel(
