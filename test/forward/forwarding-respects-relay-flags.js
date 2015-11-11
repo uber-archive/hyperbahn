@@ -62,7 +62,9 @@ allocCluster.test('register and forward', {
 
         assert.equal(counter, 1);
 
-        var logs = cluster.logger.items();
+        var logs = cluster.logger.items().filter(function only(log) {
+            return log.msg === 'forwarding error frame';
+        });
         assert.ok(logs.length >= 1 && logs.length <= 2);
 
         assert.equal(logs[0].levelName, 'warn');

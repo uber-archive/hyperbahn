@@ -73,7 +73,9 @@ allocCluster.test('register when exit node is down', {
         assert.ok(result.body.connectionCount <= 3 &&
             result.body.connectionCount > 0);
 
-        var errors = cluster.logger.items();
+        var errors = cluster.logger.items().filter(function only(log) {
+            return log.msg === 'Relay advertise failed with expected err';
+        });
 
         assert.equal(errors.length, 1);
         assert.equal(errors[0].msg,

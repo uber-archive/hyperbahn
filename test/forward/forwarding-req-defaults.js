@@ -48,7 +48,9 @@ allocCluster.test('forwarding small timeout concurrently', {
         assert.ok(err);
         assert.equal(err.message, 'unexpected error');
 
-        var lines = cluster.logger.items();
+        var lines = cluster.logger.items().filter(function only(log) {
+            return log.msg === 'forwarding error frame';
+        });
         assert.ok(lines.length >= 1);
         assert.equal(lines[0].meta.error.type, 'tchannel.unexpected');
 
