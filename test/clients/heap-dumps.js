@@ -36,9 +36,10 @@ allocCluster.test('tchannel heap dumps', function t(cluster, assert) {
         assert.ok(resp.body.path, 'heap dump does not return path');
 
         var logs = cluster.logger.items();
-        assert.equal(logs.length, 1);
-        assert.equal(logs[0].msg, 'write a heapsnapshot');
-        assert.equal(logs[0].meta.file, resp.body.path);
+        assert.ok(logs.some(function findExpected(log) {
+            return log.msg === 'write a heapsnapshot' &&
+                   log.meta.file === resp.body.path;
+        }));
 
         setTimeout(onTimeout, 1000);
 
