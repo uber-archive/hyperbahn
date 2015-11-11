@@ -36,6 +36,16 @@ allocCluster.test('dead exit peers get reaped', {
 }, function t(cluster, assert) {
     var activeNum = 3;
 
+    // for more determinism
+    cluster.namedRemotes.sort(function byHostPort(a, b) {
+        if (a.hostPort < b.hostPort) {
+            return -1;
+        } else if (a.hostPort > b.hostPort) {
+            return 1;
+        }
+        return 0;
+    });
+
     pruneClusterPears(cluster, assert, initialPruneDone);
 
     function initialPruneDone() {
