@@ -1,0 +1,82 @@
+// Copyright (c) 2015 Uber Technologies, Inc.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+'use strict';
+
+
+var sortedIndexOf = require('./lib/sorted-index-of');
+
+module.exports = PartialRange;
+
+function PartialRange() {
+    this.relayHostPort = null; // instead of this.channel.hostPort
+    this.relays = null;
+    this.workers = null;
+    this.relayIndex = NaN;
+    this.ratio = NaN;
+    this.length = NaN;
+    this.start = NaN;
+    this.stop = NaN;
+    this.affineWorkers = [];
+}
+
+PartialRange.prototype.isValid =
+function isValid() {
+    return this.relayIndex >= 0;
+};
+
+PartialRange.prototype.compute =
+function compute(relayHostPort, relays, workers, minPeersPerWorker, minPeersPerRelay) {
+    this.relayHostPort = relayHostPort;
+    this.relays = relays;
+    this.workers = workers;
+    this.relayIndex = sortedIndexOf(this.relays, this.relayHostPort);
+
+    // istanbul ignore if
+    if (this.relayIndex < 0) {
+        // invalid relayIndex, stomp fields to be sure
+        this.length        = NaN;
+        this.start         = NaN;
+        this.stop          = NaN;
+        this.affineWorkers = [];
+        return;
+    }
+
+    // Compute the range of workers that this relay should be connected to.
+    this.ratio = this.workers.length / this.relays.length;
+
+    this.length = Math.ceil(minPeersPerWorker * this.ratio); // how many peers we are going to connect to
+    this.length = Math.max(minPeersPerRelay, this.length); // please always have this many
+    this.length = Math.min(this.workers.length, this.length); // you can't have more than there are
+    this.start = Math.floor(this.relayIndex * this.ratio);
+    this.stop = Math.ceil(this.relayIndex * this.ratio + this.length) % this.workers.length;
+
+    if (this.start === this.stop) {
+        // fully connected
+        this.affineWorkers = this.workers; // XXX .slice(0)?
+    } else if (this.stop < this.start) {
+        // wrap-around --> complement
+        var head = this.workers.slice(0, this.stop);
+        var tail = this.workers.slice(this.start, this.workers.length);
+        this.affineWorkers = head.concat(tail);
+    } else {
+        this.affineWorkers = this.workers.slice(this.start, this.stop);
+    }
+};

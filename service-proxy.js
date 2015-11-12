@@ -29,9 +29,9 @@ var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
 var IntervalScan = require('./lib/interval-scan.js');
-var sortedIndexOf = require('./lib/sorted-index-of');
 
 var RateLimiter = require('./rate_limiter.js');
+var PartialRange = require('./partial_range.js');
 var Circuits = require('./circuits.js');
 var CountedReadySignal = require('ready-signal/counted');
 
@@ -597,7 +597,7 @@ function getPartialRange(serviceName, reason) {
     var self = this;
 
     var range = self.computePartialRange(serviceName);
-    if (range.relayIndex < 0) {
+    if (!range.isValid()) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
@@ -615,53 +615,14 @@ function getPartialRange(serviceName, reason) {
 ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName) {
     var self = this;
-
-    var range = {
-        relays: null,
-        workers: null,
-        relayIndex: NaN,
-        ratio: NaN,
-        start: NaN,
-        stop: NaN,
-        length: NaN,
-        affineWorkers: []
-    };
-
-    // Obtain and sort the (cached) affine relay list
-    range.relays = self.getRelaysFor(serviceName);
-
-    // Obtain and sort the affine worker list
-    range.workers = self.getWorkersFor(serviceName);
-
-    // Find our position within the affine relay set so we can project that
-    // position into the affine worker set.
-    range.relayIndex = sortedIndexOf(range.relays, self.channel.hostPort);
-    // istanbul ignore if
-    if (range.relayIndex < 0) {
-        return range;
-    }
-
-    // Compute the range of workers that this relay should be connected to.
-    range.ratio = range.workers.length / range.relays.length;
-
-    range.length = Math.ceil(self.minPeersPerWorker * range.ratio); // how many peers we are going to connect to
-    range.length = Math.max(self.minPeersPerRelay, range.length); // please always have this many
-    range.length = Math.min(range.workers.length, range.length); // you can't have more than there are
-    range.start = Math.floor(range.relayIndex * range.ratio);
-    range.stop = Math.ceil(range.relayIndex * range.ratio + range.length) % range.workers.length;
-
-    if (range.start === range.stop) {
-        // fully connected
-        range.affineWorkers = range.workers; // XXX .slice(0)?
-    } else if (range.stop < range.start) {
-        // wrap-around --> complement
-        var head = range.workers.slice(0, range.stop);
-        var tail = range.workers.slice(range.start, range.workers.length);
-        range.affineWorkers = head.concat(tail);
-    } else {
-        range.affineWorkers = range.workers.slice(range.start, range.stop);
-    }
-
+    var range = new PartialRange();
+    range.compute(
+        self.channel.hostPort,
+        self.getRelaysFor(serviceName),  // Obtain the (cached) sorted affine relay list
+        self.getWorkersFor(serviceName), // Obtain and sort the affine worker list
+        self.minPeersPerWorker,
+        self.minPeersPerRelay
+    );
     return range;
 };
 
