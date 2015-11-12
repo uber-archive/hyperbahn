@@ -84,5 +84,5 @@ function sliceRange(arr, lo, hi) {
     // the range warps around the end, so we want the complement
     var head = arr.slice(0, hi);
     var tail = arr.slice(lo, arr.length);
-    return head.concat(tail);
+    return tail.concat(head);
 }
