@@ -67,16 +67,22 @@ function compute(relayHostPort, relays, workers, minPeersPerWorker, minPeersPerR
     this.length = Math.min(this.workers.length, this.length); // you can't have more than there are
     this.start = Math.floor(this.relayIndex * this.ratio);
     this.stop = Math.ceil(this.relayIndex * this.ratio + this.length) % this.workers.length;
-
-    if (this.start === this.stop) {
-        // fully connected
-        this.affineWorkers = this.workers; // XXX .slice(0)?
-    } else if (this.stop < this.start) {
-        // wrap-around --> complement
-        var head = this.workers.slice(0, this.stop);
-        var tail = this.workers.slice(this.start, this.workers.length);
-        this.affineWorkers = head.concat(tail);
-    } else {
-        this.affineWorkers = this.workers.slice(this.start, this.stop);
-    }
+    this.affineWorkers = sliceRange(this.workers, this.start, this.stop);
 };
+
+function sliceRange(arr, lo, hi) {
+    if (lo === hi) {
+        // full array
+        return arr; // XXX .slice(0)?
+    }
+
+    // simple range subset
+    if (hi > lo) {
+        return arr.slice(lo, hi);
+    }
+
+    // the range warps around the end, so we want the complement
+    var head = arr.slice(0, hi);
+    var tail = arr.slice(lo, arr.length);
+    return head.concat(tail);
+}
