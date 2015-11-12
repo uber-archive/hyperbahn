@@ -26,8 +26,8 @@ var sortedIndexOf = require('./lib/sorted-index-of');
 
 module.exports = PartialRange;
 
-function PartialRange() {
-    this.relayHostPort     = null; // instead of this.channel.hostPort
+function PartialRange(relayHostPort, minPeersPerWorker, minPeersPerRelay) {
+    this.relayHostPort     = relayHostPort || ''; // instead of this.channel.hostPort
     this.relays            = null;
     this.workers           = null;
     this.relayIndex        = NaN;
@@ -36,8 +36,8 @@ function PartialRange() {
     this.start             = NaN;
     this.stop              = NaN;
     this.affineWorkers     = null;
-    this.minPeersPerWorker = 1;
-    this.minPeersPerRelay  = 1;
+    this.minPeersPerWorker = minPeersPerWorker || 1;
+    this.minPeersPerRelay  = minPeersPerRelay || 1;
 }
 
 PartialRange.prototype.isValid =
@@ -46,14 +46,17 @@ function isValid() {
 };
 
 PartialRange.prototype.compute =
-function compute(relayHostPort, relays, workers, minPeersPerWorker, minPeersPerRelay) {
-    this.relayHostPort     = relayHostPort;
-    this.relays            = relays;
-    this.workers           = workers;
-    this.ratio             = this.workers.length / this.relays.length;
-    this.relayIndex        = sortedIndexOf(this.relays, this.relayHostPort);
-    this.minPeersPerWorker = minPeersPerWorker;
-    this.minPeersPerRelay  = minPeersPerRelay;
+function compute(relays, workers) {
+    if (relays) {
+        this.relays = relays;
+    }
+
+    if (workers) {
+        this.workers = workers;
+    }
+
+    this.ratio      = this.workers.length / this.relays.length;
+    this.relayIndex = sortedIndexOf(this.relays, this.relayHostPort);
 
     // istanbul ignore if
     if (this.relayIndex < 0) {

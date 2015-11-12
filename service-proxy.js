@@ -615,13 +615,14 @@ function getPartialRange(serviceName, reason) {
 ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName) {
     var self = this;
-    var range = new PartialRange();
-    range.compute(
+    var range = new PartialRange(
         self.channel.hostPort,
-        self.getRelaysFor(serviceName),  // Obtain the (cached) sorted affine relay list
-        self.getWorkersFor(serviceName), // Obtain and sort the affine worker list
         self.minPeersPerWorker,
         self.minPeersPerRelay
+    );
+    range.compute(
+        self.getRelaysFor(serviceName),  // Obtain the (cached) sorted affine relay list
+        self.getWorkersFor(serviceName)  // Obtain and sort the affine worker list
     );
     return range;
 };
