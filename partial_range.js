@@ -20,6 +20,7 @@
 
 'use strict';
 
+/* eslint-disable no-multi-spaces */
 
 var sortedIndexOf = require('./lib/sorted-index-of');
 
@@ -27,13 +28,13 @@ module.exports = PartialRange;
 
 function PartialRange() {
     this.relayHostPort = null; // instead of this.channel.hostPort
-    this.relays = null;
-    this.workers = null;
-    this.relayIndex = NaN;
-    this.ratio = NaN;
-    this.length = NaN;
-    this.start = NaN;
-    this.stop = NaN;
+    this.relays        = null;
+    this.workers       = null;
+    this.relayIndex    = NaN;
+    this.ratio         = NaN;
+    this.length        = NaN;
+    this.start         = NaN;
+    this.stop          = NaN;
     this.affineWorkers = null;
 }
 
@@ -45,10 +46,10 @@ function isValid() {
 PartialRange.prototype.compute =
 function compute(relayHostPort, relays, workers, minPeersPerWorker, minPeersPerRelay) {
     this.relayHostPort = relayHostPort;
-    this.relays = relays;
-    this.workers = workers;
-    this.ratio = this.workers.length / this.relays.length;
-    this.relayIndex = sortedIndexOf(this.relays, this.relayHostPort);
+    this.relays        = relays;
+    this.workers       = workers;
+    this.ratio         = this.workers.length / this.relays.length;
+    this.relayIndex    = sortedIndexOf(this.relays, this.relayHostPort);
 
     // istanbul ignore if
     if (this.relayIndex < 0) {
@@ -61,11 +62,11 @@ function compute(relayHostPort, relays, workers, minPeersPerWorker, minPeersPerR
     }
 
     // Compute the range of workers that this relay should be connected to.
-    this.length = Math.ceil(minPeersPerWorker * this.ratio); // how many peers we are going to connect to
-    this.length = Math.max(minPeersPerRelay, this.length); // please always have this many
-    this.length = Math.min(this.workers.length, this.length); // you can't have more than there are
-    this.start = Math.floor(this.relayIndex * this.ratio);
-    this.stop = Math.ceil(this.relayIndex * this.ratio + this.length) % this.workers.length;
+    this.length        = Math.ceil(minPeersPerWorker * this.ratio);   // how many peers we are going to connect to
+    this.length        = Math.max(minPeersPerRelay, this.length);     // please always have this many
+    this.length        = Math.min(this.workers.length, this.length);  // you can't have more than there are
+    this.start         = Math.floor(this.relayIndex * this.ratio);
+    this.stop          = Math.ceil(this.relayIndex * this.ratio + this.length) % this.workers.length;
     this.affineWorkers = sliceRange(this.workers, this.start, this.stop);
 };
 
