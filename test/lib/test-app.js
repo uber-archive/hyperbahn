@@ -165,7 +165,11 @@ function checkExitPeers(assert, opts) {
     var expectedConnectedOut = true;
 
     if (self.clients.serviceProxy.partialAffinityEnabled) {
-        var range = self.clients.serviceProxy.computePartialRange(opts.serviceName);
+        var range = self.clients.serviceProxy.getPartialRange(opts.serviceName, 'test expectation');
+        if (!range) {
+            assert.fail('unable to get partial affinity range');
+            return;
+        }
         // assert.comment(self.hostPort + ' affineWorkers: ' + range.affineWorkers);
         // assert.comment(self.hostPort + ' hostPort: ' + opts.hostPort);
         expectedConnectedOut = range.affineWorkers.indexOf(opts.hostPort) > -1;

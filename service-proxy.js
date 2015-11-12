@@ -633,7 +633,18 @@ ServiceDispatchHandler.prototype.getPartialRange =
 function getPartialRange(serviceName, reason, now) {
     var self = this;
 
-    var partialRange = self.computePartialRange(serviceName, now);
+    var partialRange = new PartialRange(
+        self.channel.hostPort,
+        self.minPeersPerWorker,
+        self.minPeersPerRelay
+    );
+
+    partialRange.compute(
+        self.getRelaysFor(serviceName),  // Obtain the (cached) sorted affine relay list
+        self.getWorkersFor(serviceName), // Obtain and sort the affine worker list
+        now
+    );
+
     if (!partialRange.isValid()) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
@@ -648,22 +659,6 @@ function getPartialRange(serviceName, reason, now) {
         return null;
     }
 
-    return partialRange;
-};
-
-ServiceDispatchHandler.prototype.computePartialRange =
-function computePartialRange(serviceName, now) {
-    var self = this;
-    var partialRange = new PartialRange(
-        self.channel.hostPort,
-        self.minPeersPerWorker,
-        self.minPeersPerRelay
-    );
-    partialRange.compute(
-        self.getRelaysFor(serviceName),  // Obtain the (cached) sorted affine relay list
-        self.getWorkersFor(serviceName), // Obtain and sort the affine worker list
-        now
-    );
     return partialRange;
 };
 
