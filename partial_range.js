@@ -34,7 +34,7 @@ function PartialRange() {
     this.length = NaN;
     this.start = NaN;
     this.stop = NaN;
-    this.affineWorkers = [];
+    this.affineWorkers = null;
 }
 
 PartialRange.prototype.isValid =
@@ -56,7 +56,7 @@ function compute(relayHostPort, relays, workers, minPeersPerWorker, minPeersPerR
         this.length        = NaN;
         this.start         = NaN;
         this.stop          = NaN;
-        this.affineWorkers = [];
+        this.affineWorkers = null;
         return;
     }
 
