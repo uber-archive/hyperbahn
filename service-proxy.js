@@ -33,7 +33,6 @@ var sortedIndexOf = require('./lib/sorted-index-of');
 
 var RateLimiter = require('./rate_limiter.js');
 var Circuits = require('./circuits.js');
-var CountedReadySignal = require('ready-signal/counted');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
@@ -882,12 +881,27 @@ function removeServicePeer(serviceName, hostPort) {
         return;
     }
 
-    var allDrained = CountedReadySignal(peer.connections.length + 1);
-    allDrained(thenDeleteIt);
-    for (var j = 0; j < peer.connections.length; j++) {
-        peer.connections[j].drain('closing due to unadvertisement', allDrained.signal);
+    if (peer.draining) {
+        if (peer.draining.reason.indexOf('reaped') === 0) {
+            self.logger.info('skipping unadvertisement drain due to ongoing reap',
+                self.extendLogInfo(
+                    peer.extendLogInfo(peer.draining.extendLogInfo({}))
+                ));
+            return;
+        }
+        self.logger.warn('canceling peer drain to implement for unadvertisement drain',
+            self.extendLogInfo(
+                peer.extendLogInfo(peer.draining.extendLogInfo({}))
+            ));
+        peer.clearDrain();
     }
-    allDrained.signal();
+
+    peer.drain({
+        goal: peer.DRAIN_GOAL_CLOSE_PEER,
+        reason: 'closing due to unadvertisement',
+        direction: 'both',
+        timeout: self.drainTimeout
+    }, thenDeleteIt);
 
     function thenDeleteIt(err) {
         if (err) {
@@ -903,12 +917,9 @@ function removeServicePeer(serviceName, hostPort) {
         self.logger.info('Peer drained and closed due to unadvertisement', peer.extendLogInfo({
             serviceName: serviceName
         }));
-        peer.close(noop);
         self.channel.peers.delete(hostPort);
     }
 };
-
-function noop() {}
 
 ServiceDispatchHandler.prototype.updateServiceChannels =
 function updateServiceChannels() {
