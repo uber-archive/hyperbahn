@@ -772,11 +772,12 @@ function ensurePartialConnections(chan, serviceName, reason, now) {
     }
 
     if (!range.affineWorkers.length) {
-        self.logger.error('empty affineWorkers, this should not happen', self.extendLogInfo({
+        self.logger.warn('empty affine workers list', self.extendLogInfo({
             serviceName: serviceName,
             reason: reason,
             partialRange: range
         }));
+        // TODO: why not return early
     }
 
     var connectedPeers = self.connectedServicePeers[serviceName];
