@@ -776,7 +776,9 @@ function ensurePartialConnections(chan, serviceName, reason, now) {
     }
 
     var connectedPeers = self.connectedServicePeers[serviceName];
+    var connectedPeerKeys = connectedPeers ? Object.keys(connectedPeers) : [];
     var toConnect = [];
+    var toDisconnect = [];
     var isAffine = {};
     var i;
     var worker;
@@ -792,8 +794,14 @@ function ensurePartialConnections(chan, serviceName, reason, now) {
             toConnect.push(worker);
         }
     }
+    for (i = 0; i < connectedPeerKeys.length; i++) {
+        worker = connectedPeerKeys[i];
+        if (!isAffine[worker] && !self.peersToPrune[worker]) {
+            toDisconnect.push(worker);
+        }
+    }
 
-    if (!toConnect.length) {
+    if (!toConnect.length && !toDisconnect.length) {
         result.noop = true;
         return result;
     }
@@ -802,7 +810,8 @@ function ensurePartialConnections(chan, serviceName, reason, now) {
         serviceName: serviceName,
         reason: reason,
         partialRange: range,
-        toConnect: toConnect
+        toConnect: toConnect,
+        toDisconnect: toDisconnect
     }));
 
     var peer;
@@ -811,9 +820,10 @@ function ensurePartialConnections(chan, serviceName, reason, now) {
         self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
     }
 
-    // TODO Drop peers that no longer have affinity for this service, such
-    // that they may be elligible for having their connections reaped.
-
+    for (i = 0; i < toDisconnect.length; i++) {
+        peer = self._getServicePeer(chan, toDisconnect[i]);
+        self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', now);
+    }
     return result;
 };
 
