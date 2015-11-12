@@ -47,6 +47,7 @@ function compute(relayHostPort, relays, workers, minPeersPerWorker, minPeersPerR
     this.relayHostPort = relayHostPort;
     this.relays = relays;
     this.workers = workers;
+    this.ratio = this.workers.length / this.relays.length;
     this.relayIndex = sortedIndexOf(this.relays, this.relayHostPort);
 
     // istanbul ignore if
@@ -60,8 +61,6 @@ function compute(relayHostPort, relays, workers, minPeersPerWorker, minPeersPerR
     }
 
     // Compute the range of workers that this relay should be connected to.
-    this.ratio = this.workers.length / this.relays.length;
-
     this.length = Math.ceil(minPeersPerWorker * this.ratio); // how many peers we are going to connect to
     this.length = Math.max(minPeersPerRelay, this.length); // please always have this many
     this.length = Math.min(this.workers.length, this.length); // you can't have more than there are
