@@ -598,6 +598,8 @@ function getPartialRange(serviceName, reason) {
 
     var range = self.computePartialRange(serviceName);
     if (range.relayIndex < 0) {
+        // This should only occur if an advertisement loses the race with a
+        // relay ring membership change.
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
             serviceName: serviceName,
             reason: reason,
@@ -636,8 +638,6 @@ function computePartialRange(serviceName) {
     range.relayIndex = sortedIndexOf(range.relays, self.channel.hostPort);
     // istanbul ignore if
     if (range.relayIndex < 0) {
-        // This should only occur if an advertisement loses the race with a
-        // relay ring membership change.
         return range;
     }
 
