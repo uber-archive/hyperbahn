@@ -614,8 +614,6 @@ ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName) {
     var self = this;
 
-    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-
     var range = {
         relays: null,
         workers: null,
@@ -631,8 +629,7 @@ function computePartialRange(serviceName) {
     range.relays = self.getRelaysFor(serviceName);
 
     // Obtain and sort the affine worker list
-    range.workers = serviceChannel.peers.keys();
-    range.workers.sort();
+    range.workers = self.getWorkersFor(serviceName);
 
     // Find our position within the affine relay set so we can project that
     // position into the affine worker set.
@@ -919,6 +916,17 @@ function getRelaysFor(serviceName) {
         self.relaysFor[serviceName] = relays;
     }
     return relays;
+};
+
+ServiceDispatchHandler.prototype.getWorkersFor =
+function getWorkersFor(serviceName) {
+    var self = this;
+
+    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
+    var workers = serviceChannel.peers.keys();
+    workers.sort();
+
+    return workers;
 };
 
 ServiceDispatchHandler.prototype.updateServiceChannel =
