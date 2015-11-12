@@ -883,13 +883,23 @@ function removeServicePeer(serviceName, hostPort) {
     }
 
     var allDrained = CountedReadySignal(peer.connections.length + 1);
-    allDrained(onAllDrained);
+    allDrained(thenDeleteIt);
     for (var j = 0; j < peer.connections.length; j++) {
         peer.connections[j].drain('closing due to unadvertisement', allDrained.signal);
     }
     allDrained.signal();
 
-    function onAllDrained() {
+    function thenDeleteIt(err) {
+        if (err) {
+            self.logger.warn(
+                'error closing unadvertised peer, deleting it anyhow',
+                self.extendLogInfo(
+                    peer.extendLogInfo(peer.draining.extendLogInfo({
+                        error: err
+                    }))
+                ));
+        }
+
         self.logger.info('Peer drained and closed due to unadvertisement', peer.extendLogInfo({
             serviceName: serviceName
         }));
