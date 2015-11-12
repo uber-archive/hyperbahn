@@ -672,60 +672,11 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     // guaranteed non-null by refreshServicePeer above; we call this only so
     // as not to pass another arg along to the partial path.
     var chan = self.getServiceChannel(serviceName, false);
-
     var peer = chan.peers.get(hostPort);
-    var connectedPeers = self.connectedServicePeers[serviceName];
 
     // simply freshen if not new
     if (peer) {
-        var connected = connectedPeers && connectedPeers[hostPort];
-
-        // Update secondary indices
-        if (connected) {
-            addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
-            addIndexEntry(self.connectedPeerServices, hostPort, serviceName, now);
-            delete self.peersToPrune[hostPort];
-        } else {
-            deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
-            deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
-        }
-
-        // Unmark recently seen peers, so they don't get reaped
-        deleteIndexEntry(self.peersToReap, peer.hostPort, serviceName);
-        // Mark known peers, so they are candidates for future reaping
-        addIndexEntry(self.knownPeers, peer.hostPort, serviceName, now);
-
-        // TODO: this audit shouldn't be necessary once we understand and fix
-        // why it was needed in the first place
-        var range = self.getPartialRange(serviceName, 'refresh partial peer audit');
-        if (range) {
-            var shouldConnect = range.affineWorkers.indexOf(hostPort) >= 0;
-            var isConnected = !!connected;
-            if (isConnected !== shouldConnect) {
-                self.logger.warn('partial affinity audit fail', self.extendLogInfo({
-                    serviceName: serviceName,
-                    serviceHostPort: hostPort,
-                    isConnected: isConnected,
-                    shouldConnect: shouldConnect,
-                    connectedPeers: connectedPeers,
-                    partialRange: range
-                }));
-                connected = now;
-            }
-        }
-
-        if (connected) {
-            self.ensurePeerConnected(serviceName, peer, 'service peer affinity refresh', now);
-        } else {
-            self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity refresh', now);
-        }
-
-        self.logger.info('refreshed peer partially', self.extendLogInfo({
-            serviceName: serviceName,
-            connectedPeers: connectedPeers,
-            serviceHostPort: hostPort,
-            isConnected: connected
-        }));
+        self.freshenPartialPeer(peer, serviceName, now);
         return;
     }
 
@@ -753,6 +704,62 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
             deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
         }
     }
+};
+
+ServiceDispatchHandler.prototype.freshenPartialPeer =
+function freshenPartialPeer(peer, serviceName, now) {
+    var self = this;
+
+    var hostPort = peer.hostPort;
+    var connectedPeers = self.connectedServicePeers[serviceName];
+    var connected = connectedPeers && connectedPeers[hostPort];
+
+    // Update secondary indices
+    if (connected) {
+        addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+        addIndexEntry(self.connectedPeerServices, hostPort, serviceName, now);
+        delete self.peersToPrune[hostPort];
+    } else {
+        deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
+        deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
+    }
+
+    // Unmark recently seen peers, so they don't get reaped
+    deleteIndexEntry(self.peersToReap, peer.hostPort, serviceName);
+    // Mark known peers, so they are candidates for future reaping
+    addIndexEntry(self.knownPeers, peer.hostPort, serviceName, now);
+
+    // TODO: this audit shouldn't be necessary once we understand and fix
+    // why it was needed in the first place
+    var range = self.getPartialRange(serviceName, 'refresh partial peer audit');
+    if (range) {
+        var shouldConnect = range.affineWorkers.indexOf(hostPort) >= 0;
+        var isConnected = !!connected;
+        if (isConnected !== shouldConnect) {
+            self.logger.warn('partial affinity audit fail', self.extendLogInfo({
+                serviceName: serviceName,
+                serviceHostPort: hostPort,
+                isConnected: isConnected,
+                shouldConnect: shouldConnect,
+                connectedPeers: connectedPeers,
+                partialRange: range
+            }));
+            connected = now;
+        }
+    }
+
+    if (connected) {
+        self.ensurePeerConnected(serviceName, peer, 'service peer affinity refresh', now);
+    } else {
+        self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity refresh', now);
+    }
+
+    self.logger.info('refreshed peer partially', self.extendLogInfo({
+        serviceName: serviceName,
+        connectedPeers: connectedPeers,
+        serviceHostPort: hostPort,
+        isConnected: connected
+    }));
 };
 
 ServiceDispatchHandler.prototype.ensurePartialConnections =
