@@ -862,24 +862,32 @@ function removeServicePeer(serviceName, hostPort) {
     }
     svcchan.peers.delete(hostPort);
 
-    var anyOtherSubChan = false;
     var subChanKeys = Object.keys(self.channel.subChannels);
+    var remain = [];
     for (var i = 0; i < subChanKeys; i++) {
         var subChan = self.channel.subChannels[subChanKeys[i]];
         if (subChan.peers.get(hostPort)) {
-            anyOtherSubChan = true;
-            break;
+            remain.push(subChanKeys[i]);
         }
     }
 
-    if (!anyOtherSubChan) {
-        var allDrained = CountedReadySignal(peer.connections.length + 1);
-        allDrained(onAllDrained);
-        for (var j = 0; j < peer.connections.length; j++) {
-            peer.connections[j].drain('closing due to unadvertisement', allDrained.signal);
-        }
-        allDrained.signal();
+    if (remain.length) {
+        self.logger.info(
+            'not removing unadvertised peer due to remaining services',
+            self.extendLogInfo(peer.extendLogInfo({
+                unadvertisedService: serviceName,
+                remainingServices: remain
+            }))
+        );
+        return;
     }
+
+    var allDrained = CountedReadySignal(peer.connections.length + 1);
+    allDrained(onAllDrained);
+    for (var j = 0; j < peer.connections.length; j++) {
+        peer.connections[j].drain('closing due to unadvertisement', allDrained.signal);
+    }
+    allDrained.signal();
 
     function onAllDrained() {
         self.logger.info('Peer drained and closed due to unadvertisement', peer.extendLogInfo({
