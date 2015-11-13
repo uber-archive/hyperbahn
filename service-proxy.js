@@ -100,7 +100,6 @@ function ServiceDispatchHandler(options) {
      * hostPort              :: string
      * lastRefresh           :: number // timestamp
      * partialRanges         :: Map<serviceName, PartialRange>
-     * relaysFor             :: Map<serviceName, List<hostPort>>
      * exitServices          :: Map<serviceName, lastRefresh>
      * peersToReap           :: Map<hostPort, lastRefresh>
      * knownPeers            :: Map<hostPort, lastRefresh>
@@ -122,16 +121,12 @@ function ServiceDispatchHandler(options) {
      * connectedServicePeers and connectedPeerServices are updated by
      * connection events, maybe subject to partial affinity.
      *
-     * relaysFor is a map of service name to list of other exit nodes in SORTED
-     * order ONLY for services which this ServiceProxy is an exit.
-     *
      * On every advertise knownPeers is updated.
      *
      * However every reap period, knownPeers gets rolled over into peersToReap
      * and emptied, so it represents the "peers seen this reap round"
      */
     self.partialRanges = Object.create(null);
-    self.relaysFor = {};
     self.exitServices = Object.create(null);
     self.connectedServicePeers = Object.create(null);
     self.connectedPeerServices = Object.create(null);
@@ -649,13 +644,9 @@ function getPartialRange(serviceName, reason, now) {
 
     var partialRange = self.partialRanges[serviceName];
     if (!partialRange) {
-        var relays = self.relaysFor[serviceName];
-        if (!relays) {
-            var exitNodes = self.egressNodes.exitsFor(serviceName);
-            relays = Object.keys(exitNodes);
-            relays.sort();
-            self.relaysFor[serviceName] = relays;
-        }
+        var exitNodes = self.egressNodes.exitsFor(serviceName);
+        var relays = Object.keys(exitNodes);
+        relays.sort();
 
         var serviceChannel = self.getOrCreateServiceChannel(serviceName);
         var workers = serviceChannel.peers.keys();
@@ -1043,12 +1034,10 @@ function updateServiceChannel(serviceChannel, now) {
     var isExit = self.egressNodes.isExitFor(serviceChannel.serviceName);
     if (isExit) {
         if (self.partialAffinityEnabled) {
-            var relays = Object.keys(exitNodes);
-            relays.sort();
-            self.relaysFor[serviceChannel.serviceName] = relays;
             var partialRange = self.partialRanges[serviceChannel.serviceName];
             if (partialRange) {
                 // TODO: would be nice to do a more incremental update
+                var relays = Object.keys(exitNodes).sort();
                 partialRange.compute(relays, null, now);
             }
         }
@@ -1060,7 +1049,6 @@ function updateServiceChannel(serviceChannel, now) {
         }
     } else if (!isExit) {
         if (self.partialAffinityEnabled) {
-            delete self.relaysFor[serviceChannel.serviceName];
             delete self.partialRanges[serviceChannel.serviceName];
         }
 
