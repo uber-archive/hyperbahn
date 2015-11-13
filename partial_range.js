@@ -28,17 +28,36 @@ module.exports = PartialRange;
 
 function PartialRange(relayHostPort, minPeersPerWorker, minPeersPerRelay) {
     this.relayHostPort     = relayHostPort || ''; // instead of this.channel.hostPort
+    this.minPeersPerWorker = minPeersPerWorker || 1;
+    this.minPeersPerRelay  = minPeersPerRelay || 1;
     this.relays            = null;
     this.workers           = null;
+    this.affineWorkers     = null;
+    this.lastComputed      = 0;
     this.relayIndex        = NaN;
     this.ratio             = NaN;
     this.length            = NaN;
     this.start             = NaN;
     this.stop              = NaN;
-    this.affineWorkers     = null;
-    this.minPeersPerWorker = minPeersPerWorker || 1;
-    this.minPeersPerRelay  = minPeersPerRelay || 1;
 }
+
+PartialRange.prototype.extendLogInfo =
+function extendLogInfo(info) {
+    info.relayHostPort     = this.relayHostPort;
+    info.minPeersPerWorker = this.minPeersPerWorker;
+    info.minPeersPerRelay  = this.minPeersPerRelay;
+    info.rangeIsValid      = this.isValid();
+    info.serviceRelays     = this.relays;
+    info.serviceWorkers    = this.workers;
+    info.affineWorkers     = this.affineWorkers;
+    info.relayIndex        = this.relayIndex;
+    info.rangeRatio        = this.ratio;
+    info.rangeLength       = this.length;
+    info.rangeStart        = this.start;
+    info.rangeStop         = this.stop;
+    info.rangeLastComputed = this.lastComputed;
+    return info;
+};
 
 PartialRange.prototype.isValid =
 function isValid() {
@@ -46,7 +65,7 @@ function isValid() {
 };
 
 PartialRange.prototype.compute =
-function compute(relays, workers) {
+function compute(relays, workers, now) {
     if (relays) {
         this.relays = relays;
     }
@@ -55,8 +74,13 @@ function compute(relays, workers) {
         this.workers = workers;
     }
 
-    this.ratio      = this.workers.length / this.relays.length;
-    this.relayIndex = sortedIndexOf(this.relays, this.relayHostPort);
+    if (!relays && !workers) {
+        return;
+    }
+
+    this.lastComputed = now;
+    this.ratio        = this.workers.length / this.relays.length;
+    this.relayIndex   = sortedIndexOf(this.relays, this.relayHostPort);
 
     // istanbul ignore if
     if (this.relayIndex < 0) {
