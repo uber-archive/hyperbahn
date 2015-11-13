@@ -40,6 +40,23 @@ function PartialRange(relayHostPort, minPeersPerWorker, minPeersPerRelay) {
     this.stop              = NaN;
 }
 
+PartialRange.prototype.extendLogInfo =
+function extendLogInfo(info) {
+    info.relayHostPort     = this.relayHostPort;
+    info.minPeersPerWorker = this.minPeersPerWorker;
+    info.minPeersPerRelay  = this.minPeersPerRelay;
+    info.rangeIsValid      = this.isValid();
+    info.serviceRelays     = this.relays;
+    info.serviceWorkers    = this.workers;
+    info.affineWorkers     = this.affineWorkers;
+    info.relayIndex        = this.relayIndex;
+    info.rangeRatio        = this.ratio;
+    info.rangeLength       = this.length;
+    info.rangeStart        = this.start;
+    info.rangeStop         = this.stop;
+    return info;
+};
+
 PartialRange.prototype.isValid =
 function isValid() {
     return this.relayIndex >= 0;
