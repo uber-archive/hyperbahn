@@ -41,4 +41,6 @@ function blacklist(serviceName, instanceHostPort, timeToBan) {
 InstanceBlackList.prototype.isBlackListed =
 function isBlackListed(serviceName, instanceHostPort) {
     // TODO read from data structure
+
+    return false;
 };
