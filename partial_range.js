@@ -72,6 +72,10 @@ function compute(relays, workers) {
         this.workers = workers;
     }
 
+    if (!relays && !workers) {
+        return;
+    }
+
     this.ratio      = this.workers.length / this.relays.length;
     this.relayIndex = sortedIndexOf(this.relays, this.relayHostPort);
 
