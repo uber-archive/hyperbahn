@@ -99,12 +99,25 @@ function ServiceDispatchHandler(options) {
      * serviceName           :: string
      * hostPort              :: string
      * lastRefresh           :: number // timestamp
+     * partialRanges         :: Map<serviceName, PartialRange>
      * relaysFor             :: Map<serviceName, List<hostPort>>
      * exitServices          :: Map<serviceName, lastRefresh>
      * peersToReap           :: Map<hostPort, lastRefresh>
      * knownPeers            :: Map<hostPort, lastRefresh>
      * connectedServicePeers :: Map<serviceName, Map<hostPort, lastRefresh>>
      * connectedPeerServices :: Map<hostPort, Map<serviceName, lastRefresh>>
+     *
+     * PartialRange    :: {
+     *   relayHostPort :: hostPort,        // the host port of this relay
+     *   relays        :: Array<hostPort>, // sorted
+     *   workers       :: Array<hostPort>, // sorted
+     *   relayIndex    :: Integer,         // the index of relayHostPort in relays
+     *   ratio         :: Float,           // the conversion ratio for relays to workers
+     *   length        :: Integer,         // the size of the subset
+     *   start         :: Integer,         // the start index of the subset
+     *   stop          :: Integer,         // the stop index of the subset
+     *   affineWorkers :: ?Array<hostPort> // the computed subset of workers
+     * }
      *
      * connectedServicePeers and connectedPeerServices are updated by
      * connection events, maybe subject to partial affinity.
@@ -117,6 +130,7 @@ function ServiceDispatchHandler(options) {
      * However every reap period, knownPeers gets rolled over into peersToReap
      * and emptied, so it represents the "peers seen this reap round"
      */
+    self.partialRanges = Object.create(null);
     self.relaysFor = {};
     self.exitServices = Object.create(null);
     self.connectedServicePeers = Object.create(null);
@@ -633,24 +647,27 @@ ServiceDispatchHandler.prototype.getPartialRange =
 function getPartialRange(serviceName, reason, now) {
     var self = this;
 
-    var relays = self.relaysFor[serviceName];
-    if (!relays) {
-        var exitNodes = self.egressNodes.exitsFor(serviceName);
-        relays = Object.keys(exitNodes);
-        relays.sort();
-        self.relaysFor[serviceName] = relays;
+    var partialRange = self.partialRanges[serviceName];
+    if (!partialRange) {
+        var relays = self.relaysFor[serviceName];
+        if (!relays) {
+            var exitNodes = self.egressNodes.exitsFor(serviceName);
+            relays = Object.keys(exitNodes);
+            relays.sort();
+            self.relaysFor[serviceName] = relays;
+        }
+
+        var serviceChannel = self.getOrCreateServiceChannel(serviceName);
+        var workers = serviceChannel.peers.keys();
+        workers.sort();
+
+        partialRange = new PartialRange(
+            self.channel.hostPort,
+            self.minPeersPerWorker,
+            self.minPeersPerRelay
+        );
+        partialRange.compute(relays, workers, now);
     }
-
-    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-    var workers = serviceChannel.peers.keys();
-    workers.sort();
-
-    var partialRange = new PartialRange(
-        self.channel.hostPort,
-        self.minPeersPerWorker,
-        self.minPeersPerRelay
-    );
-    partialRange.compute(relays, workers, now);
 
     if (!partialRange.isValid()) {
         // This should only occur if an advertisement loses the race with a
@@ -682,6 +699,15 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     if (peer) {
         self.freshenPartialPeer(peer, serviceName, now);
         return;
+    }
+
+    var partialRange = self.partialRanges[serviceName];
+    if (partialRange) {
+        // TODO: would be better to do an incremental update, all we really
+        // care to do is "add (if not already in) this hostPort, then recompute
+        // the range if added
+        var workers = serviceChannel.peers.keys().sort();
+        partialRange.compute(null, workers, now);
     }
 
     peer = self._getServicePeer(serviceChannel, hostPort);
@@ -901,6 +927,15 @@ function removeServicePeer(serviceName, hostPort) {
     serviceChannel.peers.delete(hostPort);
 
     if (self.partialAffinityEnabled) {
+        var partialRange = self.partialRanges[serviceName];
+        if (partialRange) {
+            // TODO: would be better to do an incremental update:
+            // - remove (if exists)
+            // - recompute if any was removed
+            var workers = serviceChannel.peers.keys().sort();
+            partialRange.compute(null, workers, now);
+        }
+
         var result = self.ensurePartialConnections(
             serviceChannel, serviceName,
             'unadvertise from ' + hostPort, now);
@@ -1011,6 +1046,11 @@ function updateServiceChannel(serviceChannel, now) {
             var relays = Object.keys(exitNodes);
             relays.sort();
             self.relaysFor[serviceChannel.serviceName] = relays;
+            var partialRange = self.partialRanges[serviceChannel.serviceName];
+            if (partialRange) {
+                // TODO: would be nice to do a more incremental update
+                partialRange.compute(relays, null, now);
+            }
         }
 
         if (serviceChannel.serviceProxyMode === 'forward') {
@@ -1021,6 +1061,7 @@ function updateServiceChannel(serviceChannel, now) {
     } else if (!isExit) {
         if (self.partialAffinityEnabled) {
             delete self.relaysFor[serviceChannel.serviceName];
+            delete self.partialRanges[serviceChannel.serviceName];
         }
 
         if (serviceChannel.serviceProxyMode === 'exit') {
@@ -1307,6 +1348,7 @@ function reapSinglePeer(hostPort, serviceNames) {
         }
         serviceChannel.peers.delete(hostPort);
         self.deletePeerIndex(serviceName, hostPort);
+        delete self.partialRanges[serviceName];
     }
 
     peer.drain({
