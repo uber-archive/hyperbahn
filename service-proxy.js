@@ -633,17 +633,24 @@ ServiceDispatchHandler.prototype.getPartialRange =
 function getPartialRange(serviceName, reason, now) {
     var self = this;
 
+    var relays = self.relaysFor[serviceName];
+    if (!relays) {
+        var exitNodes = self.egressNodes.exitsFor(serviceName);
+        relays = Object.keys(exitNodes);
+        relays.sort();
+        self.relaysFor[serviceName] = relays;
+    }
+
+    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
+    var workers = serviceChannel.peers.keys();
+    workers.sort();
+
     var partialRange = new PartialRange(
         self.channel.hostPort,
         self.minPeersPerWorker,
         self.minPeersPerRelay
     );
-
-    partialRange.compute(
-        self.getRelaysFor(serviceName),  // Obtain the (cached) sorted affine relay list
-        self.getWorkersFor(serviceName), // Obtain and sort the affine worker list
-        now
-    );
+    partialRange.compute(relays, workers, now);
 
     if (!partialRange.isValid()) {
         // This should only occur if an advertisement loses the race with a
@@ -991,31 +998,6 @@ function updateServiceChannels() {
     if (self.circuits) {
         self.circuits.updateServices();
     }
-};
-
-ServiceDispatchHandler.prototype.getRelaysFor =
-function getRelaysFor(serviceName) {
-    var self = this;
-
-    var relays = self.relaysFor[serviceName];
-    if (!relays) {
-        var exitNodes = self.egressNodes.exitsFor(serviceName);
-        relays = Object.keys(exitNodes);
-        relays.sort();
-        self.relaysFor[serviceName] = relays;
-    }
-    return relays;
-};
-
-ServiceDispatchHandler.prototype.getWorkersFor =
-function getWorkersFor(serviceName) {
-    var self = this;
-
-    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-    var workers = serviceChannel.peers.keys();
-    workers.sort();
-
-    return workers;
 };
 
 ServiceDispatchHandler.prototype.updateServiceChannel =
