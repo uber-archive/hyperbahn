@@ -812,6 +812,7 @@ function ensurePeerDisconnected(serviceName, peer, reason, now) {
 ServiceDispatchHandler.prototype.removeServicePeer =
 function removeServicePeer(serviceName, hostPort) {
     var self = this;
+    var now = self.channel.timers.now();
 
     var serviceChannel = self.channel.subChannels[serviceName];
     if (!serviceChannel) {
@@ -823,6 +824,19 @@ function removeServicePeer(serviceName, hostPort) {
         return;
     }
     serviceChannel.peers.delete(hostPort);
+
+    if (self.partialAffinityEnabled) {
+        var result = self.ensurePartialConnections(
+            serviceChannel, serviceName,
+            'unadvertise from ' + hostPort, now);
+        if (result && result.noop) {
+            // if ensurePartialConnections did no work, we need to celar the
+            // secondary indices since neither ensurePeerDisconnected was called
+            // for the unadvertising peer
+            deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+            deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
+        }
+    }
 
     var subChanKeys = Object.keys(self.channel.subChannels);
     var remain = [];
