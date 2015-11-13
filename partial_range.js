@@ -28,16 +28,16 @@ module.exports = PartialRange;
 
 function PartialRange(relayHostPort, minPeersPerWorker, minPeersPerRelay) {
     this.relayHostPort     = relayHostPort || ''; // instead of this.channel.hostPort
+    this.minPeersPerWorker = minPeersPerWorker || 1;
+    this.minPeersPerRelay  = minPeersPerRelay || 1;
     this.relays            = null;
     this.workers           = null;
+    this.affineWorkers     = null;
     this.relayIndex        = NaN;
     this.ratio             = NaN;
     this.length            = NaN;
     this.start             = NaN;
     this.stop              = NaN;
-    this.affineWorkers     = null;
-    this.minPeersPerWorker = minPeersPerWorker || 1;
-    this.minPeersPerRelay  = minPeersPerRelay || 1;
 }
 
 PartialRange.prototype.isValid =
