@@ -592,10 +592,10 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
 };
 
 ServiceDispatchHandler.prototype.getPartialRange =
-function getPartialRange(serviceName, reason) {
+function getPartialRange(serviceName, reason, now) {
     var self = this;
 
-    var range = self.computePartialRange(serviceName);
+    var range = self.computePartialRange(serviceName, now);
     if (!range.isValid()) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
@@ -612,7 +612,7 @@ function getPartialRange(serviceName, reason) {
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
-function computePartialRange(serviceName) {
+function computePartialRange(serviceName, now) {
     var self = this;
     var range = new PartialRange(
         self.channel.hostPort,
@@ -621,7 +621,8 @@ function computePartialRange(serviceName) {
     );
     range.compute(
         self.getRelaysFor(serviceName),  // Obtain the (cached) sorted affine relay list
-        self.getWorkersFor(serviceName)  // Obtain and sort the affine worker list
+        self.getWorkersFor(serviceName), // Obtain and sort the affine worker list
+        now
     );
     return range;
 };
@@ -692,7 +693,7 @@ function freshenPartialPeer(peer, serviceName, now) {
 
     // TODO: this audit shouldn't be necessary once we understand and fix
     // why it was needed in the first place
-    var range = self.getPartialRange(serviceName, 'refresh partial peer audit');
+    var range = self.getPartialRange(serviceName, 'refresh partial peer audit', now);
     if (range) {
         var shouldConnect = range.affineWorkers.indexOf(hostPort) >= 0;
         var isConnected = !!connected;
@@ -727,7 +728,7 @@ ServiceDispatchHandler.prototype.ensurePartialConnections =
 function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     var self = this;
 
-    var range = self.getPartialRange(serviceName, reason);
+    var range = self.getPartialRange(serviceName, reason, now);
     if (!range) {
         return null;
     }
