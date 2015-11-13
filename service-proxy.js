@@ -745,7 +745,7 @@ function freshenPartialPeer(peer, serviceName, now) {
                     serviceHostPort: hostPort,
                     isConnected: isConnected,
                     shouldConnect: shouldConnect,
-                    connectedPeers: connectedPeers
+                    connectedPeers: objectTuples(connectedPeers)
                 }))
             );
             connected = now;
@@ -762,8 +762,8 @@ function freshenPartialPeer(peer, serviceName, now) {
         'refreshed peer partially',
         self.extendLogInfo({
             serviceName: serviceName,
-            connectedPeers: connectedPeers,
             serviceHostPort: hostPort,
+            numConnectedPeers: countKeys(connectedPeers),
             isConnected: connected
         })
     );
@@ -1593,10 +1593,28 @@ function deleteIndexEntry(index, keya, keyb) {
 }
 
 /* eslint-disable guard-for-in, no-unused-vars */
+
 function isObjectEmpty(obj) {
     for (var prop in obj) {
         return false;
     }
     return true;
 }
+
+function countKeys(obj) {
+    var count = 0;
+    for (var key in obj) {
+        ++count;
+    }
+    return count;
+}
+
+function objectTuples(obj) {
+    var tuples = [];
+    for (var key in obj) {
+        tuples.push([key, obj[key]]);
+    }
+    return tuples;
+}
+
 /* eslint-enable guard-for-in, no-unused-vars */
