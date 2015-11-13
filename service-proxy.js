@@ -645,13 +645,9 @@ function getPartialRange(serviceName, reason, now) {
     var partialRange = self.partialRanges[serviceName];
     if (!partialRange) {
         var exitNodes = self.egressNodes.exitsFor(serviceName);
-        var relays = Object.keys(exitNodes);
-        relays.sort();
-
         var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-        var workers = serviceChannel.peers.keys();
-        workers.sort();
-
+        var relays = Object.keys(exitNodes).sort();
+        var workers = serviceChannel.peers.keys().sort();
         partialRange = new PartialRange(
             self.channel.hostPort,
             self.minPeersPerWorker,
