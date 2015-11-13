@@ -13,16 +13,16 @@ struct DiscoveryQuery {
 }
 
 union IpAddress {
-  1: i32 ipv4
+    1: i32 ipv4
 }
 
 struct ServicePeer {
-  1: required IpAddress ip
-  2: required i32 port
+    1: required IpAddress ip
+    2: required i32 port
 }
 
 struct DiscoveryResult {
-  1: required list<ServicePeer> peers
+    1: required list<ServicePeer> peers
 }
 
 service Hyperbahn {
