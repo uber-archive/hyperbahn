@@ -182,9 +182,9 @@ function ServiceDispatchHandler(options) {
             var now = self.channel.timers.now();
             if (now - lastRefresh > self.servicePurgePeriod) {
                 delete self.exitServices[serviceName];
-                var chan = self.channel.subChannels[serviceName];
-                if (chan) {
-                    chan.close();
+                var serviceChannel = self.channel.subChannels[serviceName];
+                if (serviceChannel) {
+                    serviceChannel.close();
                     delete self.channel.subChannels[serviceName];
                     self.rateLimiter.removeServiceCounter(serviceName);
                     self.rateLimiter.removeKillSwitchCounter(serviceName);
@@ -317,13 +317,13 @@ function handleLazily(conn, reqFrame) {
         }
     }
 
-    var chan = self.channel.subChannels[serviceName];
-    if (!chan) {
-        chan = self.createServiceChannel(serviceName);
+    var serviceChannel = self.channel.subChannels[serviceName];
+    if (!serviceChannel) {
+        serviceChannel = self.createServiceChannel(serviceName);
     }
 
-    if (chan.handler.handleLazily) {
-        return chan.handler.handleLazily(conn, reqFrame);
+    if (serviceChannel.handler.handleLazily) {
+        return serviceChannel.handler.handleLazily(conn, reqFrame);
     } else {
         return false;
     }
@@ -384,14 +384,14 @@ function handleRequest(req, buildRes) {
         }
     }
 
-    var chan = self.channel.subChannels[req.serviceName];
-    if (!chan) {
-        chan = self.createServiceChannel(req.serviceName);
+    var serviceChannel = self.channel.subChannels[req.serviceName];
+    if (!serviceChannel) {
+        serviceChannel = self.createServiceChannel(req.serviceName);
     }
 
     // Temporary hack. Need to set json by default because
     // we want to upgrade without breaking ncar
-    chan.handler.handleRequest(req, buildRes);
+    serviceChannel.handler.handleRequest(req, buildRes);
 };
 
 ServiceDispatchHandler.prototype.rateLimit =
@@ -446,30 +446,30 @@ function getOrCreateServiceChannel(serviceName) {
 ServiceDispatchHandler.prototype.getServiceChannel =
 function getServiceChannel(serviceName, create) {
     var self = this;
-    var svcchan = self.channel.subChannels[serviceName];
-    if (!svcchan && create) {
-        svcchan = self.createServiceChannel(serviceName);
+    var serviceChannel = self.channel.subChannels[serviceName];
+    if (!serviceChannel && create) {
+        serviceChannel = self.createServiceChannel(serviceName);
     }
-    return svcchan;
+    return serviceChannel;
 };
 
 ServiceDispatchHandler.prototype.getServicePeer =
 function getServicePeer(serviceName, hostPort) {
     var self = this;
-    var svcchan = self.getOrCreateServiceChannel(serviceName);
-    return self._getServicePeer(svcchan, hostPort);
+    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
+    return self._getServicePeer(serviceChannel, hostPort);
 };
 
 ServiceDispatchHandler.prototype._getServicePeer =
-function _getServicePeer(svcchan, hostPort) {
-    var peer = svcchan.peers.get(hostPort);
+function _getServicePeer(serviceChannel, hostPort) {
+    var peer = serviceChannel.peers.get(hostPort);
     if (!peer) {
-        peer = svcchan.peers.add(hostPort);
+        peer = serviceChannel.peers.add(hostPort);
     }
     if (!peer.serviceProxyServices) {
         peer.serviceProxyServices = {};
     }
-    peer.serviceProxyServices[svcchan.serviceName] = true;
+    peer.serviceProxyServices[serviceChannel.serviceName] = true;
     return peer;
 };
 
@@ -506,29 +506,29 @@ function createServiceChannel(serviceName) {
         options.preferConnectionDirection = 'out';
     }
 
-    var svcchan = self.channel.makeSubChannel(options);
-    svcchan.serviceProxyMode = mode; // duck: punched
+    var serviceChannel = self.channel.makeSubChannel(options);
+    serviceChannel.serviceProxyMode = mode; // duck: punched
 
     if (mode === 'forward') {
         var exitNames = Object.keys(exitNodes);
         for (var i = 0; i < exitNames.length; i++) {
-            self._getServicePeer(svcchan, exitNames[i]);
+            self._getServicePeer(serviceChannel, exitNames[i]);
         }
     }
 
-    svcchan.handler = new RelayHandler(
-        svcchan,
+    serviceChannel.handler = new RelayHandler(
+        serviceChannel,
         mode === 'exit' && self.circuitsEnabled && self.circuits);
 
-    return svcchan;
+    return serviceChannel;
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeer =
 function refreshServicePeer(serviceName, hostPort) {
     var self = this;
 
-    var chan = self.getOrCreateServiceChannel(serviceName);
-    if (chan.serviceProxyMode !== 'exit') {
+    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
+    if (serviceChannel.serviceProxyMode !== 'exit') {
         // TODO: stat, log
         return;
     }
@@ -632,8 +632,8 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     // guaranteed non-null by refreshServicePeer above; we call this only so
     // as not to pass another arg along to the partial path.
-    var chan = self.getServiceChannel(serviceName, false);
-    var peer = chan.peers.get(hostPort);
+    var serviceChannel = self.getServiceChannel(serviceName, false);
+    var peer = serviceChannel.peers.get(hostPort);
 
     // simply freshen if not new
     if (peer) {
@@ -641,7 +641,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         return;
     }
 
-    peer = self._getServicePeer(chan, hostPort);
+    peer = self._getServicePeer(serviceChannel, hostPort);
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
@@ -649,7 +649,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 
     var result = self.ensurePartialConnections(
-        chan, serviceName,
+        serviceChannel, serviceName,
         'advertise from ' + hostPort, now);
 
     if (result && result.noop) {
@@ -724,7 +724,7 @@ function freshenPartialPeer(peer, serviceName, now) {
 };
 
 ServiceDispatchHandler.prototype.ensurePartialConnections =
-function ensurePartialConnections(chan, serviceName, reason, now) {
+function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     var self = this;
 
     var range = self.getPartialRange(serviceName, reason);
@@ -782,12 +782,12 @@ function ensurePartialConnections(chan, serviceName, reason, now) {
 
     var peer;
     for (i = 0; i < toConnect.length; i++) {
-        peer = self._getServicePeer(chan, toConnect[i]);
+        peer = self._getServicePeer(serviceChannel, toConnect[i]);
         self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
     }
 
     for (i = 0; i < toDisconnect.length; i++) {
-        peer = self._getServicePeer(chan, toDisconnect[i]);
+        peer = self._getServicePeer(serviceChannel, toDisconnect[i]);
         self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', now);
     }
     return result;
@@ -813,8 +813,8 @@ ServiceDispatchHandler.prototype.removeServicePeer =
 function removeServicePeer(serviceName, hostPort) {
     var self = this;
 
-    var svcchan = self.channel.subChannels[serviceName];
-    if (!svcchan) {
+    var serviceChannel = self.channel.subChannels[serviceName];
+    if (!serviceChannel) {
         return;
     }
 
@@ -822,7 +822,7 @@ function removeServicePeer(serviceName, hostPort) {
     if (!peer) {
         return;
     }
-    svcchan.peers.delete(hostPort);
+    serviceChannel.peers.delete(hostPort);
 
     var subChanKeys = Object.keys(self.channel.subChannels);
     var remain = [];
@@ -892,9 +892,9 @@ function updateServiceChannels() {
     var serviceNames = Object.keys(self.channel.subChannels);
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
-        var chan = self.channel.subChannels[serviceName];
-        if (chan.serviceProxyMode) {
-            self.updateServiceChannel(chan, now);
+        var serviceChannel = self.channel.subChannels[serviceName];
+        if (serviceChannel.serviceProxyMode) {
+            self.updateServiceChannel(serviceChannel, now);
         }
     }
 
@@ -929,45 +929,45 @@ function getWorkersFor(serviceName) {
 };
 
 ServiceDispatchHandler.prototype.updateServiceChannel =
-function updateServiceChannel(svcchan, now) {
+function updateServiceChannel(serviceChannel, now) {
     var self = this;
 
-    var exitNodes = self.egressNodes.exitsFor(svcchan.serviceName);
-    var isExit = self.egressNodes.isExitFor(svcchan.serviceName);
+    var exitNodes = self.egressNodes.exitsFor(serviceChannel.serviceName);
+    var isExit = self.egressNodes.isExitFor(serviceChannel.serviceName);
     if (isExit) {
         if (self.partialAffinityEnabled) {
             var relays = Object.keys(exitNodes);
             relays.sort();
-            self.relaysFor[svcchan.serviceName] = relays;
+            self.relaysFor[serviceChannel.serviceName] = relays;
         }
 
-        if (svcchan.serviceProxyMode === 'forward') {
-            self.changeToExit(svcchan);
+        if (serviceChannel.serviceProxyMode === 'forward') {
+            self.changeToExit(serviceChannel);
         } else {
-            self.updateServiceNodes(svcchan, now);
+            self.updateServiceNodes(serviceChannel, now);
         }
     } else if (!isExit) {
         if (self.partialAffinityEnabled) {
-            delete self.relaysFor[svcchan.serviceName];
+            delete self.relaysFor[serviceChannel.serviceName];
         }
 
-        if (svcchan.serviceProxyMode === 'exit') {
-            self.changeToForward(exitNodes, svcchan, now);
+        if (serviceChannel.serviceProxyMode === 'exit') {
+            self.changeToForward(exitNodes, serviceChannel, now);
         } else {
-            self.updateExitNodes(exitNodes, svcchan);
+            self.updateExitNodes(exitNodes, serviceChannel);
         }
     }
 };
 
 ServiceDispatchHandler.prototype.changeToExit =
-function changeToExit(svcchan) {
+function changeToExit(serviceChannel) {
     var self = this;
 
-    var oldMode = svcchan.serviceProxyMode;
-    svcchan.serviceProxyMode = 'exit';
-    svcchan.peers.clear();
+    var oldMode = serviceChannel.serviceProxyMode;
+    serviceChannel.serviceProxyMode = 'exit';
+    serviceChannel.peers.clear();
     self.roleTransitionEvent.emit(self, {
-        svcchan: svcchan,
+        serviceChannel: serviceChannel,
         oldMode: oldMode,
         newMode: 'exit'
     });
@@ -975,50 +975,50 @@ function changeToExit(svcchan) {
     self.logger.info('Changing to exit node', self.extendLogInfo({
         oldMode: oldMode,
         newMode: 'exit',
-        serviceName: svcchan.serviceName
+        serviceName: serviceChannel.serviceName
     }));
 };
 
 ServiceDispatchHandler.prototype.updateServiceNodes =
-function updateServiceNodes(svcchan, now) {
+function updateServiceNodes(serviceChannel, now) {
     var self = this;
 
     if (self.partialAffinityEnabled) {
         self.ensurePartialConnections(
-            svcchan, svcchan.serviceName,
+            serviceChannel, serviceChannel.serviceName,
             'hyperbahn membership change', now);
     }
 };
 
 ServiceDispatchHandler.prototype.changeToForward =
-function changeToForward(exitNodes, svcchan, now) {
+function changeToForward(exitNodes, serviceChannel, now) {
     var self = this;
 
-    var oldMode = svcchan.serviceProxyMode;
-    svcchan.serviceProxyMode = 'forward';
+    var oldMode = serviceChannel.serviceProxyMode;
+    serviceChannel.serviceProxyMode = 'forward';
 
     var i;
-    var peers = svcchan.peers.values();
-    svcchan.peers.clear();
+    var peers = serviceChannel.peers.values();
+    serviceChannel.peers.clear();
     for (i = 0; i < peers.length; i++) {
         var peer = peers[i];
         self.ensurePeerDisconnected(
-            svcchan.serviceName, peer,
+            serviceChannel.serviceName, peer,
             'hyperbahn membership change', now);
     }
 
     // TODO: transmit prior known registration data to new owner(s) to
     // speed convergence / deal with transitions better:
-    //     var oldHostPorts = svcchan.peers.keys();
-    //     var oldPeers = svcchan.peers.values();
-    //     svcchan.peers.clear();
+    //     var oldHostPorts = serviceChannel.peers.keys();
+    //     var oldPeers = serviceChannel.peers.values();
+    //     serviceChannel.peers.clear();
     //     ... send rpc to new exit nodes
     var exitNames = Object.keys(exitNodes);
     for (i = 0; i < exitNames.length; i++) {
-        self._getServicePeer(svcchan, exitNames[i]);
+        self._getServicePeer(serviceChannel, exitNames[i]);
     }
     self.roleTransitionEvent.emit(self, {
-        svcchan: svcchan,
+        serviceChannel: serviceChannel,
         oldMode: oldMode,
         newMode: 'forward'
     });
@@ -1026,23 +1026,23 @@ function changeToForward(exitNodes, svcchan, now) {
     self.logger.info('Changing to forward node', self.extendLogInfo({
         oldMode: oldMode,
         newMode: 'forward',
-        serviceName: svcchan.serviceName
+        serviceName: serviceChannel.serviceName
     }));
 };
 
 ServiceDispatchHandler.prototype.updateExitNodes =
-function updateExitNodes(exitNodes, svcchan) {
+function updateExitNodes(exitNodes, serviceChannel) {
     var self = this;
     var i;
-    var oldNames = svcchan.peers.keys();
+    var oldNames = serviceChannel.peers.keys();
     for (i = 0; i < oldNames.length; i++) {
         if (!exitNodes[oldNames[i]]) {
-            svcchan.peers.delete(oldNames[i]);
+            serviceChannel.peers.delete(oldNames[i]);
         }
     }
     var exitNames = Object.keys(exitNodes);
     for (i = 0; i < exitNames.length; i++) {
-        self._getServicePeer(svcchan, exitNames[i]);
+        self._getServicePeer(serviceChannel, exitNames[i]);
     }
 };
 
@@ -1115,12 +1115,12 @@ function isExitFor(serviceName) {
     var self = this;
 
     // faster check than calls into ringpop
-    var chan = self.channel.subChannels[serviceName];
-    if (!chan) {
+    var serviceChannel = self.channel.subChannels[serviceName];
+    if (!serviceChannel) {
         return self.egressNodes.isExitFor(serviceName);
     }
 
-    return chan.serviceProxyMode === 'exit';
+    return serviceChannel.serviceProxyMode === 'exit';
 };
 
 ServiceDispatchHandler.prototype.setReapPeersPeriod =
@@ -1212,11 +1212,11 @@ function reapSinglePeer(hostPort, serviceNames) {
 
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
-        var svcchan = self.getServiceChannel(serviceName);
-        if (!svcchan) {
+        var serviceChannel = self.getServiceChannel(serviceName);
+        if (!serviceChannel) {
             return;
         }
-        svcchan.peers.delete(hostPort);
+        serviceChannel.peers.delete(hostPort);
         self.deletePeerIndex(serviceName, hostPort);
     }
 
