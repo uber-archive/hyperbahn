@@ -639,11 +639,10 @@ function getPartialRange(serviceName, reason, now) {
         // relay ring membership change.
         self.logger.warn(
             'Relay could not find itself in the affinity set for service',
-            self.extendLogInfo({
+            self.extendLogInfo(partialRange.extendLogInfo({
                 serviceName: serviceName,
-                reason: reason,
-                partialRange: partialRange
-            })
+                reason: reason
+            }))
         );
         // TODO: upgrade two-in-a-row or more to an error
         return null;
@@ -741,14 +740,13 @@ function freshenPartialPeer(peer, serviceName, now) {
         if (isConnected !== shouldConnect) {
             self.logger.warn(
                 'partial affinity audit fail',
-                self.extendLogInfo({
+                self.extendLogInfo(partialRange.extendLogInfo({
                     serviceName: serviceName,
                     serviceHostPort: hostPort,
                     isConnected: isConnected,
                     shouldConnect: shouldConnect,
-                    connectedPeers: connectedPeers,
-                    partialRange: partialRange
-                })
+                    connectedPeers: objectTuples(connectedPeers)
+                }))
             );
             connected = now;
         }
@@ -764,8 +762,8 @@ function freshenPartialPeer(peer, serviceName, now) {
         'refreshed peer partially',
         self.extendLogInfo({
             serviceName: serviceName,
-            connectedPeers: connectedPeers,
             serviceHostPort: hostPort,
+            numConnectedPeers: countKeys(connectedPeers),
             isConnected: connected
         })
     );
@@ -783,11 +781,10 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     if (!partialRange.affineWorkers.length) {
         self.logger.warn(
             'empty affine workers list',
-            self.extendLogInfo({
+            self.extendLogInfo(partialRange.extendLogInfo({
                 serviceName: serviceName,
-                reason: reason,
-                partialRange: partialRange
-            })
+                reason: reason
+            }))
         );
         // TODO: why not return early
     }
@@ -825,13 +822,12 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
 
     self.logger.info(
         'implementing affinity change',
-        self.extendLogInfo({
+        self.extendLogInfo(partialRange.extendLogInfo({
             serviceName: serviceName,
             reason: reason,
-            partialRange: partialRange,
             toConnect: toConnect,
             toDisconnect: toDisconnect
-        })
+        }))
     );
 
     var peer;
@@ -1597,10 +1593,28 @@ function deleteIndexEntry(index, keya, keyb) {
 }
 
 /* eslint-disable guard-for-in, no-unused-vars */
+
 function isObjectEmpty(obj) {
     for (var prop in obj) {
         return false;
     }
     return true;
 }
+
+function countKeys(obj) {
+    var count = 0;
+    for (var key in obj) {
+        ++count;
+    }
+    return count;
+}
+
+function objectTuples(obj) {
+    var tuples = [];
+    for (var key in obj) {
+        tuples.push([key, obj[key]]);
+    }
+    return tuples;
+}
+
 /* eslint-enable guard-for-in, no-unused-vars */
