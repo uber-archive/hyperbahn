@@ -595,36 +595,36 @@ ServiceDispatchHandler.prototype.getPartialRange =
 function getPartialRange(serviceName, reason, now) {
     var self = this;
 
-    var range = self.computePartialRange(serviceName, now);
-    if (!range.isValid()) {
+    var partialRange = self.computePartialRange(serviceName, now);
+    if (!partialRange.isValid()) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
         self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
             serviceName: serviceName,
             reason: reason,
-            partialRange: range
+            partialRange: partialRange
         }));
         // TODO: upgrade two-in-a-row or more to an error
         return null;
     }
 
-    return range;
+    return partialRange;
 };
 
 ServiceDispatchHandler.prototype.computePartialRange =
 function computePartialRange(serviceName, now) {
     var self = this;
-    var range = new PartialRange(
+    var partialRange = new PartialRange(
         self.channel.hostPort,
         self.minPeersPerWorker,
         self.minPeersPerRelay
     );
-    range.compute(
+    partialRange.compute(
         self.getRelaysFor(serviceName),  // Obtain the (cached) sorted affine relay list
         self.getWorkersFor(serviceName), // Obtain and sort the affine worker list
         now
     );
-    return range;
+    return partialRange;
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeerPartially =
@@ -693,9 +693,9 @@ function freshenPartialPeer(peer, serviceName, now) {
 
     // TODO: this audit shouldn't be necessary once we understand and fix
     // why it was needed in the first place
-    var range = self.getPartialRange(serviceName, 'refresh partial peer audit', now);
-    if (range) {
-        var shouldConnect = range.affineWorkers.indexOf(hostPort) >= 0;
+    var partialRange = self.getPartialRange(serviceName, 'refresh partial peer audit', now);
+    if (partialRange) {
+        var shouldConnect = partialRange.affineWorkers.indexOf(hostPort) >= 0;
         var isConnected = !!connected;
         if (isConnected !== shouldConnect) {
             self.logger.warn('partial affinity audit fail', self.extendLogInfo({
@@ -704,7 +704,7 @@ function freshenPartialPeer(peer, serviceName, now) {
                 isConnected: isConnected,
                 shouldConnect: shouldConnect,
                 connectedPeers: connectedPeers,
-                partialRange: range
+                partialRange: partialRange
             }));
             connected = now;
         }
@@ -728,16 +728,16 @@ ServiceDispatchHandler.prototype.ensurePartialConnections =
 function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     var self = this;
 
-    var range = self.getPartialRange(serviceName, reason, now);
-    if (!range) {
+    var partialRange = self.getPartialRange(serviceName, reason, now);
+    if (!partialRange) {
         return null;
     }
 
-    if (!range.affineWorkers.length) {
+    if (!partialRange.affineWorkers.length) {
         self.logger.warn('empty affine workers list', self.extendLogInfo({
             serviceName: serviceName,
             reason: reason,
-            partialRange: range
+            partialRange: partialRange
         }));
         // TODO: why not return early
     }
@@ -754,8 +754,8 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
         toConnect: toConnect,
         isAffine: isAffine
     };
-    for (i = 0; i < range.affineWorkers.length; i++) {
-        worker = range.affineWorkers[i];
+    for (i = 0; i < partialRange.affineWorkers.length; i++) {
+        worker = partialRange.affineWorkers[i];
         isAffine[worker] = true;
         if (!connectedPeers || !connectedPeers[worker]) {
             toConnect.push(worker);
@@ -776,7 +776,7 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     self.logger.info('implementing affinity change', self.extendLogInfo({
         serviceName: serviceName,
         reason: reason,
-        partialRange: range,
+        partialRange: partialRange,
         toConnect: toConnect,
         toDisconnect: toDisconnect
     }));
