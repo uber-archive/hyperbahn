@@ -33,7 +33,6 @@ var IntervalScan = require('./lib/interval-scan.js');
 var RateLimiter = require('./rate_limiter.js');
 var PartialRange = require('./partial_range.js');
 var Circuits = require('./circuits.js');
-var CountedReadySignal = require('ready-signal/counted');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
@@ -825,35 +824,65 @@ function removeServicePeer(serviceName, hostPort) {
     }
     svcchan.peers.delete(hostPort);
 
-    var anyOtherSubChan = false;
     var subChanKeys = Object.keys(self.channel.subChannels);
+    var remain = [];
     for (var i = 0; i < subChanKeys; i++) {
         var subChan = self.channel.subChannels[subChanKeys[i]];
         if (subChan.peers.get(hostPort)) {
-            anyOtherSubChan = true;
-            break;
+            remain.push(subChanKeys[i]);
         }
     }
 
-    if (!anyOtherSubChan) {
-        var allDrained = CountedReadySignal(peer.connections.length + 1);
-        allDrained(onAllDrained);
-        for (var j = 0; j < peer.connections.length; j++) {
-            peer.connections[j].drain('closing due to unadvertisement', allDrained.signal);
-        }
-        allDrained.signal();
+    if (remain.length) {
+        self.logger.info(
+            'not removing unadvertised peer due to remaining services',
+            self.extendLogInfo(peer.extendLogInfo({
+                unadvertisedService: serviceName,
+                remainingServices: remain
+            }))
+        );
+        return;
     }
 
-    function onAllDrained() {
+    if (peer.draining) {
+        if (peer.draining.reason.indexOf('reaped') === 0) {
+            self.logger.info('skipping unadvertisement drain due to ongoing reap',
+                self.extendLogInfo(
+                    peer.extendLogInfo(peer.draining.extendLogInfo({}))
+                ));
+            return;
+        }
+        self.logger.warn('canceling peer drain to implement for unadvertisement drain',
+            self.extendLogInfo(
+                peer.extendLogInfo(peer.draining.extendLogInfo({}))
+            ));
+        peer.clearDrain();
+    }
+
+    peer.drain({
+        goal: peer.DRAIN_GOAL_CLOSE_PEER,
+        reason: 'closing due to unadvertisement',
+        direction: 'both',
+        timeout: self.drainTimeout
+    }, thenDeleteIt);
+
+    function thenDeleteIt(err) {
+        if (err) {
+            self.logger.warn(
+                'error closing unadvertised peer, deleting it anyhow',
+                self.extendLogInfo(
+                    peer.extendLogInfo(peer.draining.extendLogInfo({
+                        error: err
+                    }))
+                ));
+        }
+
         self.logger.info('Peer drained and closed due to unadvertisement', peer.extendLogInfo({
             serviceName: serviceName
         }));
-        peer.close(noop);
         self.channel.peers.delete(hostPort);
     }
 };
-
-function noop() {}
 
 ServiceDispatchHandler.prototype.updateServiceChannels =
 function updateServiceChannels() {
