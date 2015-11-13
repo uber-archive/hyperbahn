@@ -33,6 +33,7 @@ function PartialRange(relayHostPort, minPeersPerWorker, minPeersPerRelay) {
     this.relays            = null;
     this.workers           = null;
     this.affineWorkers     = null;
+    this.lastComputed      = 0;
     this.relayIndex        = NaN;
     this.ratio             = NaN;
     this.length            = NaN;
@@ -54,6 +55,7 @@ function extendLogInfo(info) {
     info.rangeLength       = this.length;
     info.rangeStart        = this.start;
     info.rangeStop         = this.stop;
+    info.rangeLastComputed = this.lastComputed;
     return info;
 };
 
@@ -63,7 +65,7 @@ function isValid() {
 };
 
 PartialRange.prototype.compute =
-function compute(relays, workers) {
+function compute(relays, workers, now) {
     if (relays) {
         this.relays = relays;
     }
@@ -76,8 +78,9 @@ function compute(relays, workers) {
         return;
     }
 
-    this.ratio      = this.workers.length / this.relays.length;
-    this.relayIndex = sortedIndexOf(this.relays, this.relayHostPort);
+    this.lastComputed = now;
+    this.ratio        = this.workers.length / this.relays.length;
+    this.relayIndex   = sortedIndexOf(this.relays, this.relayHostPort);
 
     // istanbul ignore if
     if (this.relayIndex < 0) {
