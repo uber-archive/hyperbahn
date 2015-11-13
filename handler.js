@@ -95,6 +95,8 @@ function HyperbahnHandler(options) {
         egressNodes: options.egressNodes
     });
 
+    self.instanceBlackList = self.hyperbahnService.instanceBlackList;
+
     // TODO replace JSON with real bufrw handlers for this
     self.tchannelJSON.register(self, 'ad', self,
         self.handleAdvertise);
@@ -140,11 +142,28 @@ HyperbahnHandler.prototype.type = 'hyperbahn.advertisement-handler';
 */
 HyperbahnHandler.prototype.handleAdvertise =
 function handleAdvertise(handler, req, arg2, arg3, cb) {
-    handler.sendRelays(req, arg2, arg3, 'relay-ad', cb);
+    var services = arg3.services;
+    var fanoutServices = [];
+
+    for (var i = 0; i < services.length; i++) {
+        var isBlackListed = handler.instanceBlackList.isBlackListed(
+            services[i].serviceName, req.connection.remoteName
+        );
+
+        if (!isBlackListed) {
+            fanoutServices.push(services[i]);
+        }
+    }
+
+    handler.sendRelays(req, arg2, {
+        services: fanoutServices
+    }, 'relay-ad', cb);
 };
 
 HyperbahnHandler.prototype.handleUnadvertise =
 function handleUnadvertise(handler, req, arg2, arg3, cb) {
+    // TODO: What are the blacklist semantics ?
+
     handler.sendRelays(req, arg2, arg3, 'relay-unad', cb);
 };
 
