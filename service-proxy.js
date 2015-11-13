@@ -140,9 +140,12 @@ function ServiceDispatchHandler(options) {
     });
     self.peerPruner.runBeginEvent.on(function onPeerReapBegin(run) {
         if (run.keys.length) {
-            self.logger.info('pruning peers', self.extendLogInfo({
-                numPeersToPrune: run.keys.length
-            }));
+            self.logger.info(
+                'pruning peers',
+                self.extendLogInfo({
+                    numPeersToPrune: run.keys.length
+                })
+            );
         }
     });
     self.peerPruner.start();
@@ -167,9 +170,12 @@ function ServiceDispatchHandler(options) {
     });
     self.peerReaper.runBeginEvent.on(function onPeerReapBegin(run) {
         if (run.keys.length) {
-            self.logger.info('reaping dead peers', self.extendLogInfo({
-                numPeersToReap: run.keys.length
-            }));
+            self.logger.info(
+                'reaping dead peers',
+                self.extendLogInfo({
+                    numPeersToReap: run.keys.length
+                })
+            );
         }
     });
     self.peerReaper.start();
@@ -243,9 +249,12 @@ function handleLazily(conn, reqFrame) {
     var res = reqFrame.bodyRW.lazy.readService(reqFrame);
     if (res.err) {
         // TODO: stat?
-        self.channel.logger.error('failed to lazy read frame serviceName', conn.extendLogInfo({
-            error: res.err
-        }));
+        self.channel.logger.error(
+            'failed to lazy read frame serviceName',
+            conn.extendLogInfo({
+                error: res.err
+            })
+        );
         // TODO: protocol error instead?
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read serviceName');
         return false;
@@ -255,7 +264,10 @@ function handleLazily(conn, reqFrame) {
     if (!serviceName) {
         // TODO: reqFrame.extendLogInfo would be nice, especially if it added
         // things like callerName and arg1
-        self.channel.logger.error('missing service name in lazy frame', conn.extendLogInfo({}));
+        self.channel.logger.error(
+            'missing service name in lazy frame',
+            conn.extendLogInfo({})
+        );
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing serviceName');
         return false;
     }
@@ -267,9 +279,12 @@ function handleLazily(conn, reqFrame) {
     res = reqFrame.bodyRW.lazy.readHeaders(reqFrame);
     if (res.err) {
         // TODO: stat?
-        self.channel.logger.warn('failed to lazy read frame headers', conn.extendLogInfo({
-            error: res.err
-        }));
+        self.channel.logger.warn(
+            'failed to lazy read frame headers',
+            conn.extendLogInfo({
+                error: res.err
+            })
+        );
         // TODO: protocol error instead?
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read headers');
         return false;
@@ -278,9 +293,12 @@ function handleLazily(conn, reqFrame) {
     var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
     var cn = cnBuf && cnBuf.toString();
     if (!cn) {
-        self.channel.logger.warn('request missing cn header', conn.extendLogInfo({
-            serviceName: serviceName
-        }));
+        self.channel.logger.warn(
+            'request missing cn header',
+            conn.extendLogInfo({
+                serviceName: serviceName
+            })
+        );
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing cn header');
         return false;
     }
@@ -298,20 +316,26 @@ function handleLazily(conn, reqFrame) {
             return true;
         } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
             var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
-            self.logger.info('hyperbahn node is rate-limited by the total rps limit', self.extendLogInfo(conn.extendLogInfo({
-                rpsLimit: totalLimit,
-                serviceCounters: self.rateLimiter.serviceCounters,
-                edgeCounters: self.rateLimiter.edgeCounters
-            })));
+            self.logger.info(
+                'hyperbahn node is rate-limited by the total rps limit',
+                self.extendLogInfo(conn.extendLogInfo({
+                    rpsLimit: totalLimit,
+                    serviceCounters: self.rateLimiter.serviceCounters,
+                    edgeCounters: self.rateLimiter.edgeCounters
+                }))
+            );
             conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
             return true;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
             var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
-            self.logger.info('hyperbahn service is rate-limited by the service rps limit', self.extendLogInfo(conn.extendLogInfo({
+            self.logger.info(
+                'hyperbahn service is rate-limited by the service rps limit',
+                self.extendLogInfo(conn.extendLogInfo({
                     rpsLimit: serviceLimit,
                     serviceCounters: self.rateLimiter.serviceCounters,
                     edgeCounters: self.rateLimiter.edgeCounters
-                })));
+                }))
+            );
             conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
             return true;
         }
@@ -334,8 +358,10 @@ function handleRequest(req, buildRes) {
     var self = this;
 
     if (!req.serviceName) {
-        self.logger.warn('Got incoming req with no service',
-            self.extendLogInfo(req.extendLogInfo({})));
+        self.logger.warn(
+            'Got incoming req with no service',
+            self.extendLogInfo(req.extendLogInfo({}))
+        );
 
         buildRes().sendError('BadRequest', 'no service name given');
         return;
@@ -355,30 +381,36 @@ function handleRequest(req, buildRes) {
             } else {
                 // TODO: needed because TChannelSelfConnection, we can drop
                 // this once self connection is dead
-                self.logger.warn('rate limiter unable to pop in req, because self connection',
+                self.logger.warn(
+                    'rate limiter unable to pop in req, because self connection',
                     self.extendLogInfo(req.extendLogInfo({
                         rateLimitReason: RATE_LIMIT_KILLSWITCH
-                    })));
+                    }))
+                );
             }
             return;
         } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
             var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
-            self.logger.info('hyperbahn node is rate-limited by the total rps limit',
+            self.logger.info(
+                'hyperbahn node is rate-limited by the total rps limit',
                 self.extendLogInfo(req.extendLogInfo({
                     rpsLimit: totalLimit,
                     serviceCounters: self.rateLimiter.serviceCounters,
                     edgeCounters: self.rateLimiter.edgeCounters
-                })));
+                }))
+            );
             buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
             return;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
             var serviceLimit = self.rateLimiter.getRpsLimitForService(req.serviceName);
-            self.logger.info('hyperbahn service is rate-limited by the service rps limit',
+            self.logger.info(
+                'hyperbahn service is rate-limited by the service rps limit',
                 self.extendLogInfo(req.extendLogInfo({
                     rpsLimit: serviceLimit,
                     serviceCounters: self.rateLimiter.serviceCounters,
                     edgeCounters: self.rateLimiter.edgeCounters
-                })));
+                }))
+            );
             buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
             return;
         }
@@ -479,9 +511,12 @@ function createServiceChannel(serviceName) {
 
     var now = self.channel.timers.now();
     if (now >= self.createdAt + self.logGracePeriod) {
-        self.logger.info('Creating new sub channel', self.extendLogInfo({
-            serviceName: serviceName
-        }));
+        self.logger.info(
+            'Creating new sub channel',
+            self.extendLogInfo({
+                serviceName: serviceName
+            })
+        );
     }
 
     var exitNodes = self.egressNodes.exitsFor(serviceName);
@@ -582,9 +617,12 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
     }
 
     if (peer.draining) {
-        self.logger.info('canceling peer drain', self.extendLogInfo(
-            peer.extendLogInfo(peer.draining.extendLogInfo({}))
-        ));
+        self.logger.info(
+            'canceling peer drain',
+            self.extendLogInfo(
+                peer.extendLogInfo(peer.draining.extendLogInfo({}))
+            )
+        );
         peer.clearDrain();
     }
 
@@ -599,11 +637,14 @@ function getPartialRange(serviceName, reason, now) {
     if (!partialRange.isValid()) {
         // This should only occur if an advertisement loses the race with a
         // relay ring membership change.
-        self.logger.warn('Relay could not find itself in the affinity set for service', self.extendLogInfo({
-            serviceName: serviceName,
-            reason: reason,
-            partialRange: partialRange
-        }));
+        self.logger.warn(
+            'Relay could not find itself in the affinity set for service',
+            self.extendLogInfo({
+                serviceName: serviceName,
+                reason: reason,
+                partialRange: partialRange
+            })
+        );
         // TODO: upgrade two-in-a-row or more to an error
         return null;
     }
@@ -698,14 +739,17 @@ function freshenPartialPeer(peer, serviceName, now) {
         var shouldConnect = partialRange.affineWorkers.indexOf(hostPort) >= 0;
         var isConnected = !!connected;
         if (isConnected !== shouldConnect) {
-            self.logger.warn('partial affinity audit fail', self.extendLogInfo({
-                serviceName: serviceName,
-                serviceHostPort: hostPort,
-                isConnected: isConnected,
-                shouldConnect: shouldConnect,
-                connectedPeers: connectedPeers,
-                partialRange: partialRange
-            }));
+            self.logger.warn(
+                'partial affinity audit fail',
+                self.extendLogInfo({
+                    serviceName: serviceName,
+                    serviceHostPort: hostPort,
+                    isConnected: isConnected,
+                    shouldConnect: shouldConnect,
+                    connectedPeers: connectedPeers,
+                    partialRange: partialRange
+                })
+            );
             connected = now;
         }
     }
@@ -716,12 +760,15 @@ function freshenPartialPeer(peer, serviceName, now) {
         self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity refresh', now);
     }
 
-    self.logger.info('refreshed peer partially', self.extendLogInfo({
-        serviceName: serviceName,
-        connectedPeers: connectedPeers,
-        serviceHostPort: hostPort,
-        isConnected: connected
-    }));
+    self.logger.info(
+        'refreshed peer partially',
+        self.extendLogInfo({
+            serviceName: serviceName,
+            connectedPeers: connectedPeers,
+            serviceHostPort: hostPort,
+            isConnected: connected
+        })
+    );
 };
 
 ServiceDispatchHandler.prototype.ensurePartialConnections =
@@ -734,11 +781,14 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     }
 
     if (!partialRange.affineWorkers.length) {
-        self.logger.warn('empty affine workers list', self.extendLogInfo({
-            serviceName: serviceName,
-            reason: reason,
-            partialRange: partialRange
-        }));
+        self.logger.warn(
+            'empty affine workers list',
+            self.extendLogInfo({
+                serviceName: serviceName,
+                reason: reason,
+                partialRange: partialRange
+            })
+        );
         // TODO: why not return early
     }
 
@@ -773,13 +823,16 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
         return result;
     }
 
-    self.logger.info('implementing affinity change', self.extendLogInfo({
-        serviceName: serviceName,
-        reason: reason,
-        partialRange: partialRange,
-        toConnect: toConnect,
-        toDisconnect: toDisconnect
-    }));
+    self.logger.info(
+        'implementing affinity change',
+        self.extendLogInfo({
+            serviceName: serviceName,
+            reason: reason,
+            partialRange: partialRange,
+            toConnect: toConnect,
+            toDisconnect: toDisconnect
+        })
+    );
 
     var peer;
     for (i = 0; i < toConnect.length; i++) {
@@ -861,16 +914,20 @@ function removeServicePeer(serviceName, hostPort) {
 
     if (peer.draining) {
         if (peer.draining.reason.indexOf('reaped') === 0) {
-            self.logger.info('skipping unadvertisement drain due to ongoing reap',
+            self.logger.info(
+                'skipping unadvertisement drain due to ongoing reap',
                 self.extendLogInfo(
                     peer.extendLogInfo(peer.draining.extendLogInfo({}))
-                ));
+                )
+            );
             return;
         }
-        self.logger.warn('canceling peer drain to implement for unadvertisement drain',
+        self.logger.warn(
+            'canceling peer drain to implement for unadvertisement drain',
             self.extendLogInfo(
                 peer.extendLogInfo(peer.draining.extendLogInfo({}))
-            ));
+            )
+        );
         peer.clearDrain();
     }
 
@@ -889,12 +946,16 @@ function removeServicePeer(serviceName, hostPort) {
                     peer.extendLogInfo(peer.draining.extendLogInfo({
                         error: err
                     }))
-                ));
+                )
+            );
         }
 
-        self.logger.info('Peer drained and closed due to unadvertisement', peer.extendLogInfo({
-            serviceName: serviceName
-        }));
+        self.logger.info(
+            'Peer drained and closed due to unadvertisement',
+            peer.extendLogInfo({
+                serviceName: serviceName
+            })
+        );
         self.channel.peers.delete(hostPort);
     }
 };
@@ -987,11 +1048,14 @@ function changeToExit(serviceChannel) {
         newMode: 'exit'
     });
 
-    self.logger.info('Changing to exit node', self.extendLogInfo({
-        oldMode: oldMode,
-        newMode: 'exit',
-        serviceName: serviceChannel.serviceName
-    }));
+    self.logger.info(
+        'Changing to exit node',
+        self.extendLogInfo({
+            oldMode: oldMode,
+            newMode: 'exit',
+            serviceName: serviceChannel.serviceName
+        })
+    );
 };
 
 ServiceDispatchHandler.prototype.updateServiceNodes =
@@ -1038,11 +1102,14 @@ function changeToForward(exitNodes, serviceChannel, now) {
         newMode: 'forward'
     });
 
-    self.logger.info('Changing to forward node', self.extendLogInfo({
-        oldMode: oldMode,
-        newMode: 'forward',
-        serviceName: serviceChannel.serviceName
-    }));
+    self.logger.info(
+        'Changing to forward node',
+        self.extendLogInfo({
+            oldMode: oldMode,
+            newMode: 'forward',
+            serviceName: serviceChannel.serviceName
+        })
+    );
 };
 
 ServiceDispatchHandler.prototype.updateExitNodes =
@@ -1164,10 +1231,13 @@ function pruneSinglePeer(hostPort, pruneInfo) {
     }
 
     if (peer.draining) {
-        self.logger.info('skipping peer prune drain, already draining', self.extendLogInfo({
-            peer: peer.hostPort,
-            priorDrainReason: peer.drainReason
-        }));
+        self.logger.info(
+            'skipping peer prune drain, already draining',
+            self.extendLogInfo({
+                peer: peer.hostPort,
+                priorDrainReason: peer.drainReason
+            })
+        );
         return;
     }
 
@@ -1179,9 +1249,12 @@ function pruneSinglePeer(hostPort, pruneInfo) {
     }, thenResetPeer);
 
     // TODO: stat?
-    self.logger.info('draining pruned peer', self.extendLogInfo(
-        peer.extendLogInfo(peer.draining.extendLogInfo({}))
-    ));
+    self.logger.info(
+        'draining pruned peer',
+        self.extendLogInfo(
+            peer.extendLogInfo(peer.draining.extendLogInfo({}))
+        )
+    );
 
     function thenResetPeer(err) {
         if (err) {
@@ -1191,7 +1264,8 @@ function pruneSinglePeer(hostPort, pruneInfo) {
                     peer.extendLogInfo(peer.draining.extendLogInfo({
                         error: err
                     }))
-                ));
+                )
+            );
         }
         peer.clearDrain();
     }
@@ -1212,16 +1286,20 @@ function reapSinglePeer(hostPort, serviceNames) {
 
     if (peer.draining) {
         if (peer.draining.reason.indexOf('peer pruned') !== 0) {
-            self.logger.warn('skipping peer reap due to unknown drain state',
+            self.logger.warn(
+                'skipping peer reap due to unknown drain state',
                 self.extendLogInfo(
                     peer.extendLogInfo(peer.draining.extendLogInfo({}))
-                ));
+                )
+            );
             return;
         }
-        self.logger.info('peer reaper canceling peer prune drain',
+        self.logger.info(
+            'peer reaper canceling peer prune drain',
             self.extendLogInfo(
                 peer.extendLogInfo(peer.draining.extendLogInfo({}))
-            ));
+            )
+        );
         peer.clearDrain();
     }
 
@@ -1243,9 +1321,12 @@ function reapSinglePeer(hostPort, serviceNames) {
     }, thenDeleteIt);
 
     // TODO: stat?
-    self.logger.info('reaping dead peer', self.extendLogInfo(
-        peer.extendLogInfo(peer.draining.extendLogInfo({}))
-    ));
+    self.logger.info(
+        'reaping dead peer',
+        self.extendLogInfo(
+            peer.extendLogInfo(peer.draining.extendLogInfo({}))
+        )
+    );
 
     function thenDeleteIt(err) {
         if (err) {
@@ -1255,7 +1336,8 @@ function reapSinglePeer(hostPort, serviceNames) {
                     peer.extendLogInfo(peer.draining.extendLogInfo({
                         error: err
                     }))
-                ));
+                )
+            );
         }
         self.channel.peers.delete(hostPort);
     }
@@ -1318,8 +1400,10 @@ function onCircuitStateChange(change) {
                     clean(circuit.endpointName),
                 1
             );
-            self.logger.info('circuit returned to good health',
-                self.extendLogInfo(circuit.extendLogInfo({})));
+            self.logger.info(
+                'circuit returned to good health',
+                self.extendLogInfo(circuit.extendLogInfo({}))
+            );
         // healthy -> unhealthy
         } else {
             self.statsd.increment('circuits.unhealthy.total', 1);
@@ -1337,8 +1421,10 @@ function onCircuitStateChange(change) {
                     clean(circuit.endpointName),
                 1
             );
-            self.logger.info('circuit became unhealthy',
-                self.extendLogInfo(circuit.extendLogInfo({})));
+            self.logger.info(
+                'circuit became unhealthy',
+                self.extendLogInfo(circuit.extendLogInfo({}))
+            );
         }
     }
 };
