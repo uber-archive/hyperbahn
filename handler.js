@@ -32,6 +32,8 @@ var TChannelJSON = require('tchannel/as/json');
 var TChannelThrift = require('tchannel/as/thrift');
 var TChannelEndpointHandler = require('tchannel/endpoint-handler');
 
+var HyperbahnService = require('./hyperbahn-service.js');
+
 var MAX_RELAY_AD_ATTEMPTS = 2;
 var RELAY_AD_RETRY_TIME = 1 * 1000;
 var RELAY_AD_TIMEOUT = 500;
@@ -88,6 +90,11 @@ function HyperbahnHandler(options) {
         source: thriftSource
     });
 
+    self.hyperbahnService = new HyperbahnService({
+        channel: self.channel,
+        egressNodes: options.egressNodes
+    });
+
     // TODO replace JSON with real bufrw handlers for this
     self.tchannelJSON.register(self, 'ad', self,
         self.handleAdvertise);
@@ -100,6 +107,8 @@ function HyperbahnHandler(options) {
 
     self.tchannelThrift.register(self, 'Hyperbahn::discover', self,
         self.discover);
+    self.tchannelThrift.register(self, 'Hyperbahn::blacklist', self,
+        blacklist);
 
     self.relayAdTimeout = options.relayAdTimeout ||
         RELAY_AD_TIMEOUT;
@@ -111,6 +120,10 @@ function HyperbahnHandler(options) {
     self.relayTimeout = options.relayTimeout || RELAY_TIMEOUT;
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
+
+function blacklist(handler, req, head, body, cb) {
+    handler.hyperbahnService.blacklist(req, head, body, cb);
+}
 
 HyperbahnHandler.prototype.type = 'hyperbahn.advertisement-handler';
 
