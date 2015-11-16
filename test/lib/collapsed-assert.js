@@ -36,6 +36,12 @@ function CollapsedAssert() {
     self._failed = false;
 }
 
+CollapsedAssert.prototype.hasFailed =
+function hasFailed() {
+    var self = this;
+    return self._failed;
+};
+
 CollapsedAssert.prototype.ifError = function ifError(err, msg, extra) {
     var self = this;
 
