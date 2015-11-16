@@ -93,10 +93,14 @@ CollapsedAssert.prototype.report = function report(realAssert, message) {
     var self = this;
 
     nodeAssert(message, 'must pass message');
-
-    if (!self._failed) {
-        return realAssert.ok(true, message);
+    realAssert.ok(!self._failed, message);
+    if (self._failed) {
+        self.passthru(realAssert);
     }
+};
+
+CollapsedAssert.prototype.passthru = function passthru(realAssert) {
+    var self = this;
 
     for (var i = 0; i < self._commands.length; i++) {
         var command = self._commands[i];
