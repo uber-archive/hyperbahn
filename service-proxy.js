@@ -749,7 +749,11 @@ function freshenPartialPeer(peer, serviceName, now) {
                     connectedPeers: objectTuples(connectedPeers)
                 }))
             );
-            connected = now;
+            if (shouldConnect) {
+                connected = now;
+            } else {
+                connected = null;
+            }
         }
     }
 
