@@ -208,6 +208,12 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
     function onRemotes() {
         self.emit('listening');
+
+        self.forEachHostPort(function each(name, i, hp) {
+            name = name.toUpperCase() + i;
+            console.log('TEST SETUP: ' + name + ' ' + hp);
+        });
+
         cb();
     }
 };
@@ -656,5 +662,28 @@ function sendRegister(channel, opts, cb) {
                 serviceName: opts.serviceName
             }]
         }, cb);
+    }
+};
+
+TestCluster.prototype.forEachHostPort =
+function forEachHostPort(each) {
+    var self = this;
+    var i;
+
+    for (i = 0; i < self.hostPortList.length; i++) {
+        each('relay', i, self.hostPortList[i]);
+    }
+
+    for (i = 0; i < self.dummies.length; i++) {
+        each('dummy', i, self.dummies[i].hostPort);
+    }
+
+    var remoteNames = Object.keys(self.remotes);
+    for (i = 0; i < remoteNames.length; i++) {
+        each(remoteNames[i], 0, self.remotes[remoteNames[i]].hostPort);
+    }
+
+    for (i = 0; i < self.namedRemotes.length; i++) {
+        each('namedRemote', i, self.namedRemotes[i].hostPort);
     }
 };
