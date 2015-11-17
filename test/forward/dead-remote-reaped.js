@@ -236,7 +236,7 @@ var getPeerInfo = require('../../peer-info.js');
 
 function checkAllExitPeers(cluster, assert, isDead) {
     cluster.namedRemotes.forEach(function eachRemote(alice, i) {
-        assert.comment('-- checkExitPeers for ' + i);
+        assert.comment('-- checkExitPeers for namedRemotes[' + i + ']');
 
         var app = cluster.apps[0];
         var exitShard = app.clients.egressNodes.exitsFor(alice.serviceName);
