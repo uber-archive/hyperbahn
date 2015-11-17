@@ -658,3 +658,26 @@ function sendRegister(channel, opts, cb) {
         }, cb);
     }
 };
+
+TestCluster.prototype.forEachHostPort =
+function forEachHostPort(each) {
+    var self = this;
+    var i;
+
+    for (i = 0; i < self.hostPortList.length; i++) {
+        each('relay', i, self.hostPortList[i]);
+    }
+
+    for (i = 0; i < self.dummies.length; i++) {
+        each('dummy', i, self.dummies[i].hostPort);
+    }
+
+    var remoteNames = Object.keys(self.remotes);
+    for (i = 0; i < remoteNames.length; i++) {
+        each(remoteNames[i], 0, self.remotes[remoteNames[i]].hostPort);
+    }
+
+    for (i = 0; i < self.namedRemotes.length; i++) {
+        each('namedRemote', i, self.namedRemotes[i].hostPort);
+    }
+};

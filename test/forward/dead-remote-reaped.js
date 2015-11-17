@@ -48,24 +48,12 @@ allocCluster.test('dead exit peers get reaped', {
         ['info', 'refreshed peer partially']
     ]
 }, function t(cluster, assert) {
-    var activeNum = 3;
-
-    cluster.hostPortList.forEach(function each(hp, i) {
-        var name = 'RELAY' + (1 + i);
+    cluster.forEachHostPort(function each(name, i, hp) {
+        name = name.toUpperCase() + i;
         assert.comment('TEST SETUP: ' + name + ' ' + hp);
     });
-    cluster.dummies.forEach(function each(dum, i) {
-        var name = 'DUMMY' + (1 + i);
-        assert.comment('TEST SETUP: ' + name + ' ' + dum.hostPort);
-    });
-    Object.keys(cluster.remotes).forEach(function each(name) {
-        var remote = cluster.remotes[name];
-        assert.comment('TEST SETUP: ' + name.toUpperCase() + ' ' + remote.hostPort);
-    });
-    cluster.namedRemotes.forEach(function each(nr, i) {
-        var name = 'NAMEDREMOTE' + (1 + i);
-        assert.comment('TEST SETUP: ' + name + ' ' + nr.hostPort);
-    });
+
+    var activeNum = 3;
 
     // for more determinism
     cluster.namedRemotes.sort(function byHostPort(a, b) {
