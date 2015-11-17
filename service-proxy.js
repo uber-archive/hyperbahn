@@ -741,6 +741,7 @@ function freshenPartialPeer(peer, serviceName, now) {
             self.logger.warn(
                 'partial affinity audit fail',
                 self.extendLogInfo(partialRange.extendLogInfo({
+                    path: 'freshenPartialPeer',
                     serviceName: serviceName,
                     serviceHostPort: hostPort,
                     isConnected: isConnected,
@@ -748,7 +749,11 @@ function freshenPartialPeer(peer, serviceName, now) {
                     connectedPeers: objectTuples(connectedPeers)
                 }))
             );
-            connected = now;
+            if (shouldConnect) {
+                connected = now;
+            } else {
+                connected = null;
+            }
         }
     }
 
@@ -796,6 +801,7 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     var isAffine = {};
     var i;
     var worker;
+    var peer;
     var result = {
         noop: false,
         toConnect: toConnect,
@@ -803,11 +809,29 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     };
     for (i = 0; i < partialRange.affineWorkers.length; i++) {
         worker = partialRange.affineWorkers[i];
+        peer = self._getServicePeer(serviceChannel, worker);
         isAffine[worker] = true;
+
         if (!connectedPeers || !connectedPeers[worker]) {
+            toConnect.push(worker);
+        } else if (!peer.isConnected('out')) {
+            // TODO: this audit shouldn't be necessary once we understand and fix
+            // why it was needed in the first place
+            self.logger.warn(
+                'partial affinity audit fail',
+                self.extendLogInfo(partialRange.extendLogInfo({
+                    path: 'ensurePartialConnections',
+                    serviceHostPort: worker,
+                    serviceName: serviceName,
+                    isConnected: false,
+                    shouldConnect: true,
+                    connectedPeers: objectTuples(connectedPeers)
+                }))
+            );
             toConnect.push(worker);
         }
     }
+
     for (i = 0; i < connectedPeerKeys.length; i++) {
         worker = connectedPeerKeys[i];
         if (!isAffine[worker] && !self.peersToPrune[worker]) {
@@ -830,7 +854,6 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
         }))
     );
 
-    var peer;
     for (i = 0; i < toConnect.length; i++) {
         peer = self._getServicePeer(serviceChannel, toConnect[i]);
         self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
