@@ -741,6 +741,7 @@ function freshenPartialPeer(peer, serviceName, now) {
             self.logger.warn(
                 'partial affinity audit fail',
                 self.extendLogInfo(partialRange.extendLogInfo({
+                    path: 'freshenPartialPeer',
                     serviceName: serviceName,
                     serviceHostPort: hostPort,
                     isConnected: isConnected,
