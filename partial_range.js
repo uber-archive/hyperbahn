@@ -93,11 +93,18 @@ function compute(relays, workers, now) {
     }
 
     // Compute the range of workers that this relay should be connected to.
-    this.length        = Math.ceil(this.minPeersPerWorker * this.ratio);  // how many peers we are going to connect to
-    this.length        = Math.max(this.minPeersPerRelay, this.length);    // please always have this many
-    this.length        = Math.min(this.workers.length, this.length);      // you can't have more than there are
-    this.start         = Math.floor(this.relayIndex * this.ratio);
-    this.stop          = Math.ceil(this.relayIndex * this.ratio + this.length) % this.workers.length;
+    this.length = Math.ceil(this.minPeersPerWorker * this.ratio);  // how many peers we are going to connect to
+    this.length = Math.max(this.minPeersPerRelay, this.length);    // please always have this many
+    this.length = Math.min(this.workers.length, this.length);      // you can't have more than there are
+
+    if (this.length >= this.workers.length) {
+        this.start = 0;
+        this.stop  = this.workers.length;
+    } else {
+        this.start = Math.floor(this.relayIndex * this.ratio);
+        this.stop  = Math.ceil(this.relayIndex * this.ratio + this.length) % this.workers.length;
+    }
+
     this.affineWorkers = sliceRange(this.workers, this.start, this.stop);
 };
 
