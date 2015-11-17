@@ -208,6 +208,12 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
     function onRemotes() {
         self.emit('listening');
+
+        self.forEachHostPort(function each(name, i, hp) {
+            name = name.toUpperCase() + i;
+            console.log('TEST SETUP: ' + name + ' ' + hp);
+        });
+
         cb();
     }
 };

@@ -48,11 +48,6 @@ allocCluster.test('dead exit peers get reaped', {
         ['info', 'refreshed peer partially']
     ]
 }, function t(cluster, assert) {
-    cluster.forEachHostPort(function each(name, i, hp) {
-        name = name.toUpperCase() + i;
-        assert.comment('TEST SETUP: ' + name + ' ' + hp);
-    });
-
     var activeNum = 3;
 
     // for more determinism
