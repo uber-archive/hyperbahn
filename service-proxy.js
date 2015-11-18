@@ -1542,6 +1542,7 @@ ServiceDispatchHandler.prototype.setPartialAffinityEnabled =
 function enablePartialAffinity(enabled) {
     var self = this;
     self.partialAffinityEnabled = !!enabled;
+    self.partialRanges = Object.create(null);
 };
 
 ServiceDispatchHandler.prototype.extendLogInfo =
