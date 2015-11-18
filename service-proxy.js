@@ -89,7 +89,7 @@ function ServiceDispatchHandler(options) {
     });
     self.rateLimiterEnabled = options.rateLimiterEnabled;
 
-    self.partialAffinityEnabled = options.partialAffinityEnabled;
+    self.partialAffinityEnabled = !!options.partialAffinityEnabled;
     self.minPeersPerWorker = options.minPeersPerWorker || DEFAULT_MIN_PEERS_PER_WORKER;
     self.minPeersPerRelay = options.minPeersPerRelay || DEFAULT_MIN_PEERS_PER_RELAY;
     self.drainTimeout = options.drainTimeout || DEFAULT_DRAIN_TIMEOUT;
@@ -1538,16 +1538,10 @@ function disableRateLimiter() {
     self.rateLimiterEnabled = false;
 };
 
-ServiceDispatchHandler.prototype.enablePartialAffinity =
-function enablePartialAffinity() {
+ServiceDispatchHandler.prototype.setPartialAffinityEnabled =
+function enablePartialAffinity(enabled) {
     var self = this;
-    self.partialAffinityEnabled = true;
-};
-
-ServiceDispatchHandler.prototype.disablePartialAffinity =
-function disablePartialAffinity() {
-    var self = this;
-    self.partialAffinityEnabled = false;
+    self.partialAffinityEnabled = !!enabled;
 };
 
 ServiceDispatchHandler.prototype.extendLogInfo =
