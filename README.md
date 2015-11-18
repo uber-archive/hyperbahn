@@ -1,4 +1,4 @@
-# Hyperbahn
+# Hyperbahn [![Build Status](https://travis-ci.org/uber/hyperbahn.svg?branch=master)] (https://travis-ci.org/uber/hyperbahn)
 
 Service discovery and routing for large-scale microservice operations
 
