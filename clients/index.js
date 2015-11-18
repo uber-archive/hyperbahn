@@ -447,11 +447,7 @@ function updatePrunePeersPeriod() {
 ApplicationClients.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled() {
     var self = this;
     var enabled = self.remoteConfig.get('partialAffinity.enabled', false);
-    if (enabled) {
-        self.serviceProxy.enablePartialAffinity();
-    } else {
-        self.serviceProxy.disablePartialAffinity();
-    }
+    self.serviceProxy.setPartialAffinityEnabled(enabled);
 };
 
 ApplicationClients.prototype.updateTotalRpsLimit = function updateTotalRpsLimit() {
