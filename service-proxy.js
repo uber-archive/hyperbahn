@@ -632,7 +632,7 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
                 peer.extendLogInfo(peer.draining.extendLogInfo({}))
             )
         );
-        peer.clearDrain();
+        peer.clearDrain('canceled to ensure peer connection');
     }
 
     peer.connectTo();
@@ -1288,7 +1288,7 @@ function pruneSinglePeer(hostPort, pruneInfo) {
                 )
             );
         }
-        peer.clearDrain();
+        peer.clearDrain('reset after prune drain done');
     }
 };
 
@@ -1321,7 +1321,7 @@ function reapSinglePeer(hostPort, serviceNames) {
                 peer.extendLogInfo(peer.draining.extendLogInfo({}))
             )
         );
-        peer.clearDrain();
+        peer.clearDrain('superceded by peer reap');
     }
 
     for (var i = 0; i < serviceNames.length; i++) {
