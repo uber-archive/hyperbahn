@@ -635,7 +635,15 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
         peer.clearDrain('canceled to ensure peer connection');
     }
 
-    peer.waitForIdentified(peer.connectTo(), onConnIded);
+    var conn = peer.connectTo();
+    self.drainInOnceConnected(peer, conn, reason);
+};
+
+ServiceDispatchHandler.prototype.drainInOnceConnected =
+function drainInOnceConnected(peer, conn, reason) {
+    var self = this;
+
+    peer.waitForIdentified(conn, onConnIded);
 
     function onConnIded(err) {
         if (err) {
