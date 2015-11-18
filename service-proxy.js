@@ -89,6 +89,7 @@ function ServiceDispatchHandler(options) {
     });
     self.rateLimiterEnabled = options.rateLimiterEnabled;
 
+    self.drainIncomingConnections = !!options.drainIncomingConnections;
     self.partialAffinityEnabled = !!options.partialAffinityEnabled;
     self.minPeersPerWorker = options.minPeersPerWorker || DEFAULT_MIN_PEERS_PER_WORKER;
     self.minPeersPerRelay = options.minPeersPerRelay || DEFAULT_MIN_PEERS_PER_RELAY;
@@ -636,7 +637,9 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
     }
 
     var conn = peer.connectTo();
-    self.drainInOnceConnected(peer, conn, reason);
+    if (self.drainIncomingConnections) {
+        self.drainInOnceConnected(peer, conn, reason);
+    }
 };
 
 ServiceDispatchHandler.prototype.drainInOnceConnected =
@@ -1602,6 +1605,12 @@ ServiceDispatchHandler.prototype.disableRateLimiter =
 function disableRateLimiter() {
     var self = this;
     self.rateLimiterEnabled = false;
+};
+
+ServiceDispatchHandler.prototype.setDrainIncomingConnections =
+function setDrainIncomingConnections(enabled) {
+    var self = this;
+    self.drainIncomingConnections = !!enabled;
 };
 
 ServiceDispatchHandler.prototype.setPartialAffinityEnabled =
