@@ -93,6 +93,7 @@ function spawnHyperbahnProc(procOpts) {
     var self = this;
 
     var hyperbahnProc = self.run(bahn, procOpts);
+    var relayIndex = self.relayProcs.length;
     self.relayProcs.push(hyperbahnProc);
     hyperbahnProc.stdout.pipe(process.stderr);
     hyperbahnProc.stderr.pipe(process.stderr);
@@ -106,6 +107,8 @@ function spawnHyperbahnProc(procOpts) {
         console.error('set kill timer for %s[%s] in %sms',
                       bahn, hyperbahnProc.pid, self.opts.relayKillIn);
     }
+
+    return relayIndex;
 };
 
 HyperbahnBenchmarkRunner.prototype.close = function close() {
