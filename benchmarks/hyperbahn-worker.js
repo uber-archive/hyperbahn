@@ -107,6 +107,7 @@ HyperbahnWorker.prototype.createConfig = function createConfig() {
                 leafHost: '127.0.0.1',
                 leafPort: self.kafkaPort
             },
+            'clients.logtron.logFile': null,
             'clients.logtron.sentry': {
                 id: 'http://bs:bs@localhost:' + self.sentryPort
             },
