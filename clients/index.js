@@ -240,6 +240,9 @@ function loadHostList() {
     var self = this;
 
     var bootFile = self._bootFile;
+    if (bootFile === null || bootFile === undefined) {
+        return null;
+    }
 
     if (Array.isArray(bootFile)) {
         return bootFile;
