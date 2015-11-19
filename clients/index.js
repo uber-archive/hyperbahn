@@ -252,15 +252,12 @@ ApplicationClients.prototype.loadHostListFile =
 function loadHostListFile(bootFile) {
     var self = this;
 
-    var autobahnHostPortList;
     try {
         // load sync because startup
-        autobahnHostPortList = JSON.parse(fs.readFileSync(bootFile, 'utf8'));
+        return JSON.parse(fs.readFileSync(bootFile, 'utf8'));
     } catch (e) {
         return null;
     }
-
-    return autobahnHostPortList;
 };
 
 ApplicationClients.prototype.setupChannel =
