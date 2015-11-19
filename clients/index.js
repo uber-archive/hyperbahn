@@ -255,9 +255,14 @@ function loadHostListFile(bootFile) {
     try {
         // load sync because startup
         return JSON.parse(fs.readFileSync(bootFile, 'utf8'));
-    } catch (e) {
-        return null;
+    } catch (err) {
+        self.logger.warn('failed to read ringpop bootstrap file', {
+            bootstrapFile: bootFile,
+            error: err
+        });
     }
+
+    return null;
 };
 
 ApplicationClients.prototype.setupChannel =
