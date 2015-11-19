@@ -245,6 +245,10 @@ function loadHostList() {
     }
 
     if (Array.isArray(bootFile)) {
+        if (!bootFile.length) {
+            self.logger.warn('got empty ringop bootstrap host list, using null instead');
+            return null;
+        }
         return bootFile;
     }
 
