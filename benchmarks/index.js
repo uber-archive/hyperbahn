@@ -85,6 +85,13 @@ function spawnRelayServer() {
         '--sentryPort', String(self.sentry.address().port)
     ];
 
+    self.spawnHyperbahnProc(procOpts);
+};
+
+HyperbahnBenchmarkRunner.prototype.spawnHyperbahnProc =
+function spawnHyperbahnProc(procOpts) {
+    var self = this;
+
     var hyperbahnProc = self.run(bahn, procOpts);
     self.relayProcs.push(hyperbahnProc);
     hyperbahnProc.stdout.pipe(process.stderr);
