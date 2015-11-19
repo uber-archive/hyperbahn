@@ -235,24 +235,45 @@ function ApplicationClients(options) {
     }
 }
 
-ApplicationClients.prototype.loadHostList = function loadHostList() {
+ApplicationClients.prototype.loadHostList =
+function loadHostList() {
     var self = this;
 
     var bootFile = self._bootFile;
-    var autobahnHostPortList;
-
-    if (Array.isArray(bootFile)) {
-        return bootFile;
-    }
-
-    try {
-        // load sync because startup
-        autobahnHostPortList = JSON.parse(fs.readFileSync(bootFile, 'utf8'));
-    } catch (e) {
+    if (bootFile === null || bootFile === undefined) {
         return null;
     }
 
-    return autobahnHostPortList;
+    if (Array.isArray(bootFile)) {
+        if (!bootFile.length) {
+            self.logger.warn('got empty ringop bootstrap host list, using null instead');
+            return null;
+        }
+        return bootFile;
+    }
+
+    if (typeof bootFile === 'string') {
+        return self.loadHostListFile(bootFile);
+    }
+
+    assert(false, 'invalid bootstrap file: ' + bootFile);
+};
+
+ApplicationClients.prototype.loadHostListFile =
+function loadHostListFile(bootFile) {
+    var self = this;
+
+    try {
+        // load sync because startup
+        return JSON.parse(fs.readFileSync(bootFile, 'utf8'));
+    } catch (err) {
+        self.logger.warn('failed to read ringpop bootstrap file', {
+            bootstrapFile: bootFile,
+            error: err
+        });
+    }
+
+    return null;
 };
 
 ApplicationClients.prototype.setupChannel =
