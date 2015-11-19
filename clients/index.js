@@ -245,6 +245,13 @@ function loadHostList() {
         return bootFile;
     }
 
+    return self.loadHostListFile(bootFile);
+};
+
+ApplicationClients.prototype.loadHostListFile =
+function loadHostListFile(bootFile) {
+    var self = this;
+
     var autobahnHostPortList;
     try {
         // load sync because startup
