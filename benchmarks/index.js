@@ -75,7 +75,7 @@ function spawnRelayServer() {
     self.startFakeKafka();
     self.startFakeSentry();
 
-    var hyperbahnProc = self.run(bahn, [
+    var procOpts = [
         '--serverPort', String(self.ports.serverPort),
         '--serverServiceName', String(self.serviceName),
         '--instances', String(self.instanceCount),
@@ -83,7 +83,9 @@ function spawnRelayServer() {
         '--statsdPort', String(self.ports.statsdPort),
         '--kafkaPort', String(self.kafka.port),
         '--sentryPort', String(self.sentry.address().port)
-    ]);
+    ];
+
+    var hyperbahnProc = self.run(bahn, procOpts);
     self.relayProcs.push(hyperbahnProc);
     hyperbahnProc.stdout.pipe(process.stderr);
     hyperbahnProc.stderr.pipe(process.stderr);
