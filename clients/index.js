@@ -248,7 +248,11 @@ function loadHostList() {
         return bootFile;
     }
 
-    return self.loadHostListFile(bootFile);
+    if (typeof bootFile === 'string') {
+        return self.loadHostListFile(bootFile);
+    }
+
+    assert(false, 'invalid bootstrap file: ' + bootFile);
 };
 
 ApplicationClients.prototype.loadHostListFile =
