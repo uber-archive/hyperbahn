@@ -235,16 +235,17 @@ function ApplicationClients(options) {
     }
 }
 
-ApplicationClients.prototype.loadHostList = function loadHostList() {
+ApplicationClients.prototype.loadHostList =
+function loadHostList() {
     var self = this;
 
     var bootFile = self._bootFile;
-    var autobahnHostPortList;
 
     if (Array.isArray(bootFile)) {
         return bootFile;
     }
 
+    var autobahnHostPortList;
     try {
         // load sync because startup
         autobahnHostPortList = JSON.parse(fs.readFileSync(bootFile, 'utf8'));
