@@ -21,7 +21,6 @@
 'use strict';
 
 var DebugLogtron = require('debug-logtron');
-var fs = require('fs');
 var path = require('path');
 
 var TChannelAsThrift = require('tchannel/as/thrift');

@@ -24,7 +24,6 @@
 /* eslint max-statements: [2, 40] */
 var console = require('console');
 var process = require('process');
-var fs = require('fs');
 
 var collectParallel = require('collect-parallel/array');
 var CountedReadySignal = require('ready-signal/counted');
@@ -332,15 +331,14 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
 
     if (thriftSpec) {
         var thriftPath = thriftSpec;
-        var thriftSource = fs.readFileSync(thriftPath).toString();
 
         thriftServer = channel.TChannelAsThrift({
-            source: thriftSource,
+            entryPoint: thriftPath,
             channel: serverChannel
         });
 
         thriftClient = channel.TChannelAsThrift({
-            source: thriftSource,
+            entryPoint: thriftPath,
             channel: clientChannel
         });
     } else {

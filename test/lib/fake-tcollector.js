@@ -20,13 +20,8 @@
 
 'use strict';
 
-var fs = require('fs');
 var path = require('path');
 var assert = require('assert');
-
-var spec = fs.readFileSync(
-    path.join(__dirname, 'tcollector.thrift'), 'utf8'
-);
 
 module.exports = FakeTCollector;
 
@@ -43,7 +38,7 @@ function FakeTCollector(options) {
     self.channel = options.channel;
 
     self.thrift = new self.channel.TChannelAsThrift({
-        source: spec
+        entryPoint: path.join(__dirname, 'tcollector.thrift')
     });
 
     self.thrift.register(

@@ -24,7 +24,6 @@
 
 var assert = require('assert');
 var util = require('util');
-var fs = require('fs');
 var path = require('path');
 var setTimeout = require('timers').setTimeout;
 var Errors = require('tchannel/errors.js');
@@ -37,10 +36,6 @@ var RELAY_AD_RETRY_TIME = 1 * 1000;
 var RELAY_AD_TIMEOUT = 500;
 
 var RELAY_TIMEOUT = 500;
-
-var thriftSource = fs.readFileSync(
-    path.join(__dirname, 'hyperbahn.thrift'), 'utf8'
-);
 
 module.exports = HyperbahnHandler;
 
@@ -85,7 +80,8 @@ function HyperbahnHandler(options) {
     self.tchannelThrift = TChannelThrift({
         channel: self.channel,
         logger: self.channel.logger,
-        source: thriftSource
+        entryPoint: path.join(__dirname, 'hyperbahn.thrift'),
+        allowFilesystemAccess: true
     });
 
     // TODO replace JSON with real bufrw handlers for this

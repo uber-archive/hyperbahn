@@ -84,7 +84,13 @@ function jsonSend(testClient, opts, cb) {
 }
 
 function thriftSend(testClient, opts, thriftSource, cb) {
-    var thrift = new TChannelThrift({source: thriftSource});
+    var thrift = new TChannelThrift({
+        entryPoint: 'entryPoint',
+        idls: {
+            entryPoint: thriftSource
+        },
+        allowFilesystemAccess: false
+    });
     testClient._client.waitForIdentified({
         host: testClient.hostPort
     }, onIdentified);

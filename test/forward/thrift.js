@@ -20,11 +20,8 @@
 
 'use strict';
 
-var fs = require('fs');
 var path = require('path');
-var someSpec = fs.readFileSync(
-    path.join(__dirname, 'someSpec.thrift'), 'utf8'
-);
+var someSpecPath = path.join(__dirname, 'someSpec.thrift');
 
 var allocCluster = require('../lib/test-cluster.js');
 
@@ -33,7 +30,7 @@ allocCluster.test('register and forward with thrift', {
     namedRemotes: ['echoRemote'],
     remotes: {
         echoRemote: {
-            thriftSpec: path.join(__dirname, 'someSpec.thrift')
+            thriftSpec: someSpecPath
         }
     }
 }, function t(cluster, assert) {
@@ -43,7 +40,7 @@ allocCluster.test('register and forward with thrift', {
     var steve = cluster.remotes.steve;
     var bob = cluster.remotes.bob;
     var tchannelThrift = TChannelAsThrift({
-        source: someSpec
+        entryPoint: someSpecPath
     });
 
     var remoteCalls = 0;
