@@ -47,6 +47,7 @@ var HeapDumper = require('./heap-dumper.js');
 var RemoteConfig = require('./remote-config.js');
 var HyperbahnEgressNodes = require('../egress-nodes.js');
 var HyperbahnHandler = require('../handler.js');
+var SocketInspector = require('./socket-inspector.js');
 
 module.exports = ApplicationClients;
 
@@ -105,6 +106,11 @@ function ApplicationClients(options) {
         self.logger = loggerParts.logger;
         self.logReservoir = loggerParts.logReservoir;
     }
+
+    self.socketInspector = SocketInspector({
+        logger: self.logger
+    });
+    self.socketInspector.enable();
 
     /*eslint no-process-env: 0*/
     var uncaughtTimeouts = config.get('clients.uncaught-exception.timeouts');
@@ -345,6 +351,7 @@ function bootstrap(cb) {
 ApplicationClients.prototype.destroy = function destroy() {
     var self = this;
 
+    self.socketInspector.disable();
     self.serviceProxy.destroy();
     self.remoteConfig.destroy();
     self.ringpop.destroy();
@@ -374,6 +381,7 @@ function updateMaxTombstoneTTL() {
 
 ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
     var self = this;
+    self.setSocketInspector();
     self.updateMaxTombstoneTTL();
     self.updateLazyHandling();
     self.updateCircuitsEnabled();
@@ -389,6 +397,21 @@ ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdat
     self.updatePartialAffinityEnabled();
     self.setMaximumRelayTTL();
     self.updatePeerHeapEnabled();
+};
+
+ApplicationClients.prototype.setSocketInspector =
+function setSocketInspector() {
+    var self = this;
+
+    var socketInspectorEnabled = self.remoteConfig.get(
+        'clients.socket-inspector.enabled', false
+    );
+
+    if (socketInspectorEnabled) {
+        self.socketInspector.enable();
+    } else {
+        self.socketInspector.disable();
+    }
 };
 
 ApplicationClients.prototype.setMaximumRelayTTL =
