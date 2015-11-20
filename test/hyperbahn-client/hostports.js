@@ -27,8 +27,10 @@ var path = require('path');
 var TChannelAsThrift = require('tchannel/as/thrift');
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 
-var source = fs.readFileSync(path.join(__dirname, '../../hyperbahn.thrift'), 'utf8');
-var thrift = new TChannelAsThrift({source: source});
+var thrift = new TChannelAsThrift({
+    entryPoint: path.join(__dirname, '../../hyperbahn.thrift'),
+    allowFilesystemAccess: true
+});
 
 module.exports = runTests;
 
@@ -175,8 +177,10 @@ function runTests(HyperbahnCluster) {
             serviceName: 'hyperbahn',
             hasNoParent: true
         });
-        var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'), 'utf8');
-        var badThrift = new TChannelAsThrift({source: badSource});
+        var badThrift = new TChannelAsThrift({
+            entryPoint: path.join(__dirname, 'bad-hyperbahn-empty-req-body.thrift'),
+            allowFilesystemAccess: true
+        });
         badThrift.send(request,
             'Hyperbahn::discover',
             null,
@@ -216,8 +220,10 @@ function runTests(HyperbahnCluster) {
             serviceName: 'hyperbahn',
             hasNoParent: true
         });
-        var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-empty-query.thrift'), 'utf8');
-        var badThrift = new TChannelAsThrift({source: badSource});
+        var badThrift = new TChannelAsThrift({
+            entryPoint: path.join(__dirname, 'bad-hyperbahn-empty-query.thrift'),
+            allowFilesystemAccess: true
+        });
         badThrift.send(request,
             'Hyperbahn::discover',
             null,
@@ -258,8 +264,10 @@ function runTests(HyperbahnCluster) {
             serviceName: 'hyperbahn',
             hasNoParent: true
         });
-        var badSource = fs.readFileSync(path.join(__dirname, 'bad-hyperbahn-no-exception.thrift'), 'utf8');
-        var badThrift = new TChannelAsThrift({source: badSource});
+        var badThrift = new TChannelAsThrift({
+            entryPoint: path.join(__dirname, 'bad-hyperbahn-no-exception.thrift'),
+            allowFilesystemAccess: true
+        });
         badThrift.send(request,
             'Hyperbahn::discover',
             null,
