@@ -76,13 +76,14 @@ HyperbahnWorker.prototype.start = function start() {
         if (err) {
             throw err;
         }
+        refreshServicePeers();
+    }
 
+    function refreshServicePeers() {
         var basePort = self.serverPort;
         var serviceProxy = self.app.clients.serviceProxy;
-
         for (var i = 0; i < self.instances; i++) {
             var targetHostPort = '127.0.0.1:' + (basePort + i);
-
             serviceProxy.refreshServicePeer(
                 self.serverServiceName, targetHostPort
             );
