@@ -118,11 +118,11 @@ function ApplicationClients(options) {
         logger: self.logger,
         statsd: self.statsd,
         statsdKey: 'uncaught-exception',
-        prefix: [
-            config.get('info.project'),
-            process.env.NODE_ENV,
-            os.hostname().split('.')[0]
-        ].join('.') + ' ',
+        meta: {
+            project: config.get('info.project'),
+            environment: process.env.NODE_ENV,
+            hostname: os.hostname().split('.')[0]
+        },
         backupFile: config.get('clients.uncaught-exception.file'),
         loggerTimeout: uncaughtTimeouts.loggerTimeout,
         statsdTimeout: uncaughtTimeouts.statsdTimeout,
