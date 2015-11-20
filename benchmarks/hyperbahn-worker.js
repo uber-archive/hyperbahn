@@ -28,6 +28,8 @@ var StaticConfig = require('static-config');
 
 var HyperbahnApplication = require('../app.js');
 
+module.exports = HyperbahnWorker;
+
 function HyperbahnWorker(opts) {
     /*eslint max-statements: [2, 25]*/
     if (!(this instanceof HyperbahnWorker)) {
@@ -47,6 +49,7 @@ function HyperbahnWorker(opts) {
     self.statsdPort = Number(opts.statsdPort);
     self.kafkaPort = Number(opts.kafkaPort);
     self.sentryPort = Number(opts.sentryPort);
+    self.ringpopList = opts.ringpopList ? opts.ringpopList.split(',') : [];
     self.config = self.createConfig();
     self.app = HyperbahnApplication(self.config, {
         processTitle: process.title,
@@ -62,9 +65,6 @@ function HyperbahnWorker(opts) {
 
 HyperbahnWorker.prototype.start = function start() {
     var self = this;
-
-    // attach before throwing exception
-    process.on('uncaughtException', self.app.clients.onError);
 
     self.app.bootstrapAndListen(onAppReady);
 
@@ -107,10 +107,13 @@ HyperbahnWorker.prototype.createConfig = function createConfig() {
                 leafHost: '127.0.0.1',
                 leafPort: self.kafkaPort
             },
+            'clients.logtron.logFile': null,
+            // 'clients.logtron.console': true,
             'clients.logtron.sentry': {
                 id: 'http://bs:bs@localhost:' + self.sentryPort
             },
-            'tchannel.host': '127.0.0.1'
+            'tchannel.host': '127.0.0.1',
+            'hyperbahn.ringpop.bootstrapFile': self.ringpopList
         }
     });
 };
@@ -120,5 +123,8 @@ if (require.main === module) {
     process.title = 'nodejs-benchmarks-hyperbahn_worker';
 
     var worker = HyperbahnWorker(argv);
+
+    // attach before throwing exception
+    process.on('uncaughtException', worker.app.clients.onError);
     worker.start();
 }
