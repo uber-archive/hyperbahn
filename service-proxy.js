@@ -1543,7 +1543,7 @@ function disableRateLimiter() {
 };
 
 ServiceDispatchHandler.prototype.setPartialAffinityEnabled =
-function enablePartialAffinity(enabled) {
+function setPartialAffinityEnabled(enabled) {
     var self = this;
     self.partialAffinityEnabled = !!enabled;
     self.partialRanges = Object.create(null);
