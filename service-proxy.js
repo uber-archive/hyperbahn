@@ -1331,10 +1331,9 @@ function reapSinglePeer(hostPort, serviceNames) {
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
         var serviceChannel = self.getServiceChannel(serviceName);
-        if (!serviceChannel) {
-            return;
+        if (serviceChannel) {
+            serviceChannel.peers.delete(hostPort);
         }
-        serviceChannel.peers.delete(hostPort);
         self.deletePeerIndex(serviceName, hostPort);
         delete self.partialRanges[serviceName];
     }
