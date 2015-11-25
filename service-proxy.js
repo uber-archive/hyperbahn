@@ -590,9 +590,7 @@ function refreshServicePeer(serviceName, hostPort) {
 
     // -- The old way: fully connect every egress to all affine peers.
 
-    // Update secondary indices
-    addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
-    addIndexEntry(self.connectedPeerServices, hostPort, serviceName, now);
+    // cancel any prune
     delete self.peersToPrune[hostPort];
 
     // Unmark recently seen peers, so they don't get reaped
@@ -608,8 +606,10 @@ ServiceDispatchHandler.prototype.deletePeerIndex =
 function deletePeerIndex(serviceName, hostPort) {
     var self = this;
 
-    deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
-    deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
+    if (self.partialAffinityEnabled) {
+        deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+        deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
+    }
     deleteIndexEntry(self.knownPeers, hostPort, serviceName);
 };
 
@@ -617,8 +617,10 @@ ServiceDispatchHandler.prototype.ensurePeerConnected =
 function ensurePeerConnected(serviceName, peer, reason, now) {
     var self = this;
 
-    addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
-    addIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName, now);
+    if (self.partialAffinityEnabled) {
+        addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+        addIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName, now);
+    }
     delete self.peersToPrune[peer.hostPort];
 
     if (peer.isConnected('out')) {
@@ -885,8 +887,10 @@ ServiceDispatchHandler.prototype.ensurePeerDisconnected =
 function ensurePeerDisconnected(serviceName, peer, reason, now) {
     var self = this;
 
-    deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
-    deleteIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName);
+    if (self.partialAffinityEnabled) {
+        deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
+        deleteIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName);
+    }
 
     var peerServices = self.connectedPeerServices[peer.hostPort];
     if (!peerServices || isObjectEmpty(peerServices)) {
