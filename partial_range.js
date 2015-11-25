@@ -39,6 +39,7 @@ function PartialRange(relayHostPort, minPeersPerWorker, minPeersPerRelay) {
     this.length            = NaN;
     this.start             = NaN;
     this.stop              = NaN;
+    this.connectedWorkers  = Object.create(null);
     this.pendingCompute    = null;
 }
 
