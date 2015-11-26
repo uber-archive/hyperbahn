@@ -858,6 +858,7 @@ function freshenPartialPeer(peer, serviceName, now) {
     var self = this;
 
     var hostPort = peer.hostPort;
+    var partialRange = self.getPartialRange(serviceName, 'refresh partial peer audit', now);
     var connectedPeers = self.connectedServicePeers[serviceName];
     var connected = connectedPeers && connectedPeers[hostPort];
 
@@ -878,26 +879,23 @@ function freshenPartialPeer(peer, serviceName, now) {
 
     // TODO: this audit shouldn't be necessary once we understand and fix
     // why it was needed in the first place
-    var partialRange = self.getPartialRange(serviceName, 'refresh partial peer audit', now);
-    if (partialRange) {
-        var shouldConnect = partialRange.affineWorkers.indexOf(hostPort) >= 0;
-        var isConnected = !!connected;
-        if (isConnected !== shouldConnect) {
-            self.logger.warn(
-                'partial affinity audit fail',
-                self.extendLogInfo(partialRange.extendLogInfo({
-                    path: 'freshenPartialPeer',
-                    serviceName: serviceName,
-                    serviceHostPort: hostPort,
-                    isConnected: isConnected,
-                    shouldConnect: shouldConnect
-                }))
-            );
-            if (shouldConnect) {
-                connected = now;
-            } else {
-                connected = null;
-            }
+    var isConnected = !!connected;
+    var shouldConnect = partialRange.affineWorkers.indexOf(hostPort) >= 0;
+    if (isConnected !== shouldConnect) {
+        self.logger.warn(
+            'partial affinity audit fail',
+            self.extendLogInfo(partialRange.extendLogInfo({
+                path: 'freshenPartialPeer',
+                serviceName: serviceName,
+                serviceHostPort: hostPort,
+                isConnected: isConnected,
+                shouldConnect: shouldConnect
+            }))
+        );
+        if (shouldConnect) {
+            connected = now;
+        } else {
+            connected = null;
         }
     }
 
