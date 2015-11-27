@@ -316,6 +316,7 @@ function setupRingpop(cb) {
         pingTimeout: self.ringpopTimeouts.pingTimeout,
         joinTimeout: self.ringpopTimeouts.joinTimeout
     });
+    self.ringpop.statPrefix = 'ringpop.hyperbahn';
     self.ringpop.setupChannel();
 
     self.egressNodes.setRingpop(self.ringpop);
