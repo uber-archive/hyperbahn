@@ -64,6 +64,15 @@ function DualStatsd(options) {
         packetQueue: options.packetQueue || null,
         socketTimeout: options.socketTimeout || null
     });
+    self.globalClient = new Statsd({
+        host: options.host,
+        port: options.port,
+        prefix: [
+            options.project,
+            'all-workers',
+            process.env.NODE_ENV
+        ]
+    });
 }
 
 DualStatsd.prototype.gauge = function gauge(name, value) {
