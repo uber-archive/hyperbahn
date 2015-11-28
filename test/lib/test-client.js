@@ -123,6 +123,17 @@ TestClient.prototype.getHosts = function getHosts(body, cb) {
     }, cb);
 };
 
+TestClient.prototype.getChannels = function getChannels(cb) {
+    var self = this;
+
+    jsonSend(self, {
+        endpoint: 'channels_v1',
+        serviceName: 'autobahn',
+        head: null,
+        body: null
+    }, cb);
+};
+
 TestClient.prototype.getConnections = function getConnections(body, cb) {
     var self = this;
 
