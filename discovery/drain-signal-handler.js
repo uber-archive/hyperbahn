@@ -23,6 +23,7 @@
 var process = require('process');
 var assert = require('assert');
 var util = require('util');
+var timers = require('timers');
 var EventEmitter = require('events').EventEmitter;
 
 module.exports = DrainSignalHandler;
@@ -38,8 +39,8 @@ function DrainSignalHandler(options) {
     assert(options.logger, 'logger required');
     self.logger = options.logger;
 
-    assert(options.tchannel, 'tchannel required');
-    self.tchannel = options.tchannel;
+    assert(options.worker, 'worker required');
+    self.worker = options.worker;
 
     assert(options.statsd, 'statsd required');
     self.statsd = options.statsd;
@@ -58,7 +59,7 @@ DrainSignalHandler.prototype.extendLogInfo =
 function extendLogInfo(info) {
     var self = this;
 
-    info = self.tchannel.extendLogInfo(info);
+    info = self.worker.routingBridge.extendLogInfo(info);
 
     return info;
 };
@@ -83,7 +84,7 @@ DrainSignalHandler.prototype.onSigTerm =
 function onSigTerm() {
     var self = this;
 
-    if (self.tchannel.draining) {
+    if (self.worker.routingBridge.isDraining()) {
         self.logger.info('got additional SIGTERM while draining', self.extendLogInfo({}));
     } else {
         self.startDrain();
@@ -94,10 +95,12 @@ DrainSignalHandler.prototype.startDrain =
 function startDrain() {
     var self = this;
 
-    self.drainStart = self.tchannel.timers.now();
+    self.drainStart = Date.now();
     self.logger.info('got SIGTERM, draining application', self.extendLogInfo({}));
-    self.tchannel.drain('shutting down due to SIGTERM', drainedThenClose);
-    self.drainDeadlineTimer = self.tchannel.timers.setTimeout(
+    self.worker.routingBridge.drain(
+        'shutting down due to SIGTERM', drainedThenClose
+    );
+    self.drainDeadlineTimer = timers.setTimeout(
         deadlineTimedOut,
         self.drainTimeout);
 
@@ -114,7 +117,7 @@ DrainSignalHandler.prototype.onSigInt =
 function onSigInt() {
     var self = this;
 
-    if (self.tchannel.draining) {
+    if (self.worker.routingBridge.isDraining()) {
         self.finishDrain('warn', 'got SIGINT, drain aborted');
     } else if (!self.destroyed) {
         self.logger.info('got SIGINT, destroying application', self.extendLogInfo({}));
@@ -142,7 +145,7 @@ DrainSignalHandler.prototype.finishDrain =
 function finishDrain(level, mess, info) {
     var self = this;
 
-    self.drainEnd = self.tchannel.timers.now();
+    self.drainEnd = Date.now();
 
     if (!info) {
         info = {};
@@ -165,7 +168,7 @@ function finishDrain(level, mess, info) {
             break;
     }
 
-    self.tchannel.timers.clearTimeout(self.drainDeadlineTimer);
+    timers.clearTimeout(self.drainDeadlineTimer);
     self.drainDeadlineTimer = null;
     self.destroy();
 };

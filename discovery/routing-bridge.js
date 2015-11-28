@@ -30,6 +30,8 @@ function RoutingBridge(routingWorker) {
     var self = this;
 
     self._worker = routingWorker;
+    self.draining = false;
+
 }
 
 RoutingBridge.prototype.listen = function listen(port, host, cb) {
@@ -38,9 +40,15 @@ RoutingBridge.prototype.listen = function listen(port, host, cb) {
     self._worker.tchannel.on('listening', onListening);
     self._worker.tchannel.listen(port, host);
 
-    function onListening(){
+    function onListening() {
         cb(null, self._worker.tchannel.hostPort);
     }
+};
+
+RoutingBridge.prototype.extendLogInfo = function extendLogInfo(info) {
+    var self = this;
+
+    return self._worker.tchannel.extendLogInfo(info);
 };
 
 RoutingBridge.prototype.destroy = function destroy() {
@@ -49,4 +57,16 @@ RoutingBridge.prototype.destroy = function destroy() {
     if (!self._worker.tchannel.destroyed) {
         self._worker.tchannel.close();
     }
+};
+
+RoutingBridge.prototype.isDraining = function isDraining() {
+    var self = this;
+
+    return self._worker.tchannel.draining;
+};
+
+RoutingBridge.prototype.drain = function drain(message, cb) {
+    var self = this;
+
+    return self._worker.tchannel.drain(message, cb);
 };

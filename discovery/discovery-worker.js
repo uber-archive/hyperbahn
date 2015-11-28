@@ -111,9 +111,7 @@ function DiscoveryWorker(config, opts) {
 
     self.drainSignalHandler = new DrainSignalHandler({
         logger: self.logger,
-
-        // TODO: so naughty
-        tchannel: self.tchannel,
+        worker: self,
         statsd: self.clients.statsd,
         drainTimeout: self.serviceProxy.drainTimeout
     });
