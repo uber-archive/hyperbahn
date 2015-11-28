@@ -120,10 +120,10 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     }
     self.isBootstrapped = true;
 
-    // necessary to expose app through repl
-    self.clients.repl.setApp(self);
     self.setupServices();
 
+    // necessary to expose app through repl
+    self.clients.repl.setApp(self);
     self.clients.setup(onClientsSetup);
 
     function onClientsSetup(err) {
