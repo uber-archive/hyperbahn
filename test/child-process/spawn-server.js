@@ -93,9 +93,7 @@ test('spin up autobahn', function t(assert) {
         var portJSON = JSON.parse(portLine);
         assert.ok(portJSON.serverAddress);
 
-        var portNum = portJSON.serverAddress.port;
-
-        var host = '127.0.0.1:' + portNum;
+        var host = portJSON.serverAddress;
         autobahnClient.waitForIdentified({
             host: host
         }, function onIdentified(err) {
