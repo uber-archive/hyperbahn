@@ -28,6 +28,7 @@ var process = require('process');
 
 var setupEndpoints = require('../endpoints/');
 var DiscoveryWorkerClients = require('../clients/');
+var DrainSignalHandler = require('./drain-signal-handler.js');
 
 var ExitNode = require('../exit.js');
 var EntryNode = require('../entry.js');
@@ -71,9 +72,14 @@ function DiscoveryWorker(config, opts) {
     self.services = null;
     self.logger = self.clients.logger;
     self.tchannel = self.clients.tchannel;
-    self.drainDeadlineTimer = null;
-    self.drainStart = null;
-    self.drainEnd = null;
+
+    self.drainSignalHandler = new DrainSignalHandler({
+        logger: self.logger,
+        tchannel: self.tchannel,
+        statsd: self.clients.statsd,
+        drainTimeout: self.clients.serviceProxy.drainTimeout
+    });
+    self.drainSignalHandler.once('shutdown', shutdown);
 
     self.tchannel.drainExempt = function isReqDrainExempt(req) {
         if (req.serviceName === 'ringpop' ||
@@ -95,9 +101,20 @@ function DiscoveryWorker(config, opts) {
     // we set this to true. Then we don't throw a 'double
     // destroy' error in destroy().
     self.forceDestroyed = false;
+
+    function shutdown() {
+        self.destroy();
+    }
 }
 
 inherits(DiscoveryWorker, EventEmitter);
+
+DiscoveryWorker.prototype.hookupSignals =
+function hookupSignals() {
+    var self = this;
+
+    self.drainSignalHandler.hookupSignals();
+};
 
 DiscoveryWorker.prototype.setupServices = function setupServices() {
     var self = this;
@@ -133,15 +150,6 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
 
         cb(null);
     }
-};
-
-DiscoveryWorker.prototype.extendLogInfo =
-function extendLogInfo(info) {
-    var self = this;
-
-    info = self.tchannel.extendLogInfo(info);
-
-    return info;
 };
 
 // TODO: remove, unecessary
