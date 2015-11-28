@@ -30,13 +30,13 @@ function ExitNode(worker) {
     }
     var self = this;
 
-    self.tchannel = worker.tchannel;
+    self.serviceProxy = worker.serviceProxy;
 }
 
 ExitNode.prototype.getServiceConnections =
 function getServiceConnections(serviceName) {
     var self = this;
-    var svcchan = self.tchannel.handler.getServiceChannel(serviceName);
+    var svcchan = self.serviceProxy.getServiceChannel(serviceName);
     var connectedHostPorts = {};
     if (svcchan) {
         svcchan.peers.entries().forEach(function each(ent) {
