@@ -109,7 +109,16 @@ function partialBootstrap(listener) {
     self.isBootstrapped = true;
 
     self.setupServices();
-    self.clients.setupChannel(onReady);
+
+    self.clients.setup(onSetup);
+
+    function onSetup(err) {
+        if (err) {
+            return self.emit('error', err);
+        }
+
+        self.clients.setupChannel(onReady);
+    }
 
     function onReady(err) {
         if (err) {

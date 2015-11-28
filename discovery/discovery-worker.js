@@ -124,7 +124,15 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     self.clients.repl.setApp(self);
     self.setupServices();
 
-    self.clients.setupChannel(onChannel);
+    self.clients.setup(onClientsSetup);
+
+    function onClientsSetup(err) {
+        if (err) {
+            return cb(err);
+        }
+
+        self.clients.setupChannel(onChannel);
+    }
 
     function onChannel(err) {
         if (err) {

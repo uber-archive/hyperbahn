@@ -286,30 +286,43 @@ function loadHostListFile(bootFile) {
     return null;
 };
 
+ApplicationClients.prototype.setup =
+function setup(cb) {
+    var self = this;
+
+    var counter = 2;
+
+    self.processReporter.bootstrap();
+    self.repl.start();
+
+    self._controlServer.listen(self._controlPort, next);
+
+    if (self.logger.bootstrap) {
+        self.logger.bootstrap(next);
+    } else {
+        next(null);
+    }
+
+    function next(err) {
+        if (err) {
+            counter = 0;
+            return cb(err);
+        }
+
+        if (--counter === 0) {
+            return cb(null);
+        }
+    }
+};
+
 ApplicationClients.prototype.setupChannel =
 function setupChannel(cb) {
     var self = this;
 
     assert(typeof cb === 'function', 'cb required');
 
-    var listenReady = CountedReadySignal(4);
-    listenReady(cb);
-
-    self.processReporter.bootstrap();
-
-    self.tchannel.on('listening', listenReady.signal);
+    self.tchannel.on('listening', cb);
     self.tchannel.listen(self._port, self._host);
-
-    self.repl.once('listening', listenReady.signal);
-    self.repl.start();
-
-    if (self.logger.bootstrap) {
-        self.logger.bootstrap(listenReady.signal);
-    } else {
-        listenReady.signal();
-    }
-
-    self._controlServer.listen(self._controlPort, listenReady.signal);
 };
 
 ApplicationClients.prototype.setupRingpop =
