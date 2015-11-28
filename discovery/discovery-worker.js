@@ -28,6 +28,7 @@ var assert = require('assert');
 var setupEndpoints = require('../endpoints/');
 var DiscoveryWorkerClients = require('../clients/');
 var DrainSignalHandler = require('./drain-signal-handler.js');
+var RemoteConfigUpdater = require('./remote-config-update.js');
 
 var ExitNode = require('../exit.js');
 var EntryNode = require('../entry.js');
@@ -87,6 +88,17 @@ function DiscoveryWorker(config, opts) {
     // destroy' error in destroy().
     self.forceDestroyed = false;
     self.services = {};
+
+    self.remoteConfigUpdate = new RemoteConfigUpdater(self);
+
+    self.clients.remoteConfig.on('update', onRemoteConfigUpdate);
+    self.clients.remoteConfig.loadSync();
+    onRemoteConfigUpdate();
+    self.clients.remoteConfig.startPolling();
+
+    function onRemoteConfigUpdate() {
+        self.remoteConfigUpdate.onRemoteConfigUpdate();
+    }
 
     function shutdown() {
         self.destroy();
@@ -169,5 +181,6 @@ DiscoveryWorker.prototype.destroy = function destroy(opts) {
 
     self.destroyed = true;
 
+    self.remoteConfigUpdate.destroy();
     self.clients.destroy();
 };

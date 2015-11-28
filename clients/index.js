@@ -234,15 +234,6 @@ function ApplicationClients(options) {
         logger: self.logger,
         logError: config.get('clients.remote-config.logError')
     });
-    self.remoteConfig.on('update', onRemoteConfigUpdate);
-    // initlialize to default
-    self.remoteConfig.loadSync();
-    self.onRemoteConfigUpdate();
-    self.remoteConfig.startPolling();
-
-    function onRemoteConfigUpdate() {
-        self.onRemoteConfigUpdate();
-    }
 }
 
 ApplicationClients.prototype.loadHostList =
@@ -362,7 +353,6 @@ ApplicationClients.prototype.destroy = function destroy() {
         self.tchannel.close();
     }
     self.processReporter.destroy();
-    self.tchannel.timers.clearTimeout(self.lazyTimeout);
     self.batchStats.destroy();
 
     self.repl.close();
@@ -371,13 +361,4 @@ ApplicationClients.prototype.destroy = function destroy() {
     if (self.logger.destroy) {
         self.logger.destroy();
     }
-};
-
-ApplicationClients.prototype.updateMaxTombstoneTTL =
-function updateMaxTombstoneTTL() {
-    var self = this;
-
-    var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
-
-    self.tchannel.setMaxTombstoneTTL(ttl);
 };
