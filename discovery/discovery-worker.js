@@ -65,19 +65,8 @@ function DiscoveryWorker(config, opts) {
         config: config,
         argv: opts.argv,
         seedClients: self.seedClients,
-        processTitle: opts.processTitle,
-
-        serviceReqDefaults: opts.serviceReqDefaults,
-        servicePurgePeriod: opts.servicePurgePeriod,
-        period: opts.period,
-        maxErrorRate: opts.maxErrorRate,
-        minRequests: opts.minRequests,
-        probation: opts.probation,
-        defaultTotalKillSwitchBuffer: opts.defaultTotalKillSwitchBuffer,
-        rateLimiterBuckets: opts.rateLimiterBuckets,
-        testChannelConfigOverlay: opts.channelTestConfigOverlay
+        processTitle: opts.processTitle
     });
-    self.services = null;
     self.logger = self.clients.logger;
 
     self.tchannel = TChannel(extendInto({
