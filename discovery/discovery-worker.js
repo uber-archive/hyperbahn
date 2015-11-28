@@ -92,15 +92,12 @@ function DiscoveryWorker(config, opts) {
     };
 
     self.isBootstrapped = false;
-
-    // internal because its already deprecated
-    self._controlServer = null;
-
     self.destroyed = false;
     // When we need to force destroy an app to test something,
     // we set this to true. Then we don't throw a 'double
     // destroy' error in destroy().
     self.forceDestroyed = false;
+    self.services = {};
 
     function shutdown() {
         self.destroy();
@@ -116,16 +113,6 @@ function hookupSignals() {
     self.drainSignalHandler.hookupSignals();
 };
 
-DiscoveryWorker.prototype.setupServices = function setupServices() {
-    var self = this;
-
-    self.services = {};
-    self.services.exitNode = ExitNode(self.clients);
-    self.services.entryNode = EntryNode(self.clients);
-
-    setupEndpoints(self.clients, self.services);
-};
-
 DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
 
@@ -134,7 +121,10 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     }
     self.isBootstrapped = true;
 
-    self.setupServices();
+    self.services.exitNode = ExitNode(self.clients);
+    self.services.entryNode = EntryNode(self.clients);
+
+    setupEndpoints(self.clients, self.services);
 
     self.clients.bootstrap(onClientsReady);
 
