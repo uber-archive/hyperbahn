@@ -29,19 +29,19 @@ function DiscoveryBridge(discoveryWorker) {
 
     var self = this;
 
-    self._worker = discoveryWorker;
+    self._discoveryWorker = discoveryWorker;
 }
 
 DiscoveryBridge.prototype.createLogger =
 function createLogger() {
     var self = this;
 
-    return self._worker.logger;
+    return self._discoveryWorker.logger;
 };
 
 DiscoveryBridge.prototype.createBatchStats =
 function createBatchStats() {
     var self = this;
 
-    return self._worker.clients.batchStats;
+    return self._discoveryWorker.clients.batchStats;
 };

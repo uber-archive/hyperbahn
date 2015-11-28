@@ -577,7 +577,7 @@ function checkExitPeers(assert, opts) {
         .exitsFor(opts.serviceName);
 
     var exitApps = self.apps.filter(function isExit(someApp) {
-        return !!exitShard[someApp.tchannel.hostPort];
+        return !!exitShard[someApp.hostPort];
     });
 
     if (opts.blackList) {

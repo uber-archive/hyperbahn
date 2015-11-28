@@ -33,7 +33,7 @@ allocCluster.test('can verify the repl', {
     var addr = repl.socketServer.address();
 
     var socket = net.connect(addr.port, 'localhost');
-    socket.write('app().tchannel.hostPort\n');
+    socket.write('app().hostPort\n');
     socket.end();
 
     var lines = [];

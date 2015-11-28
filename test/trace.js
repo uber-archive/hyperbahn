@@ -40,9 +40,9 @@ allocCluster.test('tracer picks up advertise and forward', {
         .exitsFor(steve.serviceName);
 
     var nonSteveExits = cluster.apps.filter(function isExit(someApp) {
-        return !steveExits[someApp.tchannel.hostPort];
+        return !steveExits[someApp.hostPort];
     }).map(function pluckHostPort(someApp) {
-        return someApp.tchannel.hostPort;
+        return someApp.hostPort;
     });
 
     var tcReporter = TCReporter({

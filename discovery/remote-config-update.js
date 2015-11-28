@@ -30,6 +30,8 @@ function RemoteConfigUpdater(worker) {
     var self = this;
 
     self.remoteConfig = worker.clients.remoteConfig;
+    // TODO: remove naughty naughty
+    self.tchannel = worker._proxyChannel;
     self.clients = worker.clients;
     self.worker = worker;
 
@@ -40,7 +42,7 @@ RemoteConfigUpdater.prototype.destroy =
 function destroy() {
     var self = this;
 
-    self.worker.tchannel.timers.clearTimeout(self.lazyTimeout);
+    self.tchannel.timers.clearTimeout(self.lazyTimeout);
 };
 
 RemoteConfigUpdater.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
@@ -86,25 +88,25 @@ function setMaximumRelayTTL() {
     var maximumRelayTTL = self.remoteConfig.get(
         'relay.maximum-ttl', 2 * 60 * 1000
     );
-    self.worker.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+    self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
 };
 
 RemoteConfigUpdater.prototype.updateLazyHandling = function updateLazyHandling() {
     var self = this;
     var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
-    self.worker.tchannel.setLazyRelaying(enabled);
+    self.tchannel.setLazyRelaying(enabled);
 
-    self.worker.tchannel.timers.clearTimeout(self.lazyTimeout);
+    self.tchannel.timers.clearTimeout(self.lazyTimeout);
 
     if (enabled === false) {
-        self.worker.tchannel.timers.clearTimeout(self.lazyTimeout);
-        self.lazyTimeout = self.worker.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
+        self.tchannel.timers.clearTimeout(self.lazyTimeout);
+        self.lazyTimeout = self.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
     } else {
-        self.worker.tchannel.setLazyHandling(enabled);
+        self.tchannel.setLazyHandling(enabled);
     }
 
     function turnOffLazyHandling() {
-        self.worker.tchannel.setLazyHandling(enabled);
+        self.tchannel.setLazyHandling(enabled);
     }
 };
 
@@ -220,5 +222,5 @@ function updateMaxTombstoneTTL() {
 
     var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
 
-    self.worker.tchannel.setMaxTombstoneTTL(ttl);
+    self.tchannel.setMaxTombstoneTTL(ttl);
 };

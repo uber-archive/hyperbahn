@@ -242,7 +242,7 @@ function checkAllExitPeers(cluster, assert, isDead) {
         var app = cluster.apps[0];
         var exitShard = app.clients.egressNodes.exitsFor(alice.serviceName);
         var exitApps = cluster.apps.filter(function isExit(someApp) {
-            return !!exitShard[someApp.tchannel.hostPort];
+            return !!exitShard[someApp.hostPort];
         });
 
         var peersInfo = {
@@ -255,7 +255,7 @@ function checkAllExitPeers(cluster, assert, isDead) {
         };
 
         exitApps.forEach(function anyAppPeerInfo(exitApp) {
-            var peer = exitApp.tchannel.peers.get(alice.hostPort);
+            var peer = exitApp.routingBridge.unsafeGetPeer(alice.hostPort);
             if (!peer) {
                 return;
             }

@@ -177,7 +177,7 @@ function checkExitPeers(assert, opts) {
         expectedConnectedOut = false;
     }
 
-    var peer = self.tchannel.peers.get(opts.hostPort);
+    var peer = self.routingBridge.unsafeGetPeer(opts.hostPort);
     var peerInfo = peer && getPeerInfo(peer);
 
     if (opts.isDead) {

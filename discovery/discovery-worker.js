@@ -76,14 +76,14 @@ function DiscoveryWorker(config, opts) {
     self.routingBridge = RoutingBridge(router);
 
     // TODO: holy batman. so naughty.
-    self.tchannel = router.tchannel;
+    self._proxyChannel = router.tchannel;
 
     // Circuit health monitor and control
     var circuitsConfig = config.get('hyperbahn.circuits');
 
     var serviceProxyOpts = {
         // TODO: holy batman, so naughty
-        channel: self.tchannel,
+        channel: self._proxyChannel,
         logger: self.logger,
         statsd: self.clients.statsd,
         batchStats: self.clients.batchStats,
@@ -102,10 +102,10 @@ function DiscoveryWorker(config, opts) {
     self.serviceProxy = ServiceProxy(serviceProxyOpts);
 
     // TODO: so naughty
-    self.tchannel.handler = self.serviceProxy;
+    self._proxyChannel.handler = self.serviceProxy;
 
     // TODO: so naughty
-    self.autobahnChannel = self.tchannel.makeSubChannel({
+    self.autobahnChannel = self._proxyChannel.makeSubChannel({
         serviceName: 'autobahn'
     });
 
@@ -144,6 +144,13 @@ function DiscoveryWorker(config, opts) {
 }
 inherits(DiscoveryWorker, EventEmitter);
 
+DiscoveryWorker.prototype.address =
+function address() {
+    var self = this;
+
+    return self._proxyChannel.address();
+};
+
 DiscoveryWorker.prototype.hookupSignals =
 function hookupSignals() {
     var self = this;
@@ -157,7 +164,7 @@ function setupServices() {
 
     var hyperbahnTimeouts = self.config.get('hyperbahn.timeouts');
     // TODO: naughty, dont touch self.tchannel
-    var hyperbahnChannel = self.tchannel.makeSubChannel({
+    var hyperbahnChannel = self._proxyChannel.makeSubChannel({
         serviceName: 'hyperbahn',
         trace: false
     });
@@ -242,7 +249,7 @@ function setupRingpop(hostPortList, cb) {
     var self = this;
 
     // TODO: naughty ringpop coupling
-    var ringpopChannel = self.tchannel.makeSubChannel({
+    var ringpopChannel = self._proxyChannel.makeSubChannel({
         trace: false,
         serviceName: 'ringpop'
     });

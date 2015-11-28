@@ -29,7 +29,7 @@ function RoutingBridge(routingWorker) {
 
     var self = this;
 
-    self._worker = routingWorker;
+    self._routingWorker = routingWorker;
     self.draining = false;
 
 }
@@ -37,36 +37,50 @@ function RoutingBridge(routingWorker) {
 RoutingBridge.prototype.listen = function listen(port, host, cb) {
     var self = this;
 
-    self._worker.tchannel.on('listening', onListening);
-    self._worker.tchannel.listen(port, host);
+    self._routingWorker.tchannel.on('listening', onListening);
+    self._routingWorker.tchannel.listen(port, host);
 
     function onListening() {
-        cb(null, self._worker.tchannel.hostPort);
+        cb(null, self._routingWorker.tchannel.hostPort);
     }
 };
 
 RoutingBridge.prototype.extendLogInfo = function extendLogInfo(info) {
     var self = this;
 
-    return self._worker.tchannel.extendLogInfo(info);
+    return self._routingWorker.tchannel.extendLogInfo(info);
 };
 
 RoutingBridge.prototype.destroy = function destroy() {
     var self = this;
 
-    if (!self._worker.tchannel.destroyed) {
-        self._worker.tchannel.close();
+    if (!self._routingWorker.tchannel.destroyed) {
+        self._routingWorker.tchannel.close();
     }
 };
 
 RoutingBridge.prototype.isDraining = function isDraining() {
     var self = this;
 
-    return self._worker.tchannel.draining;
+    return self._routingWorker.tchannel.draining;
 };
 
 RoutingBridge.prototype.drain = function drain(message, cb) {
     var self = this;
 
-    return self._worker.tchannel.drain(message, cb);
+    return self._routingWorker.tchannel.drain(message, cb);
+};
+
+RoutingBridge.prototype.unsafeGetPeer =
+function unsafeGetPeer(hostPort) {
+    var self = this;
+
+    return self._routingWorker.tchannel.peers.get(hostPort);
+};
+
+RoutingBridge.prototype.unsafeGetRateLimiter =
+function unsafeGetRateLimiter(hostPort) {
+    var self = this;
+
+    return self._routingWorker.tchannel.handler.rateLimiter;
 };
