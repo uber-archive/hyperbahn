@@ -613,6 +613,26 @@ function deletePeerIndex(serviceName, hostPort) {
     deleteIndexEntry(self.knownPeers, hostPort, serviceName);
 };
 
+ServiceDispatchHandler.prototype.channelInfos =
+function channelInfos() {
+    var self = this;
+
+    var tchannel = self.channel;
+
+    var channels = {};
+    Object.keys(tchannel.subChannels)
+    .forEach(function eachService(serviceName) {
+        var channel = tchannel.subChannels[serviceName];
+        channels[serviceName] = {
+            serviceName: serviceName,
+            handlerType: channel.handler.type,
+            mode: channel.options && channel.options.autobahnMode
+        };
+    });
+
+    return channels;
+};
+
 ServiceDispatchHandler.prototype.ensurePeerConnected =
 function ensurePeerConnected(serviceName, peer, reason, now) {
     var self = this;

@@ -23,18 +23,9 @@
 module.exports = channelsEndpoint;
 
 function channelsEndpoint(opts, req, head, body, cb) {
-    var tchannel = opts.worker.tchannel;
+    var serviceProxy = opts.worker.serviceProxy;
 
-    var channels = {};
-    Object.keys(tchannel.subChannels)
-    .forEach(function eachService(serviceName) {
-        var channel = tchannel.subChannels[serviceName];
-        channels[serviceName] = {
-            serviceName: serviceName,
-            handlerType: channel.handler.type,
-            mode: channel.options && channel.options.autobahnMode
-        };
-    });
+    var channels = serviceProxy.channelInfos();
 
     cb(null, {
         ok: true,
