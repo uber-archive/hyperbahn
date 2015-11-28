@@ -338,21 +338,6 @@ function setupRingpop(cb) {
     }
 };
 
-ApplicationClients.prototype.bootstrap =
-function bootstrap(cb) {
-    var self = this;
-
-    self.setupChannel(setupDone);
-
-    function setupDone(err) {
-        if (err) {
-            cb(err);
-        }
-
-        self.setupRingpop(cb);
-    }
-};
-
 ApplicationClients.prototype.destroy = function destroy() {
     var self = this;
 

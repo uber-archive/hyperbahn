@@ -102,6 +102,16 @@ function hookupSignals() {
     self.drainSignalHandler.hookupSignals();
 };
 
+DiscoveryWorker.prototype.setupServices =
+function setupServices() {
+    var self = this;
+
+    self.services.exitNode = ExitNode(self.clients);
+    self.services.entryNode = EntryNode(self.clients);
+
+    setupEndpoints(self.clients, self.services);
+};
+
 DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
 
@@ -110,12 +120,19 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     }
     self.isBootstrapped = true;
 
-    self.services.exitNode = ExitNode(self.clients);
-    self.services.entryNode = EntryNode(self.clients);
+    // necessary to expose app through repl
+    self.clients.repl.setApp(self);
+    self.setupServices();
 
-    setupEndpoints(self.clients, self.services);
+    self.clients.setupChannel(onChannel);
 
-    self.clients.bootstrap(onClientsReady);
+    function onChannel(err) {
+        if (err) {
+            return cb(err);
+        }
+
+        self.clients.setupRingpop(onClientsReady);
+    }
 
     function onClientsReady(err) {
         /* istanbul ignore next */
@@ -123,9 +140,6 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
             err = DiscoveryWorkerClientsFailureError(err);
             return cb(err);
         }
-
-        // necessary to expose app through repl
-        self.clients.repl.setApp(self);
 
         cb(null);
     }
