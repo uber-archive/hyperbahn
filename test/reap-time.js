@@ -73,14 +73,14 @@ allocCluster.test('make sure peer reaper doesnt take too long', {
         console.log('# done creating remotes');
         cassert.report(assert, 'remote creation successful');
 
-        apiExitNode.clients.serviceProxy.reapPeers(doneFirstReapPeers);
+        apiExitNode.serviceProxy.reapPeers(doneFirstReapPeers);
     }
 
     var start;
 
     function doneFirstReapPeers() {
         start = Date.now();
-        apiExitNode.clients.serviceProxy.reapPeers(doneSecondReapPeers);
+        apiExitNode.serviceProxy.reapPeers(doneSecondReapPeers);
 
         var time = Date.now() - start;
         console.log('# after reap peers', time);

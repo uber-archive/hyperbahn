@@ -41,7 +41,7 @@ module.exports.enableHandler = enableHandler;
 module.exports.totalLimitHandler = totalLimitHandler;
 
 function queryHandler(opts, req, head, body, cb) {
-    var serviceProxy = opts.clients.serviceProxy;
+    var serviceProxy = opts.worker.serviceProxy;
     var rateLimiter = serviceProxy.rateLimiter;
 
     return cb(null, {
@@ -60,7 +60,7 @@ function queryHandler(opts, req, head, body, cb) {
 
 function exemptHandler(opts, req, head, body, cb) {
     /*eslint complexity: 0*/
-    var serviceProxy = opts.clients.serviceProxy;
+    var serviceProxy = opts.worker.serviceProxy;
     var rateLimiter = serviceProxy.rateLimiter;
 
     if (!body) {
@@ -99,7 +99,7 @@ function exemptHandler(opts, req, head, body, cb) {
 
 function limitHandler(opts, req, head, body, cb) {
     /*eslint complexity: 0*/
-    var serviceProxy = opts.clients.serviceProxy;
+    var serviceProxy = opts.worker.serviceProxy;
     var rateLimiter = serviceProxy.rateLimiter;
 
     if (!body) {
@@ -135,7 +135,7 @@ function limitHandler(opts, req, head, body, cb) {
 
 function enableHandler(opts, req, head, body, cb) {
     /*eslint complexity: 0*/
-    var serviceProxy = opts.clients.serviceProxy;
+    var serviceProxy = opts.worker.serviceProxy;
 
     if (!body) {
         return cb(null, {
@@ -170,7 +170,7 @@ function enableHandler(opts, req, head, body, cb) {
 
 function totalLimitHandler(opts, req, head, body, cb) {
     /*eslint complexity: 0*/
-    var serviceProxy = opts.clients.serviceProxy;
+    var serviceProxy = opts.worker.serviceProxy;
     var rateLimiter = serviceProxy.rateLimiter;
 
     if (body && typeof body.limit === 'number') {

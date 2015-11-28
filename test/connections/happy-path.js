@@ -35,7 +35,7 @@ allocCluster.test('find connections for service', {
     var apps = cluster.apps;
     var dummies = cluster.dummies;
     var entryNode = apps[0];
-    var isPartial = entryNode.clients.serviceProxy.partialAffinityEnabled;
+    var isPartial = entryNode.serviceProxy.partialAffinityEnabled;
 
     setup();
 
@@ -131,7 +131,7 @@ function pruneClusterPears(cluster, assert, callback) {
     collectParallel(
         cluster.apps,
         function pruneEach(app, i, done) {
-            var serviceProxy = app.clients.serviceProxy;
+            var serviceProxy = app.serviceProxy;
             serviceProxy.peerPruner.run(done);
         },
         function finish(_, results) {

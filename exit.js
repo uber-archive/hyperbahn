@@ -24,12 +24,13 @@ var getPeerInfo = require('./peer-info.js');
 
 module.exports = ExitNode;
 
-function ExitNode(clients) {
+function ExitNode(worker) {
     if (!(this instanceof ExitNode)) {
-        return new ExitNode(clients);
+        return new ExitNode(worker);
     }
     var self = this;
-    self.tchannel = clients.tchannel;
+
+    self.tchannel = worker.tchannel;
 }
 
 ExitNode.prototype.getServiceConnections =

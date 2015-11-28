@@ -38,7 +38,7 @@ var InvalidRequest = TypedError({
 module.exports = killSwitch;
 
 function killSwitch(opts, req, head, body, cb) {
-    var serviceProxy = opts.clients.serviceProxy;
+    var serviceProxy = opts.worker.serviceProxy;
 
     if (!body) {
         return cb(null, {

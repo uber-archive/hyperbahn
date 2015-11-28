@@ -117,7 +117,8 @@ function partialBootstrap(listener) {
             return self.emit('error', err);
         }
 
-        self.clients.setupChannel(onReady);
+        self.tchannel.on('listening', onReady);
+        self.tchannel.listen(self.clients._port, self.clients._host);
     }
 
     function onReady(err) {
@@ -173,8 +174,8 @@ function checkExitPeers(assert, opts) {
     // By default we expect all connections to be connected
     var expectedConnectedOut = true;
 
-    if (self.clients.serviceProxy.partialAffinityEnabled) {
-        var range = self.clients.serviceProxy.getPartialRange(opts.serviceName, 'test expectation');
+    if (self.serviceProxy.partialAffinityEnabled) {
+        var range = self.serviceProxy.getPartialRange(opts.serviceName, 'test expectation');
         if (!range) {
             assert.fail('unable to get partial affinity range');
             return;

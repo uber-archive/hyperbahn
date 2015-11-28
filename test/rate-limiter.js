@@ -58,7 +58,7 @@ allocCluster.test('rps counter works', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.clients.serviceProxy.rateLimiter;
+    var rateLimiter = app.serviceProxy.rateLimiter;
     var statsd = app.clients.statsd;
 
     increment(rateLimiter, 'steve', 'bob');
@@ -103,7 +103,7 @@ allocCluster.test('rps counter works in 1.5 seconds', {
     ]
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.clients.serviceProxy.rateLimiter;
+    var rateLimiter = app.serviceProxy.rateLimiter;
     var statsd = app.clients.statsd;
 
     series([
@@ -236,7 +236,7 @@ allocCluster.test('remove counter works', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.clients.serviceProxy.rateLimiter;
+    var rateLimiter = app.serviceProxy.rateLimiter;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -267,7 +267,7 @@ allocCluster.test('rate limit works', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.clients.serviceProxy.rateLimiter;
+    var rateLimiter = app.serviceProxy.rateLimiter;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -306,7 +306,7 @@ allocCluster.test('rate exempt service works 1', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.clients.serviceProxy.rateLimiter;
+    var rateLimiter = app.serviceProxy.rateLimiter;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -341,7 +341,7 @@ allocCluster.test('rate exempt service works 2', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.clients.serviceProxy.rateLimiter;
+    var rateLimiter = app.serviceProxy.rateLimiter;
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');

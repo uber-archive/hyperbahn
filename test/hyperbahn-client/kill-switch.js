@@ -25,7 +25,7 @@ var TestCluster = require('../lib/test-cluster.js');
 TestCluster.test('set cn/service', {
     size: 1
 }, function t(cluster, assert) {
-    var proxy = cluster.apps[0].clients.serviceProxy;
+    var proxy = cluster.apps[0].serviceProxy;
 
     assert.equals(proxy.blockingTable, undefined, 'blocking table should be undefined');
     proxy.block('client1', 'service1');
@@ -50,7 +50,7 @@ TestCluster.test('set cn/service', {
 TestCluster.test('clear cn/service', {
     size: 1
 }, function t(cluster, assert) {
-    var proxy = cluster.apps[0].clients.serviceProxy;
+    var proxy = cluster.apps[0].serviceProxy;
 
     assert.equals(proxy.blockingTable, undefined, 'blocking table should be undefined');
     proxy.block('client1', 'service1');

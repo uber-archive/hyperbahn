@@ -87,7 +87,7 @@ TimeSeriesCluster.test('testing worker with low rate limit', {
     var apps = cluster._cluster.getExitNodes('time-series-server');
 
     // Set rate on a single Hyperbahn worker
-    apps[0].clients .serviceProxy
+    apps[0].serviceProxy
         .rateLimiter.updateTotalLimit(OVERLOADED_WORKER_RATELIMIT);
 
     // cluster.printBatches();

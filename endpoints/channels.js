@@ -23,7 +23,7 @@
 module.exports = channelsEndpoint;
 
 function channelsEndpoint(opts, req, head, body, cb) {
-    var tchannel = opts.clients.tchannel;
+    var tchannel = opts.worker.tchannel;
 
     var channels = {};
     Object.keys(tchannel.subChannels)

@@ -24,11 +24,15 @@ var inherits = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 var WrappedError = require('error/wrapped');
 var assert = require('assert');
+var TChannel = require('tchannel');
+var extendInto = require('xtend/mutable');
 
 var setupEndpoints = require('../endpoints/');
 var DiscoveryWorkerClients = require('../clients/');
 var DrainSignalHandler = require('./drain-signal-handler.js');
 var RemoteConfigUpdater = require('./remote-config-update.js');
+var HyperbahnHandler = require('../handler.js');
+var ServiceProxy = require('../service-proxy.js');
 
 var ExitNode = require('../exit.js');
 var EntryNode = require('../entry.js');
@@ -41,6 +45,7 @@ var DiscoveryWorkerClientsFailureError = WrappedError({
 module.exports = DiscoveryWorker;
 
 function DiscoveryWorker(config, opts) {
+    /*eslint max-statements: [2, 50] */
     if (!(this instanceof DiscoveryWorker)) {
         return new DiscoveryWorker(config, opts);
     }
@@ -53,6 +58,7 @@ function DiscoveryWorker(config, opts) {
     self.seedClients = opts.clients || {};
     assert(opts.argv, 'opts.argv is required');
 
+    self.config = config;
     self.clients = DiscoveryWorkerClients({
         config: config,
         argv: opts.argv,
@@ -71,13 +77,51 @@ function DiscoveryWorker(config, opts) {
     });
     self.services = null;
     self.logger = self.clients.logger;
-    self.tchannel = self.clients.tchannel;
+
+    self.tchannel = TChannel(extendInto({
+        logger: self.logger,
+        batchStats: self.clients.batchStats,
+        trace: false,
+        emitConnectionMetrics: false,
+        connectionStalePeriod: 1.5 * 1000,
+        useLazyRelaying: false,
+        useLazyHandling: false
+    }, opts.testChannelConfigOverlay));
+
+    // Circuit health monitor and control
+    var circuitsConfig = config.get('hyperbahn.circuits');
+
+    var serviceProxyOpts = {
+        channel: self.tchannel,
+        logger: self.logger,
+        statsd: self.clients.statsd,
+        batchStats: self.clients.batchStats,
+        egressNodes: self.clients.egressNodes,
+        servicePurgePeriod: opts.servicePurgePeriod,
+        serviceReqDefaults: opts.serviceReqDefaults,
+        rateLimiterEnabled: false,
+        defaultTotalKillSwitchBuffer: opts.defaultTotalKillSwitchBuffer,
+        rateLimiterBuckets: opts.rateLimiterBuckets,
+        circuitsConfig: circuitsConfig,
+        partialAffinityEnabled: false,
+        minPeersPerRelay: opts.minPeersPerRelay,
+        minPeersPerWorker: opts.minPeersPerWorker
+    };
+
+    self.serviceProxy = ServiceProxy(serviceProxyOpts);
+    self.tchannel.handler = self.serviceProxy;
+
+    self.tchannel.drainExempt = isReqDrainExempt;
+
+    self.autobahnChannel = self.tchannel.makeSubChannel({
+        serviceName: 'autobahn'
+    });
 
     self.drainSignalHandler = new DrainSignalHandler({
         logger: self.logger,
         tchannel: self.tchannel,
         statsd: self.clients.statsd,
-        drainTimeout: self.clients.serviceProxy.drainTimeout
+        drainTimeout: self.serviceProxy.drainTimeout
     });
     self.drainSignalHandler.once('shutdown', shutdown);
 
@@ -104,8 +148,17 @@ function DiscoveryWorker(config, opts) {
         self.destroy();
     }
 }
-
 inherits(DiscoveryWorker, EventEmitter);
+
+function isReqDrainExempt(req) {
+    if (req.serviceName === 'ringpop' ||
+        req.serviceName === 'autobahn'
+    ) {
+        return true;
+    }
+
+    return false;
+}
 
 DiscoveryWorker.prototype.hookupSignals =
 function hookupSignals() {
@@ -118,10 +171,23 @@ DiscoveryWorker.prototype.setupServices =
 function setupServices() {
     var self = this;
 
-    self.services.exitNode = ExitNode(self.clients);
-    self.services.entryNode = EntryNode(self.clients);
+    var hyperbahnTimeouts = self.config.get('hyperbahn.timeouts');
+    var hyperbahnChannel = self.tchannel.makeSubChannel({
+        serviceName: 'hyperbahn',
+        trace: false
+    });
+    var hyperbahnHandler = HyperbahnHandler({
+        channel: hyperbahnChannel,
+        egressNodes: self.clients.egressNodes,
+        callerName: 'autobahn',
+        relayAdTimeout: hyperbahnTimeouts.relayAdTimeout
+    });
+    hyperbahnChannel.handler = hyperbahnHandler;
 
-    setupEndpoints(self.clients, self.services);
+    self.services.exitNode = ExitNode(self);
+    self.services.entryNode = EntryNode(self.clients, self);
+
+    setupEndpoints(self, hyperbahnChannel);
 };
 
 DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
@@ -143,7 +209,8 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
             return cb(err);
         }
 
-        self.clients.setupChannel(onChannel);
+        self.tchannel.on('listening', onChannel);
+        self.tchannel.listen(self.clients._port, self.clients._host);
     }
 
     function onChannel(err) {
@@ -151,7 +218,7 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
             return cb(err);
         }
 
-        self.clients.setupRingpop(onClientsReady);
+        self.clients.setupRingpop(self.tchannel, onClientsReady);
     }
 
     function onClientsReady(err) {
@@ -182,5 +249,9 @@ DiscoveryWorker.prototype.destroy = function destroy(opts) {
     self.destroyed = true;
 
     self.remoteConfigUpdate.destroy();
+    self.serviceProxy.destroy();
+    if (!self.tchannel.destroyed) {
+        self.tchannel.close();
+    }
     self.clients.destroy();
 };

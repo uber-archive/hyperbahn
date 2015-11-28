@@ -29,22 +29,17 @@ var os = require('os');
 var RingPop = require('ringpop');
 var process = require('process');
 var uncaught = require('uncaught-exception');
-var TChannel = require('tchannel');
-var TChannelAsJSON = require('tchannel/as/json');
-var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
 var ProcessReporter = require('process-reporter');
 var NullStatsd = require('uber-statsd-client/null');
-var extendInto = require('xtend/mutable');
+var TChannelAsJSON = require('tchannel/as/json');
 
-var ServiceProxy = require('../service-proxy.js');
 var createLogger = require('./logger.js');
 var DualStatsd = require('./dual-statsd.js');
 var createRepl = require('./repl.js');
 var HeapDumper = require('./heap-dumper.js');
 var RemoteConfig = require('./remote-config.js');
 var HyperbahnEgressNodes = require('../egress-nodes.js');
-var HyperbahnHandler = require('../handler.js');
 var SocketInspector = require('./socket-inspector.js');
 var HyperbahnBatchStats = require('./batch-stats.js');
 
@@ -106,6 +101,10 @@ function ApplicationClients(options) {
         self.logReservoir = loggerParts.logReservoir;
     }
 
+    self.tchannelJSON = TChannelAsJSON({
+        logger: self.logger
+    });
+
     self.socketInspector = SocketInspector({
         logger: self.logger
     });
@@ -148,80 +147,13 @@ function ApplicationClients(options) {
 
     // Store the tchannel object with its peers on clients
     // Also store a json sender and a raw sender
-    self.tchannel = TChannel(extendInto({
-        logger: self.logger,
-        batchStats: self.batchStats,
-        trace: false,
-        emitConnectionMetrics: false,
-        connectionStalePeriod: 1.5 * 1000,
-        useLazyRelaying: false,
-        useLazyHandling: false
-    }, options.testChannelConfigOverlay));
-
-    self.tchannel.drainExempt = function isReqDrainExempt(req) {
-        if (req.serviceName === 'ringpop' ||
-            req.serviceName === 'autobahn'
-        ) {
-            return true;
-        }
-
-        return false;
-    };
 
     self.autobahnHostPortList = self.loadHostList();
-
-    self.tchannelJSON = TChannelAsJSON({
-        logger: self.logger
-    });
     self.repl = createRepl();
-
-    self.autobahnChannel = self.tchannel.makeSubChannel({
-        serviceName: 'autobahn'
-    });
-    self.ringpopChannel = self.tchannel.makeSubChannel({
-        trace: false,
-        serviceName: 'ringpop'
-    });
 
     self.egressNodes = HyperbahnEgressNodes({
         defaultKValue: 10
     });
-
-    var hyperbahnTimeouts = config.get('hyperbahn.timeouts');
-    self.hyperbahnChannel = self.tchannel.makeSubChannel({
-        serviceName: 'hyperbahn',
-        trace: false
-    });
-    self.hyperbahnHandler = HyperbahnHandler({
-        channel: self.hyperbahnChannel,
-        egressNodes: self.egressNodes,
-        callerName: 'autobahn',
-        relayAdTimeout: hyperbahnTimeouts.relayAdTimeout
-    });
-    self.hyperbahnChannel.handler = self.hyperbahnHandler;
-
-    // Circuit health monitor and control
-    var circuitsConfig = config.get('hyperbahn.circuits');
-
-    var serviceProxyOpts = {
-        channel: self.tchannel,
-        logger: self.logger,
-        statsd: self.statsd,
-        batchStats: self.batchStats,
-        egressNodes: self.egressNodes,
-        servicePurgePeriod: options.servicePurgePeriod,
-        serviceReqDefaults: options.serviceReqDefaults,
-        rateLimiterEnabled: false,
-        defaultTotalKillSwitchBuffer: options.defaultTotalKillSwitchBuffer,
-        rateLimiterBuckets: options.rateLimiterBuckets,
-        circuitsConfig: circuitsConfig,
-        partialAffinityEnabled: false,
-        minPeersPerRelay: options.minPeersPerRelay,
-        minPeersPerWorker: options.minPeersPerWorker
-    };
-
-    self.serviceProxy = ServiceProxy(serviceProxyOpts);
-    self.tchannel.handler = self.serviceProxy;
 
     self.heapDumper = HeapDumper({
         heapFolder: config.get('clients.heapsnapshot').folder,
@@ -306,24 +238,19 @@ function setup(cb) {
     }
 };
 
-ApplicationClients.prototype.setupChannel =
-function setupChannel(cb) {
-    var self = this;
-
-    assert(typeof cb === 'function', 'cb required');
-
-    self.tchannel.on('listening', cb);
-    self.tchannel.listen(self._port, self._host);
-};
-
 ApplicationClients.prototype.setupRingpop =
-function setupRingpop(cb) {
+function setupRingpop(tchannel, cb) {
     var self = this;
+
+    var ringpopChannel = tchannel.makeSubChannel({
+        trace: false,
+        serviceName: 'ringpop'
+    });
 
     self.ringpop = RingPop({
         app: self.projectName,
-        hostPort: self.tchannel.hostPort,
-        channel: self.ringpopChannel,
+        hostPort: tchannel.hostPort,
+        channel: ringpopChannel,
         logger: self.logger,
         statsd: self.statsd,
         pingReqTimeout: self.ringpopTimeouts.pingReqTimeout,
@@ -346,12 +273,8 @@ ApplicationClients.prototype.destroy = function destroy() {
     var self = this;
 
     self.socketInspector.disable();
-    self.serviceProxy.destroy();
     self.remoteConfig.destroy();
     self.ringpop.destroy();
-    if (!self.tchannel.destroyed) {
-        self.tchannel.close();
-    }
     self.processReporter.destroy();
     self.batchStats.destroy();
 

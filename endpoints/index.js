@@ -24,10 +24,11 @@ var TChannelAsThrift = require('tchannel/as/thrift.js');
 
 module.exports = setupEndpoints;
 
-function setupEndpoints(clients, services) {
+function setupEndpoints(worker, hyperbahnChannel) {
     var opts = {
-        clients: clients,
-        services: services
+        clients: worker.clients,
+        worker: worker,
+        services: worker.services
     };
 
     var endpoints = [
@@ -60,8 +61,8 @@ function setupEndpoints(clients, services) {
         var name = pair[0];
         var handle = pair[1];
 
-        clients.tchannelJSON.register(
-            clients.autobahnChannel, name, opts, handle
+        worker.clients.tchannelJSON.register(
+            worker.autobahnChannel, name, opts, handle
         );
 
         // TODO
@@ -75,7 +76,7 @@ function setupEndpoints(clients, services) {
     // thrift health endpoint
     var tchannelAsThrift = new TChannelAsThrift({
         source: '// lul',
-        channel: clients.hyperbahnChannel,
+        channel: hyperbahnChannel,
         isHealthy: require('./health').isHealthy
     });
 }

@@ -8,3 +8,5 @@ benchmarks/*.raw
 benchmarks/*.html
 benchmarks/*.folded
 *.heapsnapshot
+*.txt
+

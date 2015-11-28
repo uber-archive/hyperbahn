@@ -31,6 +31,7 @@ function RemoteConfigUpdater(worker) {
 
     self.remoteConfig = worker.clients.remoteConfig;
     self.clients = worker.clients;
+    self.worker = worker;
 
     self.lazyTimeout = null;
 }
@@ -39,7 +40,7 @@ RemoteConfigUpdater.prototype.destroy =
 function destroy() {
     var self = this;
 
-    self.clients.tchannel.timers.clearTimeout(self.lazyTimeout);
+    self.worker.tchannel.timers.clearTimeout(self.lazyTimeout);
 };
 
 RemoteConfigUpdater.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
@@ -85,25 +86,25 @@ function setMaximumRelayTTL() {
     var maximumRelayTTL = self.remoteConfig.get(
         'relay.maximum-ttl', 2 * 60 * 1000
     );
-    self.clients.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+    self.worker.tchannel.setMaximumRelayTTL(maximumRelayTTL);
 };
 
 RemoteConfigUpdater.prototype.updateLazyHandling = function updateLazyHandling() {
     var self = this;
     var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
-    self.clients.tchannel.setLazyRelaying(enabled);
+    self.worker.tchannel.setLazyRelaying(enabled);
 
-    self.clients.tchannel.timers.clearTimeout(self.lazyTimeout);
+    self.worker.tchannel.timers.clearTimeout(self.lazyTimeout);
 
     if (enabled === false) {
-        self.clients.tchannel.timers.clearTimeout(self.lazyTimeout);
-        self.lazyTimeout = self.clients.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
+        self.worker.tchannel.timers.clearTimeout(self.lazyTimeout);
+        self.lazyTimeout = self.worker.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
     } else {
-        self.clients.tchannel.setLazyHandling(enabled);
+        self.worker.tchannel.setLazyHandling(enabled);
     }
 
     function turnOffLazyHandling() {
-        self.clients.tchannel.setLazyHandling(enabled);
+        self.worker.tchannel.setLazyHandling(enabled);
     }
 };
 
@@ -122,9 +123,9 @@ RemoteConfigUpdater.prototype.updateCircuitsEnabled = function updateCircuitsEna
     var self = this;
     var enabled = self.remoteConfig.get('circuits.enabled', false);
     if (enabled) {
-        self.clients.serviceProxy.enableCircuits();
+        self.worker.serviceProxy.enableCircuits();
     } else {
-        self.clients.serviceProxy.disableCircuits();
+        self.worker.serviceProxy.disableCircuits();
     }
 };
 
@@ -132,9 +133,9 @@ RemoteConfigUpdater.prototype.updateRateLimitingEnabled = function updateRateLim
     var self = this;
     var enabled = self.remoteConfig.get('rateLimiting.enabled', false);
     if (enabled) {
-        self.clients.serviceProxy.enableRateLimiter();
+        self.worker.serviceProxy.enableRateLimiter();
     } else {
-        self.clients.serviceProxy.disableRateLimiter();
+        self.worker.serviceProxy.disableRateLimiter();
     }
 };
 
@@ -142,38 +143,38 @@ RemoteConfigUpdater.prototype.updateReapPeersPeriod =
 function updateReapPeersPeriod() {
     var self = this;
     var period = self.remoteConfig.get('peerReaper.period', 0);
-    self.clients.serviceProxy.setReapPeersPeriod(period);
+    self.worker.serviceProxy.setReapPeersPeriod(period);
 };
 
 RemoteConfigUpdater.prototype.updatePrunePeersPeriod =
 function updatePrunePeersPeriod() {
     var self = this;
     var period = self.remoteConfig.get('peerPruner.period', 0);
-    self.clients.serviceProxy.setPrunePeersPeriod(period);
+    self.worker.serviceProxy.setPrunePeersPeriod(period);
 };
 
 RemoteConfigUpdater.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled() {
     var self = this;
     var enabled = self.remoteConfig.get('partialAffinity.enabled', false);
-    self.clients.serviceProxy.setPartialAffinityEnabled(enabled);
+    self.worker.serviceProxy.setPartialAffinityEnabled(enabled);
 };
 
 RemoteConfigUpdater.prototype.updateTotalRpsLimit = function updateTotalRpsLimit() {
     var self = this;
     var limit = self.remoteConfig.get('rateLimiting.totalRpsLimit', 1200);
-    self.clients.serviceProxy.rateLimiter.updateTotalLimit(limit);
+    self.worker.serviceProxy.rateLimiter.updateTotalLimit(limit);
 };
 
 RemoteConfigUpdater.prototype.updateExemptServices = function updateExemptServices() {
     var self = this;
     var exemptServices = self.remoteConfig.get('rateLimiting.exemptServices', ['autobahn', 'ringpop']);
-    self.clients.serviceProxy.rateLimiter.updateExemptServices(exemptServices);
+    self.worker.serviceProxy.rateLimiter.updateExemptServices(exemptServices);
 };
 
 RemoteConfigUpdater.prototype.updateRpsLimitForServiceName = function updateRpsLimitForServiceName() {
     var self = this;
     var rpsLimitForServiceName = self.remoteConfig.get('rateLimiting.rpsLimitForServiceName', {});
-    self.clients.serviceProxy.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
+    self.worker.serviceProxy.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
 };
 
 RemoteConfigUpdater.prototype.updateKValues = function updateKValues() {
@@ -187,20 +188,20 @@ RemoteConfigUpdater.prototype.updateKValues = function updateKValues() {
         var serviceName = keys[i];
         var kValue = serviceKValues[serviceName];
         self.clients.egressNodes.setKValueFor(serviceName, kValue);
-        self.clients.serviceProxy.updateServiceChannels();
+        self.worker.serviceProxy.updateServiceChannels();
     }
 };
 
 RemoteConfigUpdater.prototype.updateKillSwitches = function updateKillSwitches() {
     var self = this;
-    self.clients.serviceProxy.unblockAllRemoteConfig();
+    self.worker.serviceProxy.unblockAllRemoteConfig();
     var killSwitches = self.remoteConfig.get('killSwitch', []);
 
     for (var i = 0; i < killSwitches.length; i++) {
         var value = killSwitches[i];
         var edge = value.split('~~');
         if (edge.length === 2 && value !== '*~~*') {
-            self.clients.serviceProxy.blockRemoteConfig(edge[0], edge[1]);
+            self.worker.serviceProxy.blockRemoteConfig(edge[0], edge[1]);
         }
     }
 };
@@ -210,7 +211,7 @@ RemoteConfigUpdater.prototype.updatePeerHeapEnabled = function updatePeerHeapEna
     var peerHeapConfig = self.remoteConfig.get('peer-heap.enabled.services', {});
     var peerHeapGlobalConfig = self.remoteConfig.get('peer-heap.enabled.global', false);
 
-    self.clients.serviceProxy.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
+    self.worker.serviceProxy.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
 };
 
 RemoteConfigUpdater.prototype.updateMaxTombstoneTTL =
@@ -219,5 +220,5 @@ function updateMaxTombstoneTTL() {
 
     var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
 
-    self.clients.tchannel.setMaxTombstoneTTL(ttl);
+    self.worker.tchannel.setMaxTombstoneTTL(ttl);
 };

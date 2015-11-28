@@ -62,7 +62,7 @@ allocCluster.test('rate limiter should be configured correclty', {
     setTimeout(check, 20);
     function check() {
         cluster.apps.forEach(function checkApp(app) {
-            var proxy = app.clients.serviceProxy;
+            var proxy = app.serviceProxy;
             var rateLimiter = proxy.rateLimiter;
             assert.ok(proxy.rateLimiterEnabled, 'should be enabled');
             assert.equals(rateLimiter.totalRpsLimit, 1201, 'totalRpsLimit should be set');
@@ -103,7 +103,7 @@ allocCluster.test('rate limiter should handle the case when a property is remove
     setTimeout(check, 20);
     function check() {
         cluster.apps.forEach(function checkApp(app) {
-            var proxy = app.clients.serviceProxy;
+            var proxy = app.serviceProxy;
             var rateLimiter = proxy.rateLimiter;
             assert.ok(!proxy.rateLimiterEnabled, 'should not be enabled');
             assert.equals(rateLimiter.totalRpsLimit, 1200, 'totalRpsLimit should be set to default');

@@ -61,15 +61,16 @@ var EntryNodeCouldNotFindExitNodesError = TypedError({
 
 module.exports = EntryNode;
 
-function EntryNode(clients) {
+function EntryNode(clients, worker) {
     if (!(this instanceof EntryNode)) {
-        return new EntryNode(clients);
+        return new EntryNode(clients, worker);
     }
     var self = this;
     // Store the clients internally. The external user
     // should not touch the clients directly, only methods.
     self._clients = clients;
-    self.serviceProxy = clients.serviceProxy;
+    self.worker = worker;
+    self.serviceProxy = worker.serviceProxy;
     self.egressNodes = clients.egressNodes;
 }
 
@@ -87,7 +88,7 @@ function getHostsConnectionsForService(opts, cb) {
     collectParallel(hosts, requestExitConnection, onAllCollected);
 
     function requestExitConnection(host, key, callback) {
-        var autobahnChannel = self._clients.autobahnChannel;
+        var autobahnChannel = self.worker.autobahnChannel;
         var tchannelJSON = self._clients.tchannelJSON;
 
         autobahnChannel.waitForIdentified({
@@ -177,7 +178,7 @@ EntryNode.prototype.fanoutSetK = function fanoutSetK(opts, cb) {
     collectParallel(ringpop.membership.members, exitSetK, onAllSet);
 
     function exitSetK(member, key, callback) {
-        var autobahnChannel = self._clients.autobahnChannel;
+        var autobahnChannel = self.worker.autobahnChannel;
         var tchannelJSON = self._clients.tchannelJSON;
 
         autobahnChannel.waitForIdentified({

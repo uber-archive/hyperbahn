@@ -203,7 +203,7 @@ function reapClusterPears(cluster, assert, callback) {
     collectParallel(
         cluster.apps,
         function reapEach(app, i, done) {
-            var serviceProxy = app.clients.serviceProxy;
+            var serviceProxy = app.serviceProxy;
             serviceProxy.peerReaper.run(done);
         },
         function finish(_, results) {
@@ -220,7 +220,7 @@ function pruneClusterPears(cluster, assert, callback) {
     collectParallel(
         cluster.apps,
         function pruneEach(app, i, done) {
-            var serviceProxy = app.clients.serviceProxy;
+            var serviceProxy = app.serviceProxy;
             serviceProxy.peerPruner.run(done);
         },
         function finish(_, results) {
