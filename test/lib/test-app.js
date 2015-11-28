@@ -215,7 +215,7 @@ function test(testName, opts, fn) {
 
         var app = TestApplication(opts);
 
-        app.bootstrapAndListen(onApp);
+        app.bootstrap(onApp);
 
         function onApp() {
             fn(app, assert);

@@ -59,7 +59,7 @@ function main(opts) {
     process.on('uncaughtException', app.clients.onError);
     app.hookupSignals();
 
-    app.bootstrapAndListen(function onAppReady(err) {
+    app.bootstrap(function onAppReady(err) {
         if (err) {
             app.clients.onError(err);
 

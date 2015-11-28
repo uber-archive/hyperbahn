@@ -66,7 +66,7 @@ function HyperbahnWorker(opts) {
 HyperbahnWorker.prototype.start = function start() {
     var self = this;
 
-    self.app.bootstrapAndListen(onAppReady);
+    self.app.bootstrap(onAppReady);
 
     function onAppReady(err) {
         if (err) {

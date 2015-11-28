@@ -152,14 +152,6 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     }
 };
 
-// TODO: remove, unecessary
-DiscoveryWorker.prototype.bootstrapAndListen =
-function bootstrapAndListen(callback) {
-    var self = this;
-
-    self.bootstrap(callback);
-};
-
 DiscoveryWorker.prototype.destroy = function destroy(opts) {
     var self = this;
 
