@@ -108,27 +108,13 @@ function partialBootstrap(listener) {
 
     self.isBootstrapped = true;
 
-    self.setupServices();
-
-    self.clients.setup(onSetup);
-
-    function onSetup(err) {
-        if (err) {
-            return self.emit('error', err);
-        }
-
-        self.tchannel.on('listening', onReady);
-        self.tchannel.listen(self.clients._port, self.clients._host);
-    }
+    self.bootstrapTChannel(onReady);
 
     function onReady(err) {
         if (err) {
             return self.emit('error', err);
         }
 
-        self.clients.repl.setApp(self);
-
-        self.hostPort = self.tchannel.hostPort;
         self.client = TestClient({
             app: self,
             logger: self.clients.logger

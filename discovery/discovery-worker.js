@@ -58,6 +58,7 @@ function DiscoveryWorker(config, opts) {
     opts = opts || {};
     self.seedConfig = opts.seedConfig;
     self.seedClients = opts.clients || {};
+    self.hostPort = null;
     assert(opts.argv, 'opts.argv is required');
 
     self.config = config;
@@ -183,13 +184,9 @@ function setupServices() {
     setupEndpoints(self, hyperbahnChannel);
 };
 
-DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
+DiscoveryWorker.prototype.bootstrapTChannel =
+function bootstrapTChannel(cb) {
     var self = this;
-
-    if (self.isBootstrapped) {
-        throw new Error('double bootstrap');
-    }
-    self.isBootstrapped = true;
 
     self.setupServices();
 
@@ -202,16 +199,33 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
             return cb(err);
         }
 
-        self.tchannel.on('listening', onChannel);
+        self.tchannel.on('listening', onListening);
         self.tchannel.listen(self.clients._port, self.clients._host);
     }
+
+    function onListening() {
+        self.hostPort = self.tchannel.hostPort;
+
+        cb(null);
+    }
+};
+
+DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
+    var self = this;
+
+    if (self.isBootstrapped) {
+        throw new Error('double bootstrap');
+    }
+    self.isBootstrapped = true;
+
+    self.bootstrapTChannel(onChannel);
 
     function onChannel(err) {
         if (err) {
             return cb(err);
         }
 
-        self.setupRingpop(onClientsReady);
+        self.setupRingpop(self.clients.autobahnHostPortList, onClientsReady);
     }
 
     function onClientsReady(err) {
@@ -226,7 +240,7 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
 };
 
 DiscoveryWorker.prototype.setupRingpop =
-function setupRingpop(cb) {
+function setupRingpop(hostPortList, cb) {
     var self = this;
 
     var ringpopChannel = self.tchannel.makeSubChannel({
@@ -252,8 +266,8 @@ function setupRingpop(cb) {
 
     self.clients.egressNodes.setRingpop(self.ringpop);
 
-    if (self.clients.autobahnHostPortList) {
-        self.ringpop.bootstrap(self.clients.autobahnHostPortList, cb);
+    if (hostPortList) {
+        self.ringpop.bootstrap(hostPortList, cb);
     } else {
         process.nextTick(cb);
     }

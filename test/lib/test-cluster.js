@@ -262,8 +262,7 @@ function grow(n, callback) {
     }
 
     function finishEachBootstrap(app, _, done) {
-        app.clients.autobahnHostPortList = self.hostPortList;
-        app.setupRingpop(done);
+        app.setupRingpop(self.hostPortList, done);
     }
 
     function bootstrapFinished(_, results) {
