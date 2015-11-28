@@ -26,7 +26,7 @@ var assert = require('assert');
 var path = require('path');
 var StaticConfig = require('static-config');
 
-var HyperbahnApplication = require('../app.js');
+var HyperbahnApplication = require('../discovery/discovery-worker.js');
 
 module.exports = HyperbahnWorker;
 
