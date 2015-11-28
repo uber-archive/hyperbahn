@@ -209,10 +209,12 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
     function onRemotes() {
         self.emit('listening');
 
-        self.forEachHostPort(function each(name, i, hp) {
-            name = name.toUpperCase() + i;
-            console.error('TEST SETUP: ' + name + ' ' + hp);
-        });
+        if (process.env.TEST_SETUP) {
+            self.forEachHostPort(function each(name, i, hp) {
+                name = name.toUpperCase() + i;
+                console.error('TEST SETUP: ' + name + ' ' + hp);
+            });
+        }
 
         cb();
     }
