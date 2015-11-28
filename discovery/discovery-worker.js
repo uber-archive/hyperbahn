@@ -24,7 +24,6 @@ var inherits = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 var WrappedError = require('error/wrapped');
 var assert = require('assert');
-var process = require('process');
 
 var setupEndpoints = require('../endpoints/');
 var DiscoveryWorkerClients = require('../clients/');
