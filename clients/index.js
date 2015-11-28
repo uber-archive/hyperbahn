@@ -158,6 +158,16 @@ function ApplicationClients(options) {
         useLazyHandling: false
     }, options.testChannelConfigOverlay));
 
+    self.tchannel.drainExempt = function isReqDrainExempt(req) {
+        if (req.serviceName === 'ringpop' ||
+            req.serviceName === 'autobahn'
+        ) {
+            return true;
+        }
+
+        return false;
+    };
+
     self.autobahnHostPortList = self.loadHostList();
 
     self.tchannelJSON = TChannelAsJSON({

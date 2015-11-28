@@ -81,16 +81,6 @@ function DiscoveryWorker(config, opts) {
     });
     self.drainSignalHandler.once('shutdown', shutdown);
 
-    self.tchannel.drainExempt = function isReqDrainExempt(req) {
-        if (req.serviceName === 'ringpop' ||
-            req.serviceName === 'autobahn'
-        ) {
-            return true;
-        }
-
-        return false;
-    };
-
     self.isBootstrapped = false;
     self.destroyed = false;
     // When we need to force destroy an app to test something,
