@@ -249,9 +249,9 @@ DiscoveryWorker.prototype.destroy = function destroy(opts) {
     self.destroyed = true;
 
     self.remoteConfigUpdate.destroy();
+    self.clients.destroy();
     self.serviceProxy.destroy();
     if (!self.tchannel.destroyed) {
         self.tchannel.close();
     }
-    self.clients.destroy();
 };
