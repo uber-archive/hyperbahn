@@ -482,8 +482,7 @@ function createApplication(hostPort) {
 
     var localOpts = shallowExtend(self.opts);
     localOpts.seedConfig = deepExtend(localOpts.seedConfig || {}, {
-        'tchannel.host': host,
-        'hyperbahn.ringpop.bootstrapFile': self.ringpopHosts
+        'tchannel.host': host
     });
     localOpts.argv = {
         port: port
