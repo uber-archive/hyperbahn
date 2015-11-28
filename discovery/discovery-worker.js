@@ -27,21 +27,21 @@ var assert = require('assert');
 var process = require('process');
 
 var setupEndpoints = require('./endpoints/');
-var ApplicationClients = require('./clients/');
+var DiscoveryWorkerClients = require('./clients/');
 
 var ExitNode = require('./exit');
 var EntryNode = require('./entry');
 
-var ApplicationClientsFailureError = WrappedError({
+var DiscoveryWorkerClientsFailureError = WrappedError({
     type: 'autobahn.app-clients-failed',
-    message: 'Application createClients failed: {origMessage}'
+    message: 'DiscoveryWorker createClients failed: {origMessage}'
 });
 
-module.exports = Application;
+module.exports = DiscoveryWorker;
 
-function Application(config, opts) {
-    if (!(this instanceof Application)) {
-        return new Application(config, opts);
+function DiscoveryWorker(config, opts) {
+    if (!(this instanceof DiscoveryWorker)) {
+        return new DiscoveryWorker(config, opts);
     }
 
     var self = this;
@@ -52,7 +52,7 @@ function Application(config, opts) {
     self.seedClients = opts.clients || {};
     assert(opts.argv, 'opts.argv is required');
 
-    self.clients = ApplicationClients({
+    self.clients = DiscoveryWorkerClients({
         config: config,
         argv: opts.argv,
         seedClients: self.seedClients,
@@ -97,9 +97,9 @@ function Application(config, opts) {
     self.forceDestroyed = false;
 }
 
-inherits(Application, EventEmitter);
+inherits(DiscoveryWorker, EventEmitter);
 
-Application.prototype.setupServices = function setupServices() {
+DiscoveryWorker.prototype.setupServices = function setupServices() {
     var self = this;
 
     self.services = {};
@@ -109,7 +109,7 @@ Application.prototype.setupServices = function setupServices() {
     setupEndpoints(self.clients, self.services);
 };
 
-Application.prototype.bootstrap = function bootstrap(cb) {
+DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
 
     if (self.isBootstrapped) {
@@ -124,7 +124,7 @@ Application.prototype.bootstrap = function bootstrap(cb) {
     function onClientsReady(err) {
         /* istanbul ignore next */
         if (err) {
-            err = ApplicationClientsFailureError(err);
+            err = DiscoveryWorkerClientsFailureError(err);
             return cb(err);
         }
 
@@ -135,7 +135,7 @@ Application.prototype.bootstrap = function bootstrap(cb) {
     }
 };
 
-Application.prototype.hookupSignals =
+DiscoveryWorker.prototype.hookupSignals =
 function hookupSignals() {
     var self = this;
 
@@ -151,7 +151,7 @@ function hookupSignals() {
     }
 };
 
-Application.prototype.extendLogInfo =
+DiscoveryWorker.prototype.extendLogInfo =
 function extendLogInfo(info) {
     var self = this;
 
@@ -160,7 +160,7 @@ function extendLogInfo(info) {
     return info;
 };
 
-Application.prototype.onSigTerm =
+DiscoveryWorker.prototype.onSigTerm =
 function onSigTerm() {
     var self = this;
 
@@ -171,7 +171,7 @@ function onSigTerm() {
     }
 };
 
-Application.prototype.startDrain =
+DiscoveryWorker.prototype.startDrain =
 function startDrain() {
     var self = this;
 
@@ -191,7 +191,7 @@ function startDrain() {
     }
 };
 
-Application.prototype.onSigInt =
+DiscoveryWorker.prototype.onSigInt =
 function onSigInt() {
     var self = this;
 
@@ -203,14 +203,14 @@ function onSigInt() {
     }
 };
 
-Application.prototype.deadlineTimedOut =
+DiscoveryWorker.prototype.deadlineTimedOut =
 function deadlineTimedOut() {
     var self = this;
 
     self.finishDrain('warn', 'deadline timeout exceeded, closing now');
 };
 
-Application.prototype.drainedThenClose =
+DiscoveryWorker.prototype.drainedThenClose =
 function drainedThenClose() {
     var self = this;
 
@@ -219,7 +219,7 @@ function drainedThenClose() {
     }
 };
 
-Application.prototype.finishDrain =
+DiscoveryWorker.prototype.finishDrain =
 function finishDrain(level, mess, info) {
     var self = this;
 
@@ -253,14 +253,14 @@ function finishDrain(level, mess, info) {
 };
 
 // TODO: remove, unecessary
-Application.prototype.bootstrapAndListen =
+DiscoveryWorker.prototype.bootstrapAndListen =
 function bootstrapAndListen(callback) {
     var self = this;
 
     self.bootstrap(callback);
 };
 
-Application.prototype.destroy = function destroy(opts) {
+DiscoveryWorker.prototype.destroy = function destroy(opts) {
     var self = this;
 
     if (self.destroyed && !self.forceDestroyed) {
