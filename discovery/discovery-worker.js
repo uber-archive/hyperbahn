@@ -135,22 +135,6 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
     }
 };
 
-DiscoveryWorker.prototype.hookupSignals =
-function hookupSignals() {
-    var self = this;
-
-    process.on('SIGTERM', onSigTerm);
-    process.on('SIGINT', onSigInt);
-
-    function onSigTerm() {
-        self.onSigTerm();
-    }
-
-    function onSigInt() {
-        self.onSigInt();
-    }
-};
-
 DiscoveryWorker.prototype.extendLogInfo =
 function extendLogInfo(info) {
     var self = this;
@@ -158,98 +142,6 @@ function extendLogInfo(info) {
     info = self.tchannel.extendLogInfo(info);
 
     return info;
-};
-
-DiscoveryWorker.prototype.onSigTerm =
-function onSigTerm() {
-    var self = this;
-
-    if (self.tchannel.draining) {
-        self.logger.info('got additional SIGTERM while draining', self.extendLogInfo({}));
-    } else {
-        self.startDrain();
-    }
-};
-
-DiscoveryWorker.prototype.startDrain =
-function startDrain() {
-    var self = this;
-
-    self.drainStart = self.tchannel.timers.now();
-    self.logger.info('got SIGTERM, draining application', self.extendLogInfo({}));
-    self.tchannel.drain('shutting down due to SIGTERM', drainedThenClose);
-    self.drainDeadlineTimer = self.tchannel.timers.setTimeout(
-        deadlineTimedOut,
-        self.clients.serviceProxy.drainTimeout);
-
-    function drainedThenClose() {
-        self.drainedThenClose();
-    }
-
-    function deadlineTimedOut() {
-        self.deadlineTimedOut();
-    }
-};
-
-DiscoveryWorker.prototype.onSigInt =
-function onSigInt() {
-    var self = this;
-
-    if (self.tchannel.draining) {
-        self.finishDrain('warn', 'got SIGINT, drain aborted');
-    } else if (!self.destroyed) {
-        self.logger.info('got SIGINT, destroying application', self.extendLogInfo({}));
-        self.destroy();
-    }
-};
-
-DiscoveryWorker.prototype.deadlineTimedOut =
-function deadlineTimedOut() {
-    var self = this;
-
-    self.finishDrain('warn', 'deadline timeout exceeded, closing now');
-};
-
-DiscoveryWorker.prototype.drainedThenClose =
-function drainedThenClose() {
-    var self = this;
-
-    if (!self.destroyed) {
-        self.finishDrain('info', 'tchannel drained, destroying application');
-    }
-};
-
-DiscoveryWorker.prototype.finishDrain =
-function finishDrain(level, mess, info) {
-    var self = this;
-
-    self.drainEnd = self.tchannel.timers.now();
-
-    if (!info) {
-        info = {};
-    }
-    var drainDuration = self.drainEnd - self.drainStart;
-    self.clients.statsd.timing('server.drain-time', drainDuration);
-    info.drainDurationMs = drainDuration;
-    info = self.extendLogInfo(info);
-
-    switch (level) {
-        case 'info':
-            self.logger.info(mess, info);
-            break;
-        case 'warn':
-            self.logger.warn(mess, info);
-            break;
-        default:
-            info.invalidLogLevel = level;
-            self.logger.error(mess, info);
-            break;
-    }
-
-    self.tchannel.timers.clearTimeout(self.drainDeadlineTimer);
-    self.drainDeadlineTimer = null;
-
-    self.destroy();
 };
 
 // TODO: remove, unecessary
