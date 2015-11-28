@@ -27,7 +27,7 @@ var nodeAssert = require('assert');
 var path = require('path');
 var StaticConfig = require('static-config');
 
-var Application = require('../../app.js');
+var Application = require('../../discovery/discovery-worker.js');
 var TestRing = require('./test-ring.js');
 var TestClient = require('./test-client.js');
 var getPeerInfo = require('../../peer-info.js');

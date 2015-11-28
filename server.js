@@ -32,7 +32,7 @@ var parseArgs = require('minimist');
 var setTimeout = require('timers').setTimeout;
 var assert = require('assert');
 
-var Application = require('./app.js');
+var Application = require('./discovery/discovery-worker.js');
 
 var ABORT_TIMEOUT = 10 * 1000;
 
