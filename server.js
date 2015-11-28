@@ -69,7 +69,7 @@ function main(opts) {
         }
 
         var logger = app.clients.logger;
-        var serverAddr = app.address();
+        var serverAddr = app.hostPort;
         var replAddr = app.clients.repl.socketServer.address();
 
         var statsd = app.clients.statsd;

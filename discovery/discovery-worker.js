@@ -144,13 +144,6 @@ function DiscoveryWorker(config, opts) {
 }
 inherits(DiscoveryWorker, EventEmitter);
 
-DiscoveryWorker.prototype.address =
-function address() {
-    var self = this;
-
-    return self._proxyChannel.address();
-};
-
 DiscoveryWorker.prototype.hookupSignals =
 function hookupSignals() {
     var self = this;
