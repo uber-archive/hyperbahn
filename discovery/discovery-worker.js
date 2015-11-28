@@ -234,15 +234,18 @@ function setupRingpop(cb) {
         serviceName: 'ringpop'
     });
 
+    var projectName = self.config.get('info.project');
+    var ringpopTimeouts = self.config.get('hyperbahn.ringpop.timeouts');
+
     self.ringpop = RingPop({
-        app: self.clients.projectName,
+        app: projectName,
         hostPort: self.tchannel.hostPort,
         channel: ringpopChannel,
         logger: self.logger,
         statsd: self.clients.statsd,
-        pingReqTimeout: self.clients.ringpopTimeouts.pingReqTimeout,
-        pingTimeout: self.clients.ringpopTimeouts.pingTimeout,
-        joinTimeout: self.clients.ringpopTimeouts.joinTimeout
+        pingReqTimeout: ringpopTimeouts.pingReqTimeout,
+        pingTimeout: ringpopTimeouts.pingTimeout,
+        joinTimeout: ringpopTimeouts.joinTimeout
     });
     self.ringpop.statPrefix = 'ringpop.hyperbahn';
     self.ringpop.setupChannel();
