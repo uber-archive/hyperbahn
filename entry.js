@@ -158,7 +158,7 @@ function getHostsConnectionsForService(opts, cb) {
 EntryNode.prototype.isExitNodeFor = function isExitNodeFor(service) {
     var self = this;
     var exitNodes = self.egressNodes.exitsFor(service);
-    var whoami = self._clients.ringpop.whoami();
+    var whoami = self.worker.ringpop.whoami();
     return exitNodes[whoami] !== undefined;
 };
 
@@ -173,7 +173,7 @@ EntryNode.prototype.setK = function setK(serviceName, k) {
 
 EntryNode.prototype.fanoutSetK = function fanoutSetK(opts, cb) {
     var self = this;
-    var ringpop = self._clients.ringpop;
+    var ringpop = self.worker.ringpop;
 
     collectParallel(ringpop.membership.members, exitSetK, onAllSet);
 

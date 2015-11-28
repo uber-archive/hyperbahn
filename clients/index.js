@@ -26,7 +26,6 @@ var http = require('http');
 // move around and change wifi networks.
 var myLocalIp = require('my-local-ip');
 var os = require('os');
-var RingPop = require('ringpop');
 var process = require('process');
 var uncaught = require('uncaught-exception');
 var fs = require('fs');
@@ -238,43 +237,11 @@ function setup(cb) {
     }
 };
 
-ApplicationClients.prototype.setupRingpop =
-function setupRingpop(tchannel, cb) {
-    var self = this;
-
-    var ringpopChannel = tchannel.makeSubChannel({
-        trace: false,
-        serviceName: 'ringpop'
-    });
-
-    self.ringpop = RingPop({
-        app: self.projectName,
-        hostPort: tchannel.hostPort,
-        channel: ringpopChannel,
-        logger: self.logger,
-        statsd: self.statsd,
-        pingReqTimeout: self.ringpopTimeouts.pingReqTimeout,
-        pingTimeout: self.ringpopTimeouts.pingTimeout,
-        joinTimeout: self.ringpopTimeouts.joinTimeout
-    });
-    self.ringpop.statPrefix = 'ringpop.hyperbahn';
-    self.ringpop.setupChannel();
-
-    self.egressNodes.setRingpop(self.ringpop);
-
-    if (self.autobahnHostPortList) {
-        self.ringpop.bootstrap(self.autobahnHostPortList, cb);
-    } else {
-        process.nextTick(cb);
-    }
-};
-
 ApplicationClients.prototype.destroy = function destroy() {
     var self = this;
 
     self.socketInspector.disable();
     self.remoteConfig.destroy();
-    self.ringpop.destroy();
     self.processReporter.destroy();
     self.batchStats.destroy();
 

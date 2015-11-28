@@ -263,7 +263,7 @@ function grow(n, callback) {
 
     function finishEachBootstrap(app, _, done) {
         app.clients.autobahnHostPortList = self.hostPortList;
-        app.clients.setupRingpop(app.tchannel, done);
+        app.setupRingpop(done);
     }
 
     function bootstrapFinished(_, results) {
@@ -399,7 +399,7 @@ TestCluster.prototype.waitForRingpop = function waitForRingpop(cb) {
     }
 
     var ringpops = self.apps.map(function getRing(x) {
-        return x.clients.ringpop;
+        return x.ringpop;
     });
     ringpops.map(function addListener(ringpop) {
         ringpop.ring.on('checksumComputed', checkAgain);
@@ -421,7 +421,7 @@ TestCluster.prototype.isRingpopConverged = function isRingpopConverged() {
     var self = this;
 
     var ringpops = self.apps.map(function getRing(x) {
-        return x.clients.ringpop;
+        return x.ringpop;
     });
 
     var allHosts = ringpops.map(function getHosts(r) {
@@ -598,7 +598,7 @@ TestCluster.prototype.getExitNodes = function getExitNodes(serviceName) {
     var self = this;
 
     var app = self.apps[0];
-    var ringpop = app.clients.ringpop;
+    var ringpop = app.ringpop;
     var hosts = [];
 
     for (var i = 0; i < self.kValue; i++) {

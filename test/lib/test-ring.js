@@ -57,7 +57,7 @@ TestRing.prototype.hashToHostPort = function hashToHostPort(
         minNumBuckets = 5;
     }
 
-    var sourceRingpop = self.application.clients.ringpop;
+    var sourceRingpop = self.application.ringpop;
 
     var hostPort = destinationApp.hostPort;
 
@@ -96,7 +96,7 @@ TestRing.prototype.forceNonOwnership = function forceNonOwnership(
 ) {
     var self = this;
 
-    var ringpop = self.application.clients.ringpop;
+    var ringpop = self.application.ringpop;
 
     var oldLookup = ringpop.lookup;
     ringpop.lookup = fakeLookup;

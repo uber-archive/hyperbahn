@@ -26,6 +26,8 @@ var WrappedError = require('error/wrapped');
 var assert = require('assert');
 var TChannel = require('tchannel');
 var extendInto = require('xtend/mutable');
+var RingPop = require('ringpop');
+var process = require('process');
 
 var setupEndpoints = require('../endpoints/');
 var DiscoveryWorkerClients = require('../clients/');
@@ -140,6 +142,8 @@ function DiscoveryWorker(config, opts) {
     onRemoteConfigUpdate();
     self.clients.remoteConfig.startPolling();
 
+    self.ringpop = null;
+
     function onRemoteConfigUpdate() {
         self.remoteConfigUpdate.onRemoteConfigUpdate();
     }
@@ -218,7 +222,7 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
             return cb(err);
         }
 
-        self.clients.setupRingpop(self.tchannel, onClientsReady);
+        self.setupRingpop(onClientsReady);
     }
 
     function onClientsReady(err) {
@@ -229,6 +233,37 @@ DiscoveryWorker.prototype.bootstrap = function bootstrap(cb) {
         }
 
         cb(null);
+    }
+};
+
+DiscoveryWorker.prototype.setupRingpop =
+function setupRingpop(cb) {
+    var self = this;
+
+    var ringpopChannel = self.tchannel.makeSubChannel({
+        trace: false,
+        serviceName: 'ringpop'
+    });
+
+    self.ringpop = RingPop({
+        app: self.clients.projectName,
+        hostPort: self.tchannel.hostPort,
+        channel: ringpopChannel,
+        logger: self.logger,
+        statsd: self.clients.statsd,
+        pingReqTimeout: self.clients.ringpopTimeouts.pingReqTimeout,
+        pingTimeout: self.clients.ringpopTimeouts.pingTimeout,
+        joinTimeout: self.clients.ringpopTimeouts.joinTimeout
+    });
+    self.ringpop.statPrefix = 'ringpop.hyperbahn';
+    self.ringpop.setupChannel();
+
+    self.clients.egressNodes.setRingpop(self.ringpop);
+
+    if (self.clients.autobahnHostPortList) {
+        self.ringpop.bootstrap(self.clients.autobahnHostPortList, cb);
+    } else {
+        process.nextTick(cb);
     }
 };
 
@@ -249,9 +284,10 @@ DiscoveryWorker.prototype.destroy = function destroy(opts) {
     self.destroyed = true;
 
     self.remoteConfigUpdate.destroy();
-    self.clients.destroy();
+    self.ringpop.destroy();
     self.serviceProxy.destroy();
     if (!self.tchannel.destroyed) {
         self.tchannel.close();
     }
+    self.clients.destroy();
 };
