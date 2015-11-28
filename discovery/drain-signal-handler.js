@@ -99,7 +99,7 @@ function startDrain() {
     self.tchannel.drain('shutting down due to SIGTERM', drainedThenClose);
     self.drainDeadlineTimer = self.tchannel.timers.setTimeout(
         deadlineTimedOut,
-        self.clients.serviceProxy.drainTimeout);
+        self.drainTimeout);
 
     function drainedThenClose() {
         self.drainedThenClose();
