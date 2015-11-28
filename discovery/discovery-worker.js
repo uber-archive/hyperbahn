@@ -26,11 +26,11 @@ var WrappedError = require('error/wrapped');
 var assert = require('assert');
 var process = require('process');
 
-var setupEndpoints = require('./endpoints/');
-var DiscoveryWorkerClients = require('./clients/');
+var setupEndpoints = require('../endpoints/');
+var DiscoveryWorkerClients = require('../clients/');
 
-var ExitNode = require('./exit');
-var EntryNode = require('./entry');
+var ExitNode = require('../exit.js');
+var EntryNode = require('../entry.js');
 
 var DiscoveryWorkerClientsFailureError = WrappedError({
     type: 'autobahn.app-clients-failed',
