@@ -28,6 +28,7 @@ var TestCluster = require('./lib/test-cluster.js');
 
 require('./endpoint-logging.js');
 require('./health.js');
+require('./channels.js');
 
 require('./admin/kill-switch.js');
 require('./admin/rate-limiter.js');
