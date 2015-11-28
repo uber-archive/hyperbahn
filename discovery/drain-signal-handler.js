@@ -22,11 +22,37 @@
 
 var process = require('process');
 var assert = require('assert');
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
 
 module.exports = DrainSignalHandler;
 
 function DrainSignalHandler(options) {
+    if (!(this instanceof DrainSignalHandler)) {
+        return new DrainSignalHandler(options);
+    }
+
+    var self = this;
+    EventEmitter.call(self);
+
+    assert(options.logger, 'logger required');
+    self.logger = options.logger;
+
+    assert(options.tchannel, 'tchannel required');
+    self.tchannel = options.tchannel;
+
+    assert(options.statsd, 'statsd required');
+    self.statsd = options.statsd;
+
+    assert(options.drainTimeout, 'drainTimeout required');
+    self.drainTimeout = options.drainTimeout;
+
+    self.drainStart = null;
+    self.destroyed = false;
+    self.drainEnd = null;
+    self.drainDeadlineTimer = null;
 }
+util.inherits(DrainSignalHandler, EventEmitter);
 
 DrainSignalHandler.prototype.extendLogInfo =
 function extendLogInfo(info) {
@@ -122,7 +148,7 @@ function finishDrain(level, mess, info) {
         info = {};
     }
     var drainDuration = self.drainEnd - self.drainStart;
-    self.clients.statsd.timing('server.drain-time', drainDuration);
+    self.statsd.timing('server.drain-time', drainDuration);
     info.drainDurationMs = drainDuration;
     info = self.extendLogInfo(info);
 
@@ -141,6 +167,13 @@ function finishDrain(level, mess, info) {
 
     self.tchannel.timers.clearTimeout(self.drainDeadlineTimer);
     self.drainDeadlineTimer = null;
-
     self.destroy();
+};
+
+DrainSignalHandler.prototype.destroy =
+function destroy() {
+    var self = this;
+
+    self.destroyed = true;
+    self.emit('shutdown');
 };
