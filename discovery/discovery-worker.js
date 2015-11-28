@@ -288,7 +288,6 @@ DiscoveryWorker.prototype.destroy = function destroy(opts) {
 
     self.destroyed = true;
 
-    self.remoteConfigUpdate.destroy();
     self.ringpop.destroy();
     self.serviceProxy.destroy();
     self.routingBridge.destroy();

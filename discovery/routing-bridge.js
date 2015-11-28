@@ -20,6 +20,8 @@
 
 'use strict';
 
+var timers = require('timers');
+
 module.exports = RoutingBridge;
 
 function RoutingBridge(routingWorker) {
@@ -31,6 +33,8 @@ function RoutingBridge(routingWorker) {
 
     self._routingWorker = routingWorker;
     self.draining = false;
+
+    self.lazyTimeout = null;
 
 }
 
@@ -57,6 +61,8 @@ RoutingBridge.prototype.destroy = function destroy() {
     if (!self._routingWorker.tchannel.destroyed) {
         self._routingWorker.tchannel.close();
     }
+
+    timers.clearTimeout(self.lazyTimeout);
 };
 
 RoutingBridge.prototype.isDraining = function isDraining() {
@@ -69,6 +75,40 @@ RoutingBridge.prototype.drain = function drain(message, cb) {
     var self = this;
 
     return self._routingWorker.tchannel.drain(message, cb);
+};
+
+RoutingBridge.prototype.setMaximumRelayTTL =
+function setMaximumRelayTTL(maximumRelayTTL) {
+    var self = this;
+
+    self._routingWorker.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+};
+
+RoutingBridge.prototype.setMaxTombstoneTTL =
+function setMaxTombstoneTTL(ttl) {
+    var self = this;
+
+    self._routingWorker.tchannel.setMaxTombstoneTTL(ttl);
+};
+
+RoutingBridge.prototype.setLazyHandling =
+function setLazyHandling(enabled) {
+    var self = this;
+
+    self._routingWorker.tchannel.setLazyRelaying(enabled);
+
+    timers.clearTimeout(self.lazyTimeout);
+
+    if (enabled === false) {
+        timers.clearTimeout(self.lazyTimeout);
+        self.lazyTimeout = timers.setTimeout(turnOffLazyHandling, 30000);
+    } else {
+        self._routingWorker.tchannel.setLazyHandling(enabled);
+    }
+
+    function turnOffLazyHandling() {
+        self._routingWorker.tchannel.setLazyHandling(enabled);
+    }
 };
 
 RoutingBridge.prototype.unsafeGetPeer =

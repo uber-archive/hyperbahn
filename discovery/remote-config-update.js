@@ -30,20 +30,11 @@ function RemoteConfigUpdater(worker) {
     var self = this;
 
     self.remoteConfig = worker.clients.remoteConfig;
-    // TODO: remove naughty naughty
-    self.tchannel = worker._proxyChannel;
     self.clients = worker.clients;
     self.worker = worker;
 
     self.lazyTimeout = null;
 }
-
-RemoteConfigUpdater.prototype.destroy =
-function destroy() {
-    var self = this;
-
-    self.tchannel.timers.clearTimeout(self.lazyTimeout);
-};
 
 RemoteConfigUpdater.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
     var self = this;
@@ -88,26 +79,14 @@ function setMaximumRelayTTL() {
     var maximumRelayTTL = self.remoteConfig.get(
         'relay.maximum-ttl', 2 * 60 * 1000
     );
-    self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+    self.worker.routingBridge.setMaximumRelayTTL(maximumRelayTTL);
 };
 
 RemoteConfigUpdater.prototype.updateLazyHandling = function updateLazyHandling() {
     var self = this;
     var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
-    self.tchannel.setLazyRelaying(enabled);
 
-    self.tchannel.timers.clearTimeout(self.lazyTimeout);
-
-    if (enabled === false) {
-        self.tchannel.timers.clearTimeout(self.lazyTimeout);
-        self.lazyTimeout = self.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
-    } else {
-        self.tchannel.setLazyHandling(enabled);
-    }
-
-    function turnOffLazyHandling() {
-        self.tchannel.setLazyHandling(enabled);
-    }
+    self.worker.routingBridge.setLazyHandling(enabled);
 };
 
 RemoteConfigUpdater.prototype.updateReservoir = function updateReservoir() {
@@ -222,5 +201,5 @@ function updateMaxTombstoneTTL() {
 
     var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
 
-    self.tchannel.setMaxTombstoneTTL(ttl);
+    self.worker.routingBridge.setMaxTombstoneTTL(ttl);
 };
