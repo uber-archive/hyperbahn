@@ -24,8 +24,6 @@ var inherits = require('inherits');
 var EventEmitter = require('events').EventEmitter;
 var WrappedError = require('error/wrapped');
 var assert = require('assert');
-var TChannel = require('tchannel');
-var extendInto = require('xtend/mutable');
 var RingPop = require('ringpop');
 var process = require('process');
 
@@ -35,6 +33,8 @@ var DrainSignalHandler = require('./drain-signal-handler.js');
 var RemoteConfigUpdater = require('./remote-config-update.js');
 var HyperbahnHandler = require('../handler.js');
 var ServiceProxy = require('../service-proxy.js');
+var RoutingWorker = require('../router/routing-worker.js');
+var RoutingBridge = require('./routing-bridge.js');
 
 var ExitNode = require('../exit.js');
 var EntryNode = require('../entry.js');
@@ -70,20 +70,19 @@ function DiscoveryWorker(config, opts) {
     });
     self.logger = self.clients.logger;
 
-    self.tchannel = TChannel(extendInto({
-        logger: self.logger,
-        batchStats: self.clients.batchStats,
-        trace: false,
-        emitConnectionMetrics: false,
-        connectionStalePeriod: 1.5 * 1000,
-        useLazyRelaying: false,
-        useLazyHandling: false
-    }, opts.testChannelConfigOverlay));
+    var router = RoutingWorker(self, {
+        testChannelConfigOverlay: opts.testChannelConfigOverlay
+    });
+    self.routingBridge = RoutingBridge(router);
+
+    // TODO: holy batman. so naughty.
+    self.tchannel = router.tchannel;
 
     // Circuit health monitor and control
     var circuitsConfig = config.get('hyperbahn.circuits');
 
     var serviceProxyOpts = {
+        // TODO: holy batman, so naughty
         channel: self.tchannel,
         logger: self.logger,
         statsd: self.clients.statsd,
@@ -101,16 +100,19 @@ function DiscoveryWorker(config, opts) {
     };
 
     self.serviceProxy = ServiceProxy(serviceProxyOpts);
+
+    // TODO: so naughty
     self.tchannel.handler = self.serviceProxy;
 
-    self.tchannel.drainExempt = isReqDrainExempt;
-
+    // TODO: so naughty
     self.autobahnChannel = self.tchannel.makeSubChannel({
         serviceName: 'autobahn'
     });
 
     self.drainSignalHandler = new DrainSignalHandler({
         logger: self.logger,
+
+        // TODO: so naughty
         tchannel: self.tchannel,
         statsd: self.clients.statsd,
         drainTimeout: self.serviceProxy.drainTimeout
@@ -144,16 +146,6 @@ function DiscoveryWorker(config, opts) {
 }
 inherits(DiscoveryWorker, EventEmitter);
 
-function isReqDrainExempt(req) {
-    if (req.serviceName === 'ringpop' ||
-        req.serviceName === 'autobahn'
-    ) {
-        return true;
-    }
-
-    return false;
-}
-
 DiscoveryWorker.prototype.hookupSignals =
 function hookupSignals() {
     var self = this;
@@ -166,6 +158,7 @@ function setupServices() {
     var self = this;
 
     var hyperbahnTimeouts = self.config.get('hyperbahn.timeouts');
+    // TODO: naughty, dont touch self.tchannel
     var hyperbahnChannel = self.tchannel.makeSubChannel({
         serviceName: 'hyperbahn',
         trace: false
@@ -199,12 +192,19 @@ function bootstrapTChannel(cb) {
             return cb(err);
         }
 
-        self.tchannel.on('listening', onListening);
-        self.tchannel.listen(self.clients._port, self.clients._host);
+        self.routingBridge.listen(
+            self.clients._port,
+            self.clients._host,
+            onListening
+        );
     }
 
-    function onListening() {
-        self.hostPort = self.tchannel.hostPort;
+    function onListening(err, hostPort) {
+        if (err) {
+            return cb(err);
+        }
+
+        self.hostPort = hostPort;
 
         cb(null);
     }
@@ -243,6 +243,7 @@ DiscoveryWorker.prototype.setupRingpop =
 function setupRingpop(hostPortList, cb) {
     var self = this;
 
+    // TODO: naughty ringpop coupling
     var ringpopChannel = self.tchannel.makeSubChannel({
         trace: false,
         serviceName: 'ringpop'
@@ -253,7 +254,7 @@ function setupRingpop(hostPortList, cb) {
 
     self.ringpop = RingPop({
         app: projectName,
-        hostPort: self.tchannel.hostPort,
+        hostPort: self.hostPort,
         channel: ringpopChannel,
         logger: self.logger,
         statsd: self.clients.statsd,
@@ -292,8 +293,6 @@ DiscoveryWorker.prototype.destroy = function destroy(opts) {
     self.remoteConfigUpdate.destroy();
     self.ringpop.destroy();
     self.serviceProxy.destroy();
-    if (!self.tchannel.destroyed) {
-        self.tchannel.close();
-    }
+    self.routingBridge.destroy();
     self.clients.destroy();
 };
