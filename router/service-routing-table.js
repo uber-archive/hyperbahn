@@ -152,4 +152,4 @@ function isExitFor(serviceName) {
     }
 
     return serviceChannel.serviceProxyMode === 'exit';
-}
+};

@@ -488,9 +488,7 @@ function createApplication(hostPort) {
         port: port
     };
 
-    var rateLimiterBuckets;
     var remoteConfigFile;
-    var defaultTotalKillSwitchBuffer;
 
     self.opts.remoteConfig = self.opts.remoteConfig || {};
     if (remoteConfigOverlay) {
@@ -503,8 +501,6 @@ function createApplication(hostPort) {
         localOpts.seedConfig = deepExtend(localOpts.seedConfig, {
             'clients.remote-config.file': remoteConfigFile.filePath
         });
-        // rateLimiterBuckets = self.opts.remoteConfig['rateLimiting.rateLimiterBuckets'];
-        // defaultTotalKillSwitchBuffer = self.opts.remoteConfig['rateLimiting.defaultTotalKillSwitchBuffer'];
     }
 
     localOpts.channelTestConfigOverlay = channelTestConfigOverlay;

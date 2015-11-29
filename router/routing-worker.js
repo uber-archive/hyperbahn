@@ -70,7 +70,6 @@ function RoutingWorker(discoveryWorker, opts) {
 RoutingWorker.prototype.destroy = function destroy() {
     var self = this;
 
-
     if (!self.tchannel.destroyed) {
         self.tchannel.close();
     }

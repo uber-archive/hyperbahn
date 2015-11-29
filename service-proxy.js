@@ -23,14 +23,12 @@
 /* eslint-disable max-statements */
 
 var assert = require('assert');
-var Buffer = require('buffer').Buffer;
 var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
 var IntervalScan = require('./lib/interval-scan.js');
 
-var RateLimiter = require('./rate_limiter.js');
 var PartialRange = require('./partial_range.js');
 var Circuits = require('./circuits.js');
 
@@ -45,13 +43,8 @@ var DEFAULT_PRUNE_PEERS_PERIOD = 2 * 60 * 1000; // every 2 minutes
 // our call SLA is 30 seconds currently
 var DEFAULT_DRAIN_TIMEOUT = 30 * 1000;
 
-var RATE_LIMIT_TOTAL = 'total';
-var RATE_LIMIT_SERVICE = 'service';
-var RATE_LIMIT_KILLSWITCH = 'killswitch';
-
-var CN_HEADER_BUFFER = new Buffer('cn');
-
 function ServiceDispatchHandler(options) {
+    /*eslint complexity: [2, 25]*/
     if (!(this instanceof ServiceDispatchHandler)) {
         return new ServiceDispatchHandler(options);
     }
