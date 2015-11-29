@@ -116,6 +116,59 @@ function handleLazily(conn, reqFrame) {
     }
 };
 
+ServiceDispatchHandler.prototype.extendLogInfo =
+function extendLogInfo(info) {
+    var self = this;
+
+    self.channel.extendLogInfo(info);
+
+    // info.affineServices = Object.keys(self.exitServices);
+
+    info.circuitsEnabled = self.circuitsEnabled;
+    info.rateLimiterEnabled = self.rateLimiterEnabled;
+    // info.partialAffinityEnabled = self.partialAffinityEnabled;
+
+    // info.minPeersPerWorker = self.minPeersPerWorker;
+    // info.minPeersPerRelay = self.minPeersPerRelay;
+
+    return info;
+};
+
+ServiceDispatchHandler.prototype.handleRequest =
+function handleRequest(req, buildRes) {
+    var self = this;
+
+    if (!req.serviceName) {
+        self.logger.warn(
+            'Got incoming req with no service',
+            self.extendLogInfo(req.extendLogInfo({}))
+        );
+
+        buildRes().sendError('BadRequest', 'no service name given');
+        return;
+    }
+
+    if (self.isBlocked(req.headers && req.headers.cn, req.serviceName)) {
+        req.operations.popInReq(req.id);
+        return;
+    }
+
+    if (self.rateLimiterEnabled) {
+        var rateLimitReason = self.rateLimit(req.headers && req.headers.cn, req.serviceName);
+        if (rateLimitReason !== null) {
+            self.failEagerlyWithRateLimitReason(req, rateLimitReason, buildRes);
+            return;
+        }
+    }
+
+    var serviceChannel = self.channel.subChannels[req.serviceName];
+    if (!serviceChannel) {
+        serviceChannel = self.serviceRoutingTable.createServiceChannel(req.serviceName);
+    }
+
+    serviceChannel.handler.handleRequest(req, buildRes);
+};
+
 ServiceDispatchHandler.prototype.isBlocked =
 function isBlocked() {
     // TODO: port over real isBlocked()
@@ -167,5 +220,51 @@ function failWithRateLimitReason(conn, reqFrame, rateLimitReason, serviceName) {
         conn.sendLazyErrorFrameForReq(reqFrame, 'Busy',
             serviceName + ' is rate-limited by the service rps of ' + serviceLimit
         );
+    }
+};
+
+ServiceDispatchHandler.prototype.failEagerlyWithRateLimitReason =
+function failEagerlyWithRateLimitReason(req, rateLimitReason, buildRes) {
+    var self = this;
+
+    if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
+        if (req.connection &&
+            req.connection.ops) {
+            req.connection.ops.popInReq(req.id);
+        } else {
+            // TODO: needed because TChannelSelfConnection, we can drop
+            // this once self connection is dead
+            self.logger.warn(
+                'rate limiter unable to pop in req, because self connection',
+                self.extendLogInfo(req.extendLogInfo({
+                    rateLimitReason: RATE_LIMIT_KILLSWITCH
+                }))
+            );
+        }
+        return;
+    } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
+        var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
+        self.logger.info(
+            'hyperbahn node is rate-limited by the total rps limit',
+            self.extendLogInfo(req.extendLogInfo({
+                rpsLimit: totalLimit,
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
+            }))
+        );
+        buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
+        return;
+    } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
+        var serviceLimit = self.rateLimiter.getRpsLimitForService(req.serviceName);
+        self.logger.info(
+            'hyperbahn service is rate-limited by the service rps limit',
+            self.extendLogInfo(req.extendLogInfo({
+                rpsLimit: serviceLimit,
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
+            }))
+        );
+        buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
+        return;
     }
 };
