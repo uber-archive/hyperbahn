@@ -41,54 +41,6 @@ function ServiceDispatchHandler(options) {
     self.logger = options.logger;
 }
 
-ServiceDispatchHandler.prototype.failWithBadRequest =
-function failWithBadRequest(conn, reqFrame, message, error) {
-    var self = this;
-
-    // TODO: reqFrame.extendLogInfo would be nice, especially if it added
-    // things like callerName and arg1
-    self.logger.error(message, conn.extendLogInfo({
-        error: error
-    }));
-
-    conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', message);
-};
-
-ServiceDispatchHandler.prototype.failWithRateLimitReason =
-function failWithRateLimitReason(conn, reqFrame, rateLimitReason, serviceName) {
-    var self = this;
-
-    if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
-        conn.ops.popInReq(reqFrame.id);
-    } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
-        var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
-        self.logger.info(
-            'hyperbahn node is rate-limited by the total rps limit',
-            self.extendLogInfo(conn.extendLogInfo({
-                rpsLimit: totalLimit,
-                serviceCounters: self.rateLimiter.serviceCounters,
-                edgeCounters: self.rateLimiter.edgeCounters
-            }))
-        );
-        conn.sendLazyErrorFrameForReq(reqFrame, 'Busy',
-            'hyperbahn node is rate-limited by the total rps of ' + totalLimit
-        );
-    } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
-        var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
-        self.logger.info(
-            'hyperbahn service is rate-limited by the service rps limit',
-            self.extendLogInfo(conn.extendLogInfo({
-                rpsLimit: serviceLimit,
-                serviceCounters: self.rateLimiter.serviceCounters,
-                edgeCounters: self.rateLimiter.edgeCounters
-            }))
-        );
-        conn.sendLazyErrorFrameForReq(reqFrame, 'Busy',
-            serviceName + ' is rate-limited by the service rps of ' + serviceLimit
-        );
-    }
-};
-
 /*eslint max-statements: [2, 45]*/
 /*eslint complexity: [2, 15]*/
 ServiceDispatchHandler.prototype.handleLazily =
@@ -152,5 +104,53 @@ function handleLazily(conn, reqFrame) {
         return serviceChannel.handler.handleLazily(conn, reqFrame);
     } else {
         return false;
+    }
+};
+
+ServiceDispatchHandler.prototype.failWithBadRequest =
+function failWithBadRequest(conn, reqFrame, message, error) {
+    var self = this;
+
+    // TODO: reqFrame.extendLogInfo would be nice, especially if it added
+    // things like callerName and arg1
+    self.logger.error(message, conn.extendLogInfo({
+        error: error
+    }));
+
+    conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', message);
+};
+
+ServiceDispatchHandler.prototype.failWithRateLimitReason =
+function failWithRateLimitReason(conn, reqFrame, rateLimitReason, serviceName) {
+    var self = this;
+
+    if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
+        conn.ops.popInReq(reqFrame.id);
+    } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
+        var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
+        self.logger.info(
+            'hyperbahn node is rate-limited by the total rps limit',
+            self.extendLogInfo(conn.extendLogInfo({
+                rpsLimit: totalLimit,
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
+            }))
+        );
+        conn.sendLazyErrorFrameForReq(reqFrame, 'Busy',
+            'hyperbahn node is rate-limited by the total rps of ' + totalLimit
+        );
+    } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
+        var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
+        self.logger.info(
+            'hyperbahn service is rate-limited by the service rps limit',
+            self.extendLogInfo(conn.extendLogInfo({
+                rpsLimit: serviceLimit,
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
+            }))
+        );
+        conn.sendLazyErrorFrameForReq(reqFrame, 'Busy',
+            serviceName + ' is rate-limited by the service rps of ' + serviceLimit
+        );
     }
 };
