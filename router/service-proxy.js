@@ -53,6 +53,10 @@ function ServiceDispatchHandler(options) {
 
     // TODO: port over rate limiter itself
     self.rateLimiterEnabled = false;
+
+    // Populated by remote-config
+    self.peerHeapEnabledServices = Object.create(null);
+    self.peerHeapEnabledGlobal = false;
 }
 
 /*eslint max-statements: [2, 45]*/
@@ -189,10 +193,6 @@ function createServiceChannel(serviceName) {
         );
     }
 
-    var exitNodes = self.egressNodes.exitsFor(serviceName);
-    var isExit = self.egressNodes.isExitFor(serviceName);
-    var mode = isExit ? 'exit' : 'forward';
-
     var choosePeerWithHeap = self.peerHeapEnabledGlobal;
     if (serviceName in self.peerHeapEnabledServices) {
         choosePeerWithHeap = self.peerHeapEnabledServices[serviceName];
@@ -203,11 +203,24 @@ function createServiceChannel(serviceName) {
         choosePeerWithHeap: choosePeerWithHeap
     };
 
-    if (mode === 'exit') {
-        options.preferConnectionDirection = 'out';
-    }
-
     var serviceChannel = self.channel.makeSubChannel(options);
+    serviceChannel.handler = new RelayHandler(serviceChannel);
+
+    // TODO: this belongs in discovery...
+    self.transitionChannelToMode(serviceName);
+
+    return serviceChannel;
+};
+
+ServiceDispatchHandler.prototype.transitionChannelToMode =
+function transitionChannelToMode(serviceName) {
+    var self = this;
+
+    var isExit = self.egressNodes.isExitFor(serviceName);
+    var mode = isExit ? 'exit' : 'forward';
+    var exitNodes = self.egressNodes.exitsFor(serviceName);
+
+    var serviceChannel = self.channel.subChannels[serviceName];
     serviceChannel.serviceProxyMode = mode; // duck: punched
 
     if (mode === 'forward') {
@@ -217,9 +230,14 @@ function createServiceChannel(serviceName) {
         }
     }
 
-    serviceChannel.handler = new RelayHandler(
-        serviceChannel,
-        mode === 'exit' && self.circuitsEnabled && self.circuits);
+    if (mode === 'exit' && self.circuitsEnabled) {
+        serviceChannel.handler.circuit = self.circuits;
+    }
 
-    return serviceChannel;
+    var preferConnectionDirection = mode === 'exit' ? 'out' : 'any';
+    serviceChannel.peers.preferConnectionDirection = preferConnectionDirection;
+    var peers = serviceChannel.peers.values();
+    for (var i = 0; i < peers.length; i++) {
+        peers[i].setPreferConnectionDirection(preferConnectionDirection);
+    }
 };
