@@ -54,6 +54,8 @@ function ServiceDispatchHandler(options) {
     self.blockingTable = new BlockingTable();
 }
 
+ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
+
 /*eslint max-statements: [2, 45]*/
 /*eslint complexity: [2, 15]*/
 ServiceDispatchHandler.prototype.handleLazily =
