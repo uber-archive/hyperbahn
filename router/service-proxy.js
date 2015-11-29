@@ -22,6 +22,7 @@
 
 var assert = require('assert');
 var Buffer = require('buffer').Buffer;
+var RelayHandler = require('tchannel/relay_handler');
 
 var CN_HEADER_BUFFER = new Buffer('cn');
 var RATE_LIMIT_TOTAL = 'total';
@@ -39,6 +40,9 @@ function ServiceDispatchHandler(options) {
 
     assert(options.logger, 'logger required');
     self.logger = options.logger;
+
+    assert(options.channel, 'channel required');
+    self.channel = options.channel;
 
     // TODO: port over rate limiter itself
     self.rateLimiterEnabled = false;
@@ -162,4 +166,57 @@ function failWithRateLimitReason(conn, reqFrame, rateLimitReason, serviceName) {
             serviceName + ' is rate-limited by the service rps of ' + serviceLimit
         );
     }
+};
+
+ServiceDispatchHandler.prototype.createServiceChannel =
+function createServiceChannel(serviceName) {
+    var self = this;
+
+    var now = self.channel.timers.now();
+    if (now >= self.createdAt + self.logGracePeriod) {
+        self.logger.info(
+            'Creating new sub channel',
+            self.extendLogInfo({
+                serviceName: serviceName
+            })
+        );
+    }
+
+    var exitNodes = self.egressNodes.exitsFor(serviceName);
+    var isExit = self.egressNodes.isExitFor(serviceName);
+    var mode = isExit ? 'exit' : 'forward';
+
+    var choosePeerWithHeap = self.peerHeapEnabledGlobal;
+    if (serviceName in self.peerHeapEnabledServices) {
+        choosePeerWithHeap = self.peerHeapEnabledServices[serviceName];
+    }
+
+    var options = {
+        serviceName: serviceName,
+        choosePeerWithHeap: choosePeerWithHeap
+    };
+
+    if (self.serviceReqDefaults[serviceName]) {
+        options.requestDefaults = self.serviceReqDefaults[serviceName];
+    }
+
+    if (mode === 'exit') {
+        options.preferConnectionDirection = 'out';
+    }
+
+    var serviceChannel = self.channel.makeSubChannel(options);
+    serviceChannel.serviceProxyMode = mode; // duck: punched
+
+    if (mode === 'forward') {
+        var exitNames = Object.keys(exitNodes);
+        for (var i = 0; i < exitNames.length; i++) {
+            self._getServicePeer(serviceChannel, exitNames[i]);
+        }
+    }
+
+    serviceChannel.handler = new RelayHandler(
+        serviceChannel,
+        mode === 'exit' && self.circuitsEnabled && self.circuits);
+
+    return serviceChannel;
 };
