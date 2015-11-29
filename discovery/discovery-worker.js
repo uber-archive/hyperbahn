@@ -102,9 +102,6 @@ function DiscoveryWorker(config, opts) {
     self.serviceProxy = ServiceProxy(serviceProxyOpts);
 
     // TODO: so naughty
-    self._proxyChannel.handler = self.serviceProxy;
-
-    // TODO: so naughty
     self.autobahnChannel = self._proxyChannel.makeSubChannel({
         serviceName: 'autobahn'
     });
