@@ -39,6 +39,9 @@ function ServiceDispatchHandler(options) {
 
     assert(options.logger, 'logger required');
     self.logger = options.logger;
+
+    // TODO: port over rate limiter itself
+    self.rateLimiterEnabled = false;
 }
 
 /*eslint max-statements: [2, 45]*/
