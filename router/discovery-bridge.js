@@ -45,3 +45,17 @@ function createBatchStats() {
 
     return self._discoveryWorker.clients.batchStats;
 };
+
+DiscoveryBridge.prototype.unsafeIsExitFor =
+function unsafeIsExitFor(serviceName) {
+    var self = this;
+
+    self._discoveryWorker.serviceProxy.egressNodes.isExitFor(serviceName);
+};
+
+DiscoveryBridge.prototype.unsafeExitsFor =
+function unsafeExitsFor(serviceName) {
+    var self = this;
+
+    self._discoveryWorker.serviceProxy.egressNodes.exitsFor(serviceName);
+};

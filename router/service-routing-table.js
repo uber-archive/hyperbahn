@@ -21,7 +21,6 @@
 'use strict';
 
 var assert = require('assert');
-var timers = require('timers');
 
 var RelayHandler = require('tchannel/relay_handler');
 
@@ -42,6 +41,9 @@ function ServiceRoutingTable(options) {
     assert(options.channel, 'channel required');
     self.channel = options.channel;
 
+    assert(options.discoveryBridge, 'discoveryBridge required');
+    self.discoveryBridge = options.discoveryBridge;
+
     self.logGracePeriod = options.logGracePeriod ||
         DEFAULT_LOG_GRACE_PERIOD;
     self.createdAt = Date.now();
@@ -61,7 +63,7 @@ ServiceRoutingTable.prototype.createServiceChannel =
 function createServiceChannel(serviceName) {
     var self = this;
 
-    var now = timers.now();
+    var now = Date.now();
     if (now >= self.createdAt + self.logGracePeriod) {
         self.logger.info(
             'Creating new sub channel',
@@ -94,9 +96,9 @@ ServiceRoutingTable.prototype.transitionChannelToMode =
 function transitionChannelToMode(serviceName) {
     var self = this;
 
-    var isExit = self.egressNodes.isExitFor(serviceName);
+    var isExit = self.discoveryBridge.unsafeIsExitFor(serviceName);
     var mode = isExit ? 'exit' : 'forward';
-    var exitNodes = self.egressNodes.exitsFor(serviceName);
+    var exitNodes = self.discoveryBridge.unsafeExitsFor(serviceName);
 
     var serviceChannel = self.channel.subChannels[serviceName];
     serviceChannel.serviceProxyMode = mode; // duck: punched

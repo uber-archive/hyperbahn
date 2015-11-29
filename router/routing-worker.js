@@ -54,7 +54,8 @@ function RoutingWorker(discoveryWorker, opts) {
 
     self.serviceRoutingTable = new ServiceRoutingTable({
         logger: self.logger,
-        channel: self.tchannel
+        channel: self.tchannel,
+        discoveryBridge: self.discoveryBridge
     });
     self.serviceProxyHandler = new ServiceProxyHandler({
         logger: self.logger,
