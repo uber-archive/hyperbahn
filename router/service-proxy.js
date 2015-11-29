@@ -107,6 +107,12 @@ function handleLazily(conn, reqFrame) {
     }
 };
 
+ServiceDispatchHandler.prototype.isBlocked =
+function isBlocked() {
+    // TODO: port over real isBlocked()
+    return false;
+};
+
 ServiceDispatchHandler.prototype.failWithBadRequest =
 function failWithBadRequest(conn, reqFrame, message, error) {
     var self = this;
