@@ -38,7 +38,7 @@ var InvalidRequest = TypedError({
 module.exports = killSwitch;
 
 function killSwitch(opts, req, head, body, cb) {
-    var serviceProxy = opts.worker.serviceProxy;
+    var routingBridge = opts.worker.routingBridge;
 
     if (!body) {
         return cb(null, {
@@ -51,11 +51,8 @@ function killSwitch(opts, req, head, body, cb) {
     }
 
     if (body.type === 'query') {
-        return cb(null, {
-            ok: true,
-            head: null,
-            body: {blockingTable: serviceProxy.blockingTable}
-        });
+        routingBridge.getBlockingTable(onBlockingTable);
+        return null;
     }
 
     if (!body.cn || !body.serviceName) {
@@ -70,9 +67,9 @@ function killSwitch(opts, req, head, body, cb) {
     }
 
     if (body.type === 'block') {
-        serviceProxy.block(body.cn, body.serviceName);
+        routingBridge.blockEdge(body.cn, body.serviceName, onWritten);
     } else if (body.type === 'unblock') {
-        serviceProxy.unblock(body.cn, body.serviceName);
+        routingBridge.unblockEdge(body.cn, body.serviceName, onWritten);
     } else {
         return cb(null, {
             ok: false,
@@ -83,9 +80,31 @@ function killSwitch(opts, req, head, body, cb) {
         });
     }
 
-    return cb(null, {
-        ok: true,
-        head: null,
-        body: {blockingTable: serviceProxy.blockingTable}
-    });
+    function onWritten(err) {
+        if (err) {
+            return cb(null, {
+                ok: false,
+                head: null,
+                body: err
+            });
+        }
+
+        routingBridge.getBlockingTable(onBlockingTable);
+    }
+
+    function onBlockingTable(err, blockingTable) {
+        if (err) {
+            return cb(null, {
+                ok: false,
+                head: null,
+                body: err
+            });
+        }
+
+        return cb(null, {
+            ok: true,
+            head: null,
+            body: {blockingTable: blockingTable}
+        });
+    }
 }

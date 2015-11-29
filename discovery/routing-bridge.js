@@ -133,3 +133,41 @@ function setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig) {
         peerHeapConfig, peerHeapGlobalConfig
     );
 };
+
+RoutingBridge.prototype.updateKillSwitches =
+function updateKillSwitches(killSwitches) {
+    var self = this;
+
+    self._routingWorker.serviceProxyHandler.unblockAllRemoteConfig();
+
+    for (var i = 0; i < killSwitches.length; i++) {
+        var value = killSwitches[i];
+        var edge = value.split('~~');
+        if (edge.length === 2 && value !== '*~~*') {
+            self._routingWorker.serviceProxyHandler.blockRemoteConfig(edge[0], edge[1]);
+        }
+    }
+};
+
+RoutingBridge.prototype.getBlockingTable =
+function getBlockingTable(cb) {
+    var self = this;
+
+    cb(null, self._routingWorker.serviceProxyHandler.blockingTable);
+};
+
+RoutingBridge.prototype.blockEdge =
+function blockEdge(callerName, serviceName, cb) {
+    var self = this;
+
+    self._routingWorker.serviceProxyHandler.block(callerName, serviceName);
+    cb(null);
+};
+
+RoutingBridge.prototype.unblockEdge =
+function unblockEdge(callerName, serviceName, cb) {
+    var self = this;
+
+    self._routingWorker.serviceProxyHandler.unblocK(callerName, serviceName);
+    cb(null);
+};

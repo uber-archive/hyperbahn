@@ -175,16 +175,9 @@ RemoteConfigUpdater.prototype.updateKValues = function updateKValues() {
 
 RemoteConfigUpdater.prototype.updateKillSwitches = function updateKillSwitches() {
     var self = this;
-    self.worker.serviceProxy.unblockAllRemoteConfig();
-    var killSwitches = self.remoteConfig.get('killSwitch', []);
 
-    for (var i = 0; i < killSwitches.length; i++) {
-        var value = killSwitches[i];
-        var edge = value.split('~~');
-        if (edge.length === 2 && value !== '*~~*') {
-            self.worker.serviceProxy.blockRemoteConfig(edge[0], edge[1]);
-        }
-    }
+    var killSwitches = self.remoteConfig.get('killSwitch', []);
+    self.worker.routingBridge.updateKillSwitches(killSwitches);
 };
 
 RemoteConfigUpdater.prototype.updatePeerHeapEnabled = function updatePeerHeapEnabled() {
