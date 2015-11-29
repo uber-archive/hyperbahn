@@ -122,7 +122,7 @@ RoutingBridge.prototype.unsafeGetRateLimiter =
 function unsafeGetRateLimiter(hostPort) {
     var self = this;
 
-    return self._routingWorker.tchannel.handler.rateLimiter;
+    return self._routingWorker.serviceProxyHandler.rateLimiter;
 };
 
 RoutingBridge.prototype.setPeerHeapEnabled =

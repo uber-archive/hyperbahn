@@ -77,6 +77,7 @@ function HyperbahnHandler(options) {
     self.channel = options.channel;
     self.egressNodes = options.egressNodes;
     self.callerName = options.callerName;
+    self.serviceProxy = options.serviceProxy;
 
     self.tchannelJSON = TChannelJSON({
         logger: self.channel.logger
@@ -350,13 +351,13 @@ function logError(err, opts, response) {
 HyperbahnHandler.prototype.advertise =
 function advertise(service) {
     var self = this;
-    self.channel.topChannel.handler.refreshServicePeer(service.serviceName, service.hostPort);
+    self.serviceProxy.refreshServicePeer(service.serviceName, service.hostPort);
 };
 
 HyperbahnHandler.prototype.unadvertise =
 function unadvertise(service) {
     var self = this;
-    self.channel.topChannel.handler.removeServicePeer(service.serviceName, service.hostPort);
+    self.serviceProxy.removeServicePeer(service.serviceName, service.hostPort);
 };
 
 function convertHosts(hosts) {
@@ -400,7 +401,7 @@ function discover(handler, req, head, body, cb) {
     if (exitHosts.indexOf(myHost) === -1) {
         // Since Hyperbahn is fully connected to service hosts,
         // any exit node suffices.
-        svcchan = handler.channel.topChannel.handler.getOrCreateServiceChannel(serviceName);
+        svcchan = handler.serviceProxy.getOrCreateServiceChannel(serviceName);
         handler.tchannelThrift.send(svcchan.request({
             serviceName: 'hyperbahn',
             headers: {

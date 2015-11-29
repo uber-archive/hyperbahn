@@ -160,6 +160,7 @@ function setupServices() {
     });
     var hyperbahnHandler = HyperbahnHandler({
         channel: hyperbahnChannel,
+        serviceProxy: self.serviceProxy,
         egressNodes: self.clients.egressNodes,
         callerName: 'autobahn',
         relayAdTimeout: hyperbahnTimeouts.relayAdTimeout
