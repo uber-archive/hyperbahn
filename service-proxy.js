@@ -248,49 +248,6 @@ util.inherits(ServiceDispatchHandler, EventEmitter);
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
 
-ServiceDispatchHandler.prototype.rateLimit =
-function rateLimit(cn, serviceName) {
-    var self = this;
-
-    // stats edge traffic
-    self.rateLimiter.incrementEdgeCounter(cn + '~~' + serviceName);
-
-    var isExitNode = self.isExitFor(serviceName);
-    if (isExitNode) {
-        self.rateLimiter.createServiceCounter(serviceName);
-        self.rateLimiter.createKillSwitchServiceCounter(serviceName);
-    }
-
-    // apply kill switch safe guard first
-    if (self.rateLimiter.shouldKillSwitchTotalRequest(serviceName) ||
-        (isExitNode && self.rateLimiter.shouldKillSwitchService(serviceName))) {
-        return RATE_LIMIT_KILLSWITCH;
-    }
-
-    self.rateLimiter.incrementKillSwitchTotalCounter(serviceName);
-    if (isExitNode) {
-        self.rateLimiter.incrementKillSwitchServiceCounter(serviceName);
-    }
-
-    // apply rate limiter
-    if (self.rateLimiter.shouldRateLimitTotalRequest(serviceName)) {
-        return RATE_LIMIT_TOTAL;
-    }
-
-    // check RPS for service limit
-    if (isExitNode && self.rateLimiter.shouldRateLimitService(serviceName)) {
-        return RATE_LIMIT_SERVICE;
-    }
-
-    // increment the counters
-    self.rateLimiter.incrementTotalCounter(serviceName);
-    if (isExitNode) {
-        self.rateLimiter.incrementServiceCounter(serviceName);
-    }
-
-    return '';
-};
-
 ServiceDispatchHandler.prototype.getOrCreateServiceChannel =
 function getOrCreateServiceChannel(serviceName) {
     var self = this;
