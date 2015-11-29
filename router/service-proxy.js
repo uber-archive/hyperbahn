@@ -53,6 +53,8 @@ function ServiceDispatchHandler(options) {
 
     // TODO: port over rate limiter itself
     self.rateLimiterEnabled = false;
+    // TODO: port over circuits itself
+    self.circuitsEnabled = false;
 
     // Populated by remote-config
     self.peerHeapEnabledServices = Object.create(null);

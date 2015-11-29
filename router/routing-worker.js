@@ -23,6 +23,7 @@
 var TChannel = require('tchannel');
 var extendInto = require('xtend/mutable');
 
+var ServiceProxyHandler = require('./service-proxy-handler.js');
 var DiscoveryBridge = require('./discovery-bridge.js');
 
 module.exports = RoutingWorker;
@@ -49,6 +50,11 @@ function RoutingWorker(discoveryWorker, opts) {
     }, opts.testChannelConfigOverlay));
 
     self.tchannel.drainExempt = isReqDrainExempt;
+
+    self.serviceProxyHandler = new ServiceProxyHandler({
+        logger: self.logger,
+        channel: self.tchannel
+    });
 }
 
 function isReqDrainExempt(req) {
