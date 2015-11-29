@@ -106,7 +106,7 @@ function transitionChannelToMode(serviceName) {
     if (mode === 'forward') {
         var exitNames = Object.keys(exitNodes);
         for (var i = 0; i < exitNames.length; i++) {
-            self._getServicePeer(serviceChannel, exitNames[i]);
+            self.discoveryBridge.unsafeGetServicePeer(serviceChannel, exitNames[i]);
         }
     }
 

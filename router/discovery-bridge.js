@@ -50,12 +50,19 @@ DiscoveryBridge.prototype.unsafeIsExitFor =
 function unsafeIsExitFor(serviceName) {
     var self = this;
 
-    self._discoveryWorker.serviceProxy.egressNodes.isExitFor(serviceName);
+    return self._discoveryWorker.serviceProxy.egressNodes.isExitFor(serviceName);
 };
 
 DiscoveryBridge.prototype.unsafeExitsFor =
 function unsafeExitsFor(serviceName) {
     var self = this;
 
-    self._discoveryWorker.serviceProxy.egressNodes.exitsFor(serviceName);
+    return self._discoveryWorker.serviceProxy.egressNodes.exitsFor(serviceName);
 };
+
+DiscoveryBridge.prototype.unsafeGetServicePeer =
+function unsafeGetServicePeer(serviceChannel, hostPort) {
+    var self = this;
+
+    return self._discoveryWorker.serviceProxy._getServicePeer(serviceChannel, hostPort);
+}
