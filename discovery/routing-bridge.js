@@ -124,3 +124,12 @@ function unsafeGetRateLimiter(hostPort) {
 
     return self._routingWorker.tchannel.handler.rateLimiter;
 };
+
+RoutingBridge.prototype.setPeerHeapEnabled =
+function setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig) {
+    var self = this;
+
+    return self._routingWorker.tchannel.handler.setPeerHeapEnabled(
+        peerHeapConfig, peerHeapGlobalConfig
+    );
+};

@@ -237,7 +237,27 @@ function transitionChannelToMode(serviceName) {
     var preferConnectionDirection = mode === 'exit' ? 'out' : 'any';
     serviceChannel.peers.preferConnectionDirection = preferConnectionDirection;
     var peers = serviceChannel.peers.values();
-    for (var i = 0; i < peers.length; i++) {
-        peers[i].setPreferConnectionDirection(preferConnectionDirection);
+    for (var j = 0; j < peers.length; j++) {
+        peers[j].setPreferConnectionDirection(preferConnectionDirection);
+    }
+};
+
+ServiceDispatchHandler.prototype.setPeerHeapEnabled =
+function setPeerHeapEnabled(peerHeapEnabledServices, peerHeapEnabledGlobal) {
+    var self = this;
+
+    assert(typeof peerHeapEnabledServices === 'object');
+    self.peerHeapEnabledServices = peerHeapEnabledServices;
+    self.peerHeapEnabledGlobal = peerHeapEnabledGlobal;
+
+    var keys = Object.keys(self.channel.subChannels);
+    var i;
+    for (i = 0; i < keys.length; i++) {
+        var serviceName = keys[i];
+        var enabled = self.peerHeapEnabledGlobal;
+        if (serviceName in self.peerHeapEnabledServices) {
+            enabled = self.peerHeapEnabledServices[serviceName];
+        }
+        self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
     }
 };

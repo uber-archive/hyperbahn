@@ -192,7 +192,7 @@ RemoteConfigUpdater.prototype.updatePeerHeapEnabled = function updatePeerHeapEna
     var peerHeapConfig = self.remoteConfig.get('peer-heap.enabled.services', {});
     var peerHeapGlobalConfig = self.remoteConfig.get('peer-heap.enabled.global', false);
 
-    self.worker.serviceProxy.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
+    self.worker.routingBridge.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
 };
 
 RemoteConfigUpdater.prototype.updateMaxTombstoneTTL =
