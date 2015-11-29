@@ -129,7 +129,7 @@ RoutingBridge.prototype.setPeerHeapEnabled =
 function setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig) {
     var self = this;
 
-    return self._routingWorker.tchannel.handler.setPeerHeapEnabled(
+    return self._routingWorker.serviceRoutingTable.setPeerHeapEnabled(
         peerHeapConfig, peerHeapGlobalConfig
     );
 };
