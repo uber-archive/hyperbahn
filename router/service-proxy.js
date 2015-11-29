@@ -22,10 +22,6 @@
 
 var assert = require('assert');
 var Buffer = require('buffer').Buffer;
-var timers = require('timers');
-var RelayHandler = require('tchannel/relay_handler');
-
-var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
 var CN_HEADER_BUFFER = new Buffer('cn');
 var RATE_LIMIT_TOTAL = 'total';
@@ -47,18 +43,11 @@ function ServiceDispatchHandler(options) {
     assert(options.channel, 'channel required');
     self.channel = options.channel;
 
-    self.logGracePeriod = options.logGracePeriod ||
-        DEFAULT_LOG_GRACE_PERIOD;
-    self.createdAt = Date.now();
+    assert(options.serviceRoutingTable, 'serviceRoutingTable required');
+    self.serviceRoutingTable = options.serviceRoutingTable;
 
     // TODO: port over rate limiter itself
     self.rateLimiterEnabled = false;
-    // TODO: port over circuits itself
-    self.circuitsEnabled = false;
-
-    // Populated by remote-config
-    self.peerHeapEnabledServices = Object.create(null);
-    self.peerHeapEnabledGlobal = false;
 }
 
 /*eslint max-statements: [2, 45]*/
@@ -117,7 +106,7 @@ function handleLazily(conn, reqFrame) {
 
     var serviceChannel = self.channel.subChannels[serviceName];
     if (!serviceChannel) {
-        serviceChannel = self.createServiceChannel(serviceName);
+        serviceChannel = self.serviceRoutingTable.createServiceChannel(serviceName);
     }
 
     if (serviceChannel.handler.handleLazily) {
@@ -178,88 +167,5 @@ function failWithRateLimitReason(conn, reqFrame, rateLimitReason, serviceName) {
         conn.sendLazyErrorFrameForReq(reqFrame, 'Busy',
             serviceName + ' is rate-limited by the service rps of ' + serviceLimit
         );
-    }
-};
-
-ServiceDispatchHandler.prototype.createServiceChannel =
-function createServiceChannel(serviceName) {
-    var self = this;
-
-    var now = timers.now();
-    if (now >= self.createdAt + self.logGracePeriod) {
-        self.logger.info(
-            'Creating new sub channel',
-            self.extendLogInfo({
-                serviceName: serviceName
-            })
-        );
-    }
-
-    var choosePeerWithHeap = self.peerHeapEnabledGlobal;
-    if (serviceName in self.peerHeapEnabledServices) {
-        choosePeerWithHeap = self.peerHeapEnabledServices[serviceName];
-    }
-
-    var options = {
-        serviceName: serviceName,
-        choosePeerWithHeap: choosePeerWithHeap
-    };
-
-    var serviceChannel = self.channel.makeSubChannel(options);
-    serviceChannel.handler = new RelayHandler(serviceChannel);
-
-    // TODO: this belongs in discovery...
-    self.transitionChannelToMode(serviceName);
-
-    return serviceChannel;
-};
-
-ServiceDispatchHandler.prototype.transitionChannelToMode =
-function transitionChannelToMode(serviceName) {
-    var self = this;
-
-    var isExit = self.egressNodes.isExitFor(serviceName);
-    var mode = isExit ? 'exit' : 'forward';
-    var exitNodes = self.egressNodes.exitsFor(serviceName);
-
-    var serviceChannel = self.channel.subChannels[serviceName];
-    serviceChannel.serviceProxyMode = mode; // duck: punched
-
-    if (mode === 'forward') {
-        var exitNames = Object.keys(exitNodes);
-        for (var i = 0; i < exitNames.length; i++) {
-            self._getServicePeer(serviceChannel, exitNames[i]);
-        }
-    }
-
-    if (mode === 'exit' && self.circuitsEnabled) {
-        serviceChannel.handler.circuit = self.circuits;
-    }
-
-    var preferConnectionDirection = mode === 'exit' ? 'out' : 'any';
-    serviceChannel.peers.preferConnectionDirection = preferConnectionDirection;
-    var peers = serviceChannel.peers.values();
-    for (var j = 0; j < peers.length; j++) {
-        peers[j].setPreferConnectionDirection(preferConnectionDirection);
-    }
-};
-
-ServiceDispatchHandler.prototype.setPeerHeapEnabled =
-function setPeerHeapEnabled(peerHeapEnabledServices, peerHeapEnabledGlobal) {
-    var self = this;
-
-    assert(typeof peerHeapEnabledServices === 'object');
-    self.peerHeapEnabledServices = peerHeapEnabledServices;
-    self.peerHeapEnabledGlobal = peerHeapEnabledGlobal;
-
-    var keys = Object.keys(self.channel.subChannels);
-    var i;
-    for (i = 0; i < keys.length; i++) {
-        var serviceName = keys[i];
-        var enabled = self.peerHeapEnabledGlobal;
-        if (serviceName in self.peerHeapEnabledServices) {
-            enabled = self.peerHeapEnabledServices[serviceName];
-        }
-        self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
     }
 };
