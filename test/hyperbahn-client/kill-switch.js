@@ -20,65 +20,57 @@
 
 'use strict';
 
-var TestCluster = require('../lib/test-cluster.js');
+var test = require('tape');
 
-TestCluster.test('set cn/service', {
-    size: 1
-}, function t(cluster, assert) {
-    // TODO LOL
-    var proxy = cluster.apps[0].routingBridge._routingWorker.serviceProxyHandler;
+var BlockingTable = require('../../router/blocking-table.js');
 
-    assert.equals(proxy.blockingTable, undefined, 'blocking table should be undefined');
-    proxy.block('client1', 'service1');
-    proxy.block('client1', 'service2');
-    proxy.block('client2', 'service1');
-    proxy.block('*', 'service1');
-    proxy.block(null, 'service2');
+test('set cn/service', function t(assert) {
+    var blockingTable = new BlockingTable();
 
-    assert.ok(proxy.isBlocked('client1', 'service1'), 'set blocking client1/service1 correctly');
-    assert.ok(proxy.isBlocked('client1', 'service2'), 'set blocking client1/service2 correctly');
-    assert.ok(proxy.isBlocked('client2', 'service1'), 'set blocking client2/service1 correctly');
-    assert.ok(proxy.isBlocked('*', 'service1'), 'set blocking */service1 correctly');
-    assert.ok(proxy.isBlocked('*', 'service2'), 'set blocking */service2 correctly');
-    assert.notOk(proxy.isBlocked('*', 'service3'), 'shouldn\'t have set */service3');
-    assert.notOk(proxy.isBlocked('c', 's'), 'shouldn\'t have set c/s');
+    assert.equals(blockingTable._blockingTable, null, 'blocking table should be null');
+    blockingTable.block('client1', 'service1');
+    blockingTable.block('client1', 'service2');
+    blockingTable.block('client2', 'service1');
+    blockingTable.block('*', 'service1');
+    blockingTable.block(null, 'service2');
 
-    proxy.destroy();
-    proxy.channel.close();
+    assert.ok(blockingTable.isBlocked('client1', 'service1'), 'set blocking client1/service1 correctly');
+    assert.ok(blockingTable.isBlocked('client1', 'service2'), 'set blocking client1/service2 correctly');
+    assert.ok(blockingTable.isBlocked('client2', 'service1'), 'set blocking client2/service1 correctly');
+    assert.ok(blockingTable.isBlocked('*', 'service1'), 'set blocking */service1 correctly');
+    assert.ok(blockingTable.isBlocked('*', 'service2'), 'set blocking */service2 correctly');
+    assert.notOk(blockingTable.isBlocked('*', 'service3'), 'shouldn\'t have set */service3');
+    assert.notOk(blockingTable.isBlocked('c', 's'), 'shouldn\'t have set c/s');
+
     assert.end();
 });
 
-TestCluster.test('clear cn/service', {
-    size: 1
-}, function t(cluster, assert) {
-    // TODO LOL
-    var proxy = cluster.apps[0].routingBridge._routingWorker.serviceProxyHandler;
+test('clear cn/service', function t(assert) {
+    var blockingTable = new BlockingTable();
 
-    assert.equals(proxy.blockingTable, undefined, 'blocking table should be undefined');
-    proxy.block('client1', 'service1');
-    proxy.block('client1', 'service2');
-    proxy.block('client2', 'service1');
-    proxy.block('*', 'service1');
-    proxy.block(null, 'service2');
+    assert.equals(blockingTable._blockingTable, null, 'blocking table should be null');
+    blockingTable.block('client1', 'service1');
+    blockingTable.block('client1', 'service2');
+    blockingTable.block('client2', 'service1');
+    blockingTable.block('*', 'service1');
+    blockingTable.block(null, 'service2');
 
-    proxy.unblock('client1', 'service1');
-    proxy.unblock('client2', 'service1');
-    proxy.unblock('*', 'service1');
+    blockingTable.unblock('client1', 'service1');
+    blockingTable.unblock('client2', 'service1');
+    blockingTable.unblock('*', 'service1');
 
-    assert.notOk(proxy.isBlocked('client1', 'service1'), 'client1/service1 should be cleared');
-    assert.notOk(proxy.isBlocked('client2', 'service1'), 'client2/service1  should be cleared');
-    assert.notOk(proxy.isBlocked('*', 'service1'), '*/service1  should be cleared');
+    assert.notOk(blockingTable.isBlocked('client1', 'service1'), 'client1/service1 should be cleared');
+    assert.notOk(blockingTable.isBlocked('client2', 'service1'), 'client2/service1  should be cleared');
+    assert.notOk(blockingTable.isBlocked('*', 'service1'), '*/service1  should be cleared');
 
-    assert.ok(proxy.isBlocked('client1', 'service2'), 'client1/service2 shouldn\'t be cleared');
-    assert.ok(proxy.isBlocked('*', 'service2'), 'blocking */service2 shouldn\'t be cleared');
+    assert.ok(blockingTable.isBlocked('client1', 'service2'), 'client1/service2 shouldn\'t be cleared');
+    assert.ok(blockingTable.isBlocked('*', 'service2'), 'blocking */service2 shouldn\'t be cleared');
 
-    proxy.unblock('client1', 'service2');
-    proxy.unblock(null, 'service2');
-    assert.notOk(proxy.isBlocked('client1', 'service2'), 'client1/service2 should be cleared');
-    assert.notOk(proxy.isBlocked('*', 'service2'), 'blocking */service2 should be cleared');
-    assert.equals(proxy.blockingTable, null, 'blocking table should be cleared');
+    blockingTable.unblock('client1', 'service2');
+    blockingTable.unblock(null, 'service2');
+    assert.notOk(blockingTable.isBlocked('client1', 'service2'), 'client1/service2 should be cleared');
+    assert.notOk(blockingTable.isBlocked('*', 'service2'), 'blocking */service2 should be cleared');
+    assert.equals(blockingTable._blockingTable, null, 'blocking table should be cleared');
 
-    proxy.destroy();
-    proxy.channel.close();
     assert.end();
 });
