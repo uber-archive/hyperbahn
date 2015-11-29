@@ -138,13 +138,15 @@ RoutingBridge.prototype.updateKillSwitches =
 function updateKillSwitches(killSwitches) {
     var self = this;
 
-    self._routingWorker.serviceProxyHandler.unblockAllRemoteConfig();
+    var blockingTable = self._routingWorker.serviceProxyHandler.blockingTable;
+
+    blockingTable.unblockAllRemoteConfig();
 
     for (var i = 0; i < killSwitches.length; i++) {
         var value = killSwitches[i];
         var edge = value.split('~~');
         if (edge.length === 2 && value !== '*~~*') {
-            self._routingWorker.serviceProxyHandler.blockRemoteConfig(edge[0], edge[1]);
+            blockingTable.blockRemoteConfig(edge[0], edge[1]);
         }
     }
 };
@@ -153,14 +155,18 @@ RoutingBridge.prototype.getBlockingTable =
 function getBlockingTable(cb) {
     var self = this;
 
-    cb(null, self._routingWorker.serviceProxyHandler.blockingTable);
+    var blockingTable = self._routingWorker.serviceProxyHandler.blockingTable;
+
+    cb(null, blockingTable._blockingTable);
 };
 
 RoutingBridge.prototype.blockEdge =
 function blockEdge(callerName, serviceName, cb) {
     var self = this;
 
-    self._routingWorker.serviceProxyHandler.block(callerName, serviceName);
+    var blockingTable = self._routingWorker.serviceProxyHandler.blockingTable;
+
+    blockingTable.block(callerName, serviceName);
     cb(null);
 };
 
@@ -168,6 +174,8 @@ RoutingBridge.prototype.unblockEdge =
 function unblockEdge(callerName, serviceName, cb) {
     var self = this;
 
-    self._routingWorker.serviceProxyHandler.unblocK(callerName, serviceName);
+    var blockingTable = self._routingWorker.serviceProxyHandler.blockingTable;
+
+    blockingTable.unblock(callerName, serviceName);
     cb(null);
 };
