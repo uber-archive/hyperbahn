@@ -48,6 +48,9 @@ function ServiceDispatchHandler(options) {
 
     // TODO: port over rate limiter itself
     self.rateLimiterEnabled = false;
+
+    self.blockingTable = null;
+    self.blockingTableRemoteConfig = null;
 }
 
 /*eslint max-statements: [2, 45]*/
@@ -170,10 +173,69 @@ function handleRequest(req, buildRes) {
 };
 
 ServiceDispatchHandler.prototype.isBlocked =
-function isBlocked() {
-    // TODO: port over real isBlocked()
+function isBlocked(cn, serviceName) {
+    var self = this;
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+
+    if (self.blockingTable &&
+        (self.blockingTable[cn + '~~' + serviceName] ||
+        self.blockingTable['*~~' + serviceName] ||
+        self.blockingTable[cn + '~~*'])) {
+        return true;
+    }
+
+    if (self.blockingTableRemoteConfig &&
+        (self.blockingTableRemoteConfig[cn + '~~' + serviceName] ||
+        self.blockingTableRemoteConfig['*~~' + serviceName] ||
+        self.blockingTableRemoteConfig[cn + '~~*'])) {
+        return true;
+    }
+
     return false;
 };
+
+ServiceDispatchHandler.prototype.block =
+function block(cn, serviceName) {
+    var self = this;
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+    self.blockingTable = self.blockingTable || {};
+    assert(cn !== '*' || serviceName !== '*', 'at least one of cn/serviceName should be provided');
+    self.blockingTable[cn + '~~' + serviceName] = Date.now();
+};
+
+ServiceDispatchHandler.prototype.unblock =
+function unblock(cn, serviceName) {
+    var self = this;
+    if (!self.blockingTable) {
+        return;
+    }
+
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+    delete self.blockingTable[cn + '~~' + serviceName];
+    if (Object.keys(self.blockingTable).length === 0) {
+        self.blockingTable = null;
+    }
+};
+
+ServiceDispatchHandler.prototype.blockRemoteConfig =
+function blockRemoteConfig(cn, serviceName) {
+    var self = this;
+    cn = cn || '*';
+    serviceName = serviceName || '*';
+    self.blockingTableRemoteConfig = self.blockingTableRemoteConfig || {};
+    assert(cn !== '*' || serviceName !== '*', 'at least one of cn/serviceName should be provided');
+    self.blockingTableRemoteConfig[cn + '~~' + serviceName] = Date.now();
+};
+
+ServiceDispatchHandler.prototype.unblockAllRemoteConfig =
+function unblockAllRemoteConfig() {
+    var self = this;
+    self.blockingTableRemoteConfig = null;
+};
+
 
 ServiceDispatchHandler.prototype.failWithBadRequest =
 function failWithBadRequest(conn, reqFrame, message, error) {

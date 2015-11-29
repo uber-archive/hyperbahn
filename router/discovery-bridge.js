@@ -65,4 +65,4 @@ function unsafeGetServicePeer(serviceChannel, hostPort) {
     var self = this;
 
     return self._discoveryWorker.serviceProxy._getServicePeer(serviceChannel, hostPort);
-}
+};
