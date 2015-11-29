@@ -22,7 +22,10 @@
 
 var assert = require('assert');
 var Buffer = require('buffer').Buffer;
+var timers = require('timers');
 var RelayHandler = require('tchannel/relay_handler');
+
+var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
 var CN_HEADER_BUFFER = new Buffer('cn');
 var RATE_LIMIT_TOTAL = 'total';
@@ -43,6 +46,10 @@ function ServiceDispatchHandler(options) {
 
     assert(options.channel, 'channel required');
     self.channel = options.channel;
+
+    self.logGracePeriod = options.logGracePeriod ||
+        DEFAULT_LOG_GRACE_PERIOD;
+    self.createdAt = Date.now();
 
     // TODO: port over rate limiter itself
     self.rateLimiterEnabled = false;
@@ -172,7 +179,7 @@ ServiceDispatchHandler.prototype.createServiceChannel =
 function createServiceChannel(serviceName) {
     var self = this;
 
-    var now = self.channel.timers.now();
+    var now = timers.now();
     if (now >= self.createdAt + self.logGracePeriod) {
         self.logger.info(
             'Creating new sub channel',
@@ -195,10 +202,6 @@ function createServiceChannel(serviceName) {
         serviceName: serviceName,
         choosePeerWithHeap: choosePeerWithHeap
     };
-
-    if (self.serviceReqDefaults[serviceName]) {
-        options.requestDefaults = self.serviceReqDefaults[serviceName];
-    }
 
     if (mode === 'exit') {
         options.preferConnectionDirection = 'out';
