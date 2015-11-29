@@ -58,11 +58,8 @@ RoutingBridge.prototype.extendLogInfo = function extendLogInfo(info) {
 RoutingBridge.prototype.destroy = function destroy() {
     var self = this;
 
-    if (!self._routingWorker.tchannel.destroyed) {
-        self._routingWorker.tchannel.close();
-    }
-
     timers.clearTimeout(self.lazyTimeout);
+    self._routingWorker.destroy();
 };
 
 RoutingBridge.prototype.isDraining = function isDraining() {
@@ -119,7 +116,7 @@ function unsafeGetPeer(hostPort) {
 };
 
 RoutingBridge.prototype.unsafeGetRateLimiter =
-function unsafeGetRateLimiter(hostPort) {
+function unsafeGetRateLimiter() {
     var self = this;
 
     return self._routingWorker.serviceProxyHandler.rateLimiter;
@@ -178,4 +175,102 @@ function unblockEdge(callerName, serviceName, cb) {
 
     blockingTable.unblock(callerName, serviceName);
     cb(null);
+};
+
+RoutingBridge.prototype.toggleRateLimiter =
+function toggleRateLimiter(enabled) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+    if (enabled) {
+        serviceProxyHandler.enableRateLimiter();
+    } else {
+        serviceProxyHandler.disableRateLimiter();
+    }
+};
+
+RoutingBridge.prototype.updateTotalRateLimit =
+function updateTotalRateLimit(limit) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+    serviceProxyHandler.rateLimiter.updateTotalLimit(limit);
+};
+
+RoutingBridge.prototype.updateRateLimitExemptServices =
+function updateRateLimitExemptServices(exemptServices) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+    serviceProxyHandler.rateLimiter.updateExemptServices(exemptServices);
+};
+
+RoutingBridge.prototype.updateRpsLimitForAllServices =
+function updateRpsLimitForAllServices(rpsLimitForServiceName) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+    serviceProxyHandler.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
+};
+
+RoutingBridge.prototype.updateServiceRateLimit =
+function updateServiceRateLimit(serviceName, limit) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+    serviceProxyHandler.rateLimiter.updateServiceLimit(serviceName, limit);
+};
+
+RoutingBridge.prototype.addRateLimitExceptService =
+function addRateLimitExceptService(serviceName) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+    var exemptServices = serviceProxyHandler.rateLimiter.exemptServices.slice();
+
+    if (exemptServices.indexOf(serviceName) === -1) {
+        exemptServices.push(serviceName);
+    }
+
+    serviceProxyHandler.rateLimiter.updateExemptServices(exemptServices);
+};
+
+RoutingBridge.prototype.removeRateLimitExceptService =
+function removeRateLimitExceptService(serviceName) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+    var exemptServices = serviceProxyHandler.rateLimiter.exemptServices.slice();
+
+    if (exemptServices.indexOf(serviceName) !== -1) {
+        exemptServices.splice(exemptServices.indexOf(serviceName), 1);
+    }
+
+    serviceProxyHandler.rateLimiter.updateExemptServices(exemptServices);
+};
+
+RoutingBridge.prototype.getRateLimiterInfo =
+function getRateLimiterInfo(cb) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+    var rateLimiter = serviceProxyHandler.rateLimiter;
+
+    cb(null, {
+        enabled: serviceProxyHandler.rateLimiterEnabled,
+        totalRpsLimit: rateLimiter.totalRpsLimit,
+        exemptServices: rateLimiter.exemptServices,
+        rpsLimitForServiceName: rateLimiter.rpsLimitForServiceName,
+        totalRequestCounter: rateLimiter.totalRequestCounter,
+        serviceCounters: rateLimiter.counters
+    });
+};
+
+RoutingBridge.prototype.updateTotalKillSwitchBuffer =
+function updateTotalKillSwitchBuffer(totalBuffer) {
+    var self = this;
+
+    var serviceProxyHandler = self._routingWorker.serviceProxyHandler;
+
+    serviceProxyHandler.rateLimiter.updateTotalKillSwitchBuffer(totalBuffer);
 };

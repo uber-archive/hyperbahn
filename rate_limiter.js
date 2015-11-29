@@ -318,6 +318,14 @@ function updateTotalLimit(limit) {
     self.totalKsCounter.rpsLimit = self.totalRpsLimit + self.defaultTotalKillSwitchBuffer;
 };
 
+RateLimiter.prototype.updateTotalKillSwitchBuffer =
+function updateTotalKillSwitchBuffer(totalBuffer) {
+    var self = this;
+
+    self.defaultTotalKillSwitchBuffer = totalBuffer;
+    self.updateTotalLimit(self.totalRpsLimit);
+};
+
 RateLimiter.prototype.createServiceCounter =
 function createServiceCounter(serviceName) {
     var self = this;

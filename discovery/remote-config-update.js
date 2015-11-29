@@ -55,6 +55,7 @@ RemoteConfigUpdater.prototype.onRemoteConfigUpdate = function onRemoteConfigUpda
     self.updatePartialAffinityEnabled();
     self.setMaximumRelayTTL();
     self.updatePeerHeapEnabled();
+    self.updateTotalKillSwitchBuffer();
 };
 
 RemoteConfigUpdater.prototype.setSocketInspector =
@@ -113,11 +114,13 @@ RemoteConfigUpdater.prototype.updateCircuitsEnabled = function updateCircuitsEna
 RemoteConfigUpdater.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled() {
     var self = this;
     var enabled = self.remoteConfig.get('rateLimiting.enabled', false);
-    if (enabled) {
-        self.worker.serviceProxy.enableRateLimiter();
-    } else {
-        self.worker.serviceProxy.disableRateLimiter();
-    }
+
+    self.worker.routingBridge.toggleRateLimiter(enabled);
+    // if (enabled) {
+    //     self.worker.serviceProxy.enableRateLimiter();
+    // } else {
+    //     self.worker.serviceProxy.disableRateLimiter();
+    // }
 };
 
 RemoteConfigUpdater.prototype.updateReapPeersPeriod =
@@ -143,19 +146,25 @@ RemoteConfigUpdater.prototype.updatePartialAffinityEnabled = function updatePart
 RemoteConfigUpdater.prototype.updateTotalRpsLimit = function updateTotalRpsLimit() {
     var self = this;
     var limit = self.remoteConfig.get('rateLimiting.totalRpsLimit', 1200);
-    self.worker.serviceProxy.rateLimiter.updateTotalLimit(limit);
+
+    self.worker.routingBridge.updateTotalRateLimit(limit);
+    // self.worker.serviceProxy.rateLimiter.updateTotalLimit(limit);
 };
 
 RemoteConfigUpdater.prototype.updateExemptServices = function updateExemptServices() {
     var self = this;
     var exemptServices = self.remoteConfig.get('rateLimiting.exemptServices', ['autobahn', 'ringpop']);
-    self.worker.serviceProxy.rateLimiter.updateExemptServices(exemptServices);
+
+    self.worker.routingBridge.updateRateLimitExemptServices(exemptServices);
+    // self.worker.serviceProxy.rateLimiter.updateExemptServices(exemptServices);
 };
 
 RemoteConfigUpdater.prototype.updateRpsLimitForServiceName = function updateRpsLimitForServiceName() {
     var self = this;
     var rpsLimitForServiceName = self.remoteConfig.get('rateLimiting.rpsLimitForServiceName', {});
-    self.worker.serviceProxy.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
+
+    self.worker.routingBridge.updateRpsLimitForAllServices(rpsLimitForServiceName);
+    // self.worker.serviceProxy.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
 };
 
 RemoteConfigUpdater.prototype.updateKValues = function updateKValues() {
@@ -195,4 +204,15 @@ function updateMaxTombstoneTTL() {
     var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
 
     self.worker.routingBridge.setMaxTombstoneTTL(ttl);
+};
+
+RemoteConfigUpdater.prototype.updateTotalKillSwitchBuffer =
+function updateTotalKillSwitchBuffer() {
+    var self = this;
+
+    var totalBuffer = self.remoteConfig.get(
+        'rateLimiting.defaultTotalKillSwitchBuffer', 200
+    );
+
+    self.worker.routingBridge.updateTotalKillSwitchBuffer(totalBuffer);
 };

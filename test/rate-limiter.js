@@ -58,7 +58,7 @@ allocCluster.test('rps counter works', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.serviceProxy.rateLimiter;
+    var rateLimiter = app.routingBridge.unsafeGetRateLimiter();
     var statsd = app.clients.statsd;
 
     increment(rateLimiter, 'steve', 'bob');
@@ -97,13 +97,13 @@ allocCluster.test('rps counter works in 1.5 seconds', {
         'rateLimiting.rateLimiterBuckets': 2,
         'rateLimiting.defaultTotalKillSwitchBuffer': 5
     },
-    statsdSize: 100,
+    statsdSize: 500,
     whitelist: [
         ['warn', 'no usable nodes at protocol period']
     ]
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.serviceProxy.rateLimiter;
+    var rateLimiter = app.routingBridge.unsafeGetRateLimiter();
     var statsd = app.clients.statsd;
 
     series([
@@ -130,14 +130,10 @@ allocCluster.test('rps counter works in 1.5 seconds', {
             assert.equals(rateLimiter.serviceCounters.bob.rps, 1, 'check2: request for bob');
             assert.equals(rateLimiter.ksCounters.bob.rps, 1, 'check2: request for bob - kill switch');
             done();
-        }
+        },
+        wait,
+        wait
     ], function done() {
-
-        // Force flush of second stats with two refreshes
-        timers.clearTimeout(rateLimiter.refreshTimer);
-        rateLimiter.refresh();
-        timers.clearTimeout(rateLimiter.refreshTimer);
-        rateLimiter.refresh();
         app.clients.batchStats.flushStats();
 
         var elems = statsd._buffer._elements;
@@ -236,7 +232,7 @@ allocCluster.test('remove counter works', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.serviceProxy.rateLimiter;
+    var rateLimiter = app.routingBridge.unsafeGetRateLimiter();
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -267,7 +263,7 @@ allocCluster.test('rate limit works', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.serviceProxy.rateLimiter;
+    var rateLimiter = app.routingBridge.unsafeGetRateLimiter();
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -306,7 +302,7 @@ allocCluster.test('rate exempt service works 1', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.serviceProxy.rateLimiter;
+    var rateLimiter = app.routingBridge.unsafeGetRateLimiter();
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');
@@ -341,7 +337,7 @@ allocCluster.test('rate exempt service works 2', {
     statsdSize: 100
 }, function t(cluster, assert) {
     var app = cluster.apps[0];
-    var rateLimiter = app.serviceProxy.rateLimiter;
+    var rateLimiter = app.routingBridge.unsafeGetRateLimiter();
 
     increment(rateLimiter, 'steve', 'bob');
     increment(rateLimiter, 'steve', 'bob');

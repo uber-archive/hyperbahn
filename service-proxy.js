@@ -77,18 +77,6 @@ function ServiceDispatchHandler(options) {
     self.circuits = null;
     self.boundOnCircuitStateChange = onCircuitStateChange;
 
-    self.rateLimiter = new RateLimiter({
-        channel: self.channel,
-        batchStats: self.batchStats,
-        rpsLimitForServiceName: options.rpsLimitForServiceName,
-        exemptServices: options.exemptServices,
-        totalRpsLimit: options.totalRpsLimit,
-        defaultServiceRpsLimit: options.defaultServiceRpsLimit,
-        defaultTotalKillSwitchBuffer: options.defaultTotalKillSwitchBuffer,
-        numOfBuckets: options.rateLimiterBuckets
-    });
-    self.rateLimiterEnabled = options.rateLimiterEnabled;
-
     self.partialAffinityEnabled = !!options.partialAffinityEnabled;
     self.minPeersPerWorker = options.minPeersPerWorker || DEFAULT_MIN_PEERS_PER_WORKER;
     self.minPeersPerRelay = options.minPeersPerRelay || DEFAULT_MIN_PEERS_PER_RELAY;
@@ -201,8 +189,9 @@ function ServiceDispatchHandler(options) {
                 if (serviceChannel) {
                     serviceChannel.close();
                     delete self.channel.subChannels[serviceName];
-                    self.rateLimiter.removeServiceCounter(serviceName);
-                    self.rateLimiter.removeKillSwitchCounter(serviceName);
+                    // TODO: wat even self.rateLimiter...
+                    // self.rateLimiter.removeServiceCounter(serviceName);
+                    // self.rateLimiter.removeKillSwitchCounter(serviceName);
                 }
             }
         },
@@ -1191,7 +1180,6 @@ function destroy() {
     self.peerReaper.stop();
     self.servicePurger.stop();
     self.statEmitter.stop();
-    self.rateLimiter.destroy();
 };
 
 ServiceDispatchHandler.prototype.initCircuits =
@@ -1253,18 +1241,6 @@ function disableCircuits() {
             subChannel.handler.circuits = null;
         }
     }
-};
-
-ServiceDispatchHandler.prototype.enableRateLimiter =
-function enableRateLimiter() {
-    var self = this;
-    self.rateLimiterEnabled = true;
-};
-
-ServiceDispatchHandler.prototype.disableRateLimiter =
-function disableRateLimiter() {
-    var self = this;
-    self.rateLimiterEnabled = false;
 };
 
 ServiceDispatchHandler.prototype.setPartialAffinityEnabled =

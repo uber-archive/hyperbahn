@@ -141,3 +141,15 @@ function setPeerHeapEnabled(peerHeapEnabledServices, peerHeapEnabledGlobal) {
         self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
     }
 };
+
+ServiceRoutingTable.prototype.isExitFor =
+function isExitFor(serviceName) {
+    var self = this;
+
+    var serviceChannel = self.channel.subChannels[serviceName];
+    if (!serviceChannel) {
+        return false;
+    }
+
+    return serviceChannel.serviceProxyMode === 'exit';
+}

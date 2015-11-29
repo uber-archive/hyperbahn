@@ -60,11 +60,22 @@ function RoutingWorker(discoveryWorker, opts) {
     self.serviceProxyHandler = new ServiceProxyHandler({
         logger: self.logger,
         channel: self.tchannel,
-        serviceRoutingTable: self.serviceRoutingTable
+        serviceRoutingTable: self.serviceRoutingTable,
+        batchStats: self.batchStats
     });
 
     self.tchannel.handler = self.serviceProxyHandler;
 }
+
+RoutingWorker.prototype.destroy = function destroy() {
+    var self = this;
+
+
+    if (!self.tchannel.destroyed) {
+        self.tchannel.close();
+    }
+    self.serviceProxyHandler.destroy();
+};
 
 function isReqDrainExempt(req) {
     if (req.serviceName === 'ringpop' ||

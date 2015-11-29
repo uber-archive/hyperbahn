@@ -24,6 +24,7 @@ var assert = require('assert');
 var Buffer = require('buffer').Buffer;
 
 var BlockingTable = require('./blocking-table.js');
+var RateLimiter = require('../rate_limiter.js');
 
 var CN_HEADER_BUFFER = new Buffer('cn');
 var RATE_LIMIT_TOTAL = 'total';
@@ -48,10 +49,24 @@ function ServiceDispatchHandler(options) {
     assert(options.serviceRoutingTable, 'serviceRoutingTable required');
     self.serviceRoutingTable = options.serviceRoutingTable;
 
+    assert(options.batchStats, 'batchStats required');
+
     // TODO: port over rate limiter itself
     self.rateLimiterEnabled = false;
 
     self.blockingTable = new BlockingTable();
+
+    self.rateLimiter = new RateLimiter({
+        channel: self.channel,
+        batchStats: options.batchStats
+        // rpsLimitForServiceName: options.rpsLimitForServiceName,
+        // exemptServices: options.exemptServices,
+        // totalRpsLimit: options.totalRpsLimit,
+        // defaultServiceRpsLimit: options.defaultServiceRpsLimit,
+        // defaultTotalKillSwitchBuffer: options.defaultTotalKillSwitchBuffer,
+        // numOfBuckets: options.rateLimiterBuckets
+    });
+    // self.rateLimiterEnabled = options.rateLimiterEnabled;
 }
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
@@ -276,7 +291,7 @@ function rateLimit(cn, serviceName) {
     // stats edge traffic
     self.rateLimiter.incrementEdgeCounter(cn + '~~' + serviceName);
 
-    var isExitNode = self.isExitFor(serviceName);
+    var isExitNode = self.serviceRoutingTable.isExitFor(serviceName);
     if (isExitNode) {
         self.rateLimiter.createServiceCounter(serviceName);
         self.rateLimiter.createKillSwitchServiceCounter(serviceName);
@@ -309,5 +324,24 @@ function rateLimit(cn, serviceName) {
         self.rateLimiter.incrementServiceCounter(serviceName);
     }
 
-    return '';
+    return null;
+};
+
+ServiceDispatchHandler.prototype.enableRateLimiter =
+function enableRateLimiter() {
+    var self = this;
+    self.rateLimiterEnabled = true;
+};
+
+ServiceDispatchHandler.prototype.disableRateLimiter =
+function disableRateLimiter() {
+    var self = this;
+    self.rateLimiterEnabled = false;
+};
+
+ServiceDispatchHandler.prototype.destroy =
+function destroy() {
+    var self = this;
+
+    self.rateLimiter.destroy();
 };

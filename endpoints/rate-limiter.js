@@ -34,6 +34,8 @@ var InvalidRequest = TypedError({
     requestType: null
 });
 
+var DEFAULT_TOTAL_RPS_LIMIT = 1000;
+
 module.exports.queryHandler = queryHandler;
 module.exports.exemptHandler = exemptHandler;
 module.exports.limitHandler = limitHandler;
@@ -41,27 +43,29 @@ module.exports.enableHandler = enableHandler;
 module.exports.totalLimitHandler = totalLimitHandler;
 
 function queryHandler(opts, req, head, body, cb) {
-    var serviceProxy = opts.worker.serviceProxy;
-    var rateLimiter = serviceProxy.rateLimiter;
+    var routingBridge = opts.worker.routingBridge;
 
-    return cb(null, {
-        ok: true,
-        head: null,
-        body: {
-            enabled: serviceProxy.rateLimiterEnabled,
-            totalRpsLimit: rateLimiter.totalRpsLimit,
-            exemptServices: rateLimiter.exemptServices,
-            rpsLimitForServiceName: rateLimiter.rpsLimitForServiceName,
-            totalRequestCounter: rateLimiter.totalRequestCounter,
-            serviceCounters: rateLimiter.counters
+    routingBridge.getRateLimiterInfo(onInfo);
+
+    function onInfo(err, info) {
+        if (err) {
+            return cb(null, {
+                ok: false,
+                head: null,
+                body: err
+            });
         }
-    });
+
+        cb(null, {
+            ok: true,
+            head: null,
+            body: info
+        });
+    }
 }
 
 function exemptHandler(opts, req, head, body, cb) {
-    /*eslint complexity: 0*/
-    var serviceProxy = opts.worker.serviceProxy;
-    var rateLimiter = serviceProxy.rateLimiter;
+    var routingBridge = opts.worker.routingBridge;
 
     if (!body) {
         return cb(null, {
@@ -74,12 +78,9 @@ function exemptHandler(opts, req, head, body, cb) {
     }
 
     if (body.type === 'add' && typeof body.exemptService === 'string') {
-        rateLimiter.exemptServices.push(body.exemptService);
+        routingBridge.addRateLimitExceptService(body.exemptService);
     } else if (body.type === 'remove' && typeof body.exemptService === 'string') {
-        var index = rateLimiter.exemptServices.indexOf(body.exemptService);
-        if (index !== -1) {
-            rateLimiter.exemptServices.splice(index, 1);
-        }
+        routingBridge.removeRateLimitExceptService(body.exemptService);
     } else {
         return cb(null, {
             ok: false,
@@ -99,8 +100,7 @@ function exemptHandler(opts, req, head, body, cb) {
 
 function limitHandler(opts, req, head, body, cb) {
     /*eslint complexity: 0*/
-    var serviceProxy = opts.worker.serviceProxy;
-    var rateLimiter = serviceProxy.rateLimiter;
+    var routingBridge = opts.worker.routingBridge;
 
     if (!body) {
         return cb(null, {
@@ -113,9 +113,9 @@ function limitHandler(opts, req, head, body, cb) {
     }
 
     if (typeof body.serviceName === 'string' && typeof body.limit === 'number') {
-        rateLimiter.updateServiceLimit(body.serviceName, body.limit);
+        routingBridge.updateServiceRateLimit(body.serviceName, body.limit);
     } else if (typeof body.serviceName === 'string') {
-        rateLimiter.updateServiceLimit(body.serviceName, rateLimiter.defaultServiceRpsLimit);
+        routingBridge.updateServiceRateLimit(body.serviceName, 'default');
     } else {
         return cb(null, {
             ok: false,
@@ -134,8 +134,7 @@ function limitHandler(opts, req, head, body, cb) {
 }
 
 function enableHandler(opts, req, head, body, cb) {
-    /*eslint complexity: 0*/
-    var serviceProxy = opts.worker.serviceProxy;
+    var routingBridge = opts.worker.routingBridge;
 
     if (!body) {
         return cb(null, {
@@ -148,9 +147,9 @@ function enableHandler(opts, req, head, body, cb) {
     }
 
     if (body.type === 'enable') {
-        serviceProxy.rateLimiterEnabled = true;
+        routingBridge.toggleRateLimiter(true);
     } else if (body.type === 'disable') {
-        serviceProxy.rateLimiterEnabled = false;
+        routingBridge.toggleRateLimiter(false);
     } else {
         return cb(null, {
             ok: false,
@@ -169,14 +168,12 @@ function enableHandler(opts, req, head, body, cb) {
 }
 
 function totalLimitHandler(opts, req, head, body, cb) {
-    /*eslint complexity: 0*/
-    var serviceProxy = opts.worker.serviceProxy;
-    var rateLimiter = serviceProxy.rateLimiter;
+    var routingBridge = opts.worker.routingBridge;
 
     if (body && typeof body.limit === 'number') {
-        rateLimiter.updateTotalLimit(body.limit);
+        routingBridge.updateTotalRateLimit(body.limit);
     } else {
-        rateLimiter.updateTotalLimit(rateLimiter.defaultTotalRpsLimit);
+        routingBridge.updateTotalRateLimit(DEFAULT_TOTAL_RPS_LIMIT);
     }
 
     return cb(null, {

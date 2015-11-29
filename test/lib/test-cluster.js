@@ -503,8 +503,8 @@ function createApplication(hostPort) {
         localOpts.seedConfig = deepExtend(localOpts.seedConfig, {
             'clients.remote-config.file': remoteConfigFile.filePath
         });
-        rateLimiterBuckets = self.opts.remoteConfig['rateLimiting.rateLimiterBuckets'];
-        defaultTotalKillSwitchBuffer = self.opts.remoteConfig['rateLimiting.defaultTotalKillSwitchBuffer'];
+        // rateLimiterBuckets = self.opts.remoteConfig['rateLimiting.rateLimiterBuckets'];
+        // defaultTotalKillSwitchBuffer = self.opts.remoteConfig['rateLimiting.defaultTotalKillSwitchBuffer'];
     }
 
     localOpts.channelTestConfigOverlay = channelTestConfigOverlay;
@@ -513,8 +513,6 @@ function createApplication(hostPort) {
         localOpts.clients.logger || self.logger;
     localOpts.clients.statsd =
         localOpts.clients.statsd || self.statsd;
-    localOpts.rateLimiterBuckets = rateLimiterBuckets;
-    localOpts.defaultTotalKillSwitchBuffer = defaultTotalKillSwitchBuffer;
 
     // TODO throw an error if listen() fails
     // TODO add timeout to gaurd against this edge case
