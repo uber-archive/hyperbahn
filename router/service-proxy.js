@@ -20,112 +20,125 @@
 
 'use strict';
 
+var assert = require('assert');
+var Buffer = require('buffer').Buffer;
+
+var CN_HEADER_BUFFER = new Buffer('cn');
+var RATE_LIMIT_TOTAL = 'total';
+var RATE_LIMIT_SERVICE = 'service';
+var RATE_LIMIT_KILLSWITCH = 'killswitch';
+
 module.exports = ServiceDispatchHandler;
 
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
         return new ServiceDispatchHandler(options);
     }
+
+    var self = this;
+
+    assert(options.logger, 'logger required');
+    self.logger = options.logger;
 }
 
+ServiceDispatchHandler.prototype.failWithBadRequest =
+function failWithBadRequest(conn, reqFrame, message, error) {
+    var self = this;
+
+    // TODO: reqFrame.extendLogInfo would be nice, especially if it added
+    // things like callerName and arg1
+    self.logger.error(message, conn.extendLogInfo({
+        error: error
+    }));
+
+    conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', message);
+};
+
+ServiceDispatchHandler.prototype.failWithRateLimitReason =
+function failWithRateLimitReason(conn, reqFrame, rateLimitReason, serviceName) {
+    var self = this;
+
+    if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
+        conn.ops.popInReq(reqFrame.id);
+    } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
+        var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
+        self.logger.info(
+            'hyperbahn node is rate-limited by the total rps limit',
+            self.extendLogInfo(conn.extendLogInfo({
+                rpsLimit: totalLimit,
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
+            }))
+        );
+        conn.sendLazyErrorFrameForReq(reqFrame, 'Busy',
+            'hyperbahn node is rate-limited by the total rps of ' + totalLimit
+        );
+    } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
+        var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
+        self.logger.info(
+            'hyperbahn service is rate-limited by the service rps limit',
+            self.extendLogInfo(conn.extendLogInfo({
+                rpsLimit: serviceLimit,
+                serviceCounters: self.rateLimiter.serviceCounters,
+                edgeCounters: self.rateLimiter.edgeCounters
+            }))
+        );
+        conn.sendLazyErrorFrameForReq(reqFrame, 'Busy',
+            serviceName + ' is rate-limited by the service rps of ' + serviceLimit
+        );
+    }
+};
+
+/*eslint max-statements: [2, 45]*/
+/*eslint complexity: [2, 15]*/
 ServiceDispatchHandler.prototype.handleLazily =
 function handleLazily(conn, reqFrame) {
     var self = this;
 
-    /*eslint max-statements: [2, 45]*/
-    /*eslint complexity: [2, 15]*/
-
     var res = reqFrame.bodyRW.lazy.readService(reqFrame);
     if (res.err) {
         // TODO: stat?
-        self.channel.logger.error(
-            'failed to lazy read frame serviceName',
-            conn.extendLogInfo({
-                error: res.err
-            })
-        );
         // TODO: protocol error instead?
-        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read serviceName');
-        return false;
+        self.failWithBadRequest(conn, reqFrame,
+            'failed to lazy read frame serviceName', res.err);
+        return true;
     }
 
     var serviceName = res.value;
     if (!serviceName) {
-        // TODO: reqFrame.extendLogInfo would be nice, especially if it added
-        // things like callerName and arg1
-        self.channel.logger.error(
-            'missing service name in lazy frame',
-            conn.extendLogInfo({})
-        );
-        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing serviceName');
-        return false;
+        self.failWithBadRequest(conn, reqFrame,
+            'missing service name in lazy frame', null);
+        return true;
     }
-
-    // TODO: feature support
-    // - blocking
-    // - rate limiting
 
     res = reqFrame.bodyRW.lazy.readHeaders(reqFrame);
     if (res.err) {
         // TODO: stat?
-        self.channel.logger.warn(
-            'failed to lazy read frame headers',
-            conn.extendLogInfo({
-                error: res.err
-            })
-        );
         // TODO: protocol error instead?
-        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read headers');
-        return false;
+        self.failWithBadRequest(conn, reqFrame,
+            'failed to lazy read frame headers', res.err);
+        return true;
     }
 
     var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
     var cn = cnBuf && cnBuf.toString();
     if (!cn) {
-        self.channel.logger.warn(
-            'request missing cn header',
-            conn.extendLogInfo({
-                serviceName: serviceName
-            })
-        );
-        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing cn header');
-        return false;
+        self.failWithBadRequest(conn, reqFrame,
+            'request missing cn header', null);
+        return true;
     }
 
     if (self.isBlocked(cn, serviceName)) {
         conn.ops.popInReq(reqFrame.id);
-        return null;
+        return true;
     }
 
     if (self.rateLimiterEnabled) {
         var rateLimitReason = self.rateLimit(cn, serviceName);
-
-        if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
-            conn.ops.popInReq(reqFrame.id);
-            return true;
-        } else if (rateLimitReason === RATE_LIMIT_TOTAL) {
-            var totalLimit = self.rateLimiter.totalRequestCounter.rpsLimit;
-            self.logger.info(
-                'hyperbahn node is rate-limited by the total rps limit',
-                self.extendLogInfo(conn.extendLogInfo({
-                    rpsLimit: totalLimit,
-                    serviceCounters: self.rateLimiter.serviceCounters,
-                    edgeCounters: self.rateLimiter.edgeCounters
-                }))
+        if (rateLimitReason !== null) {
+            self.failWithRateLimitReason(
+                conn, reqFrame, rateLimitReason, serviceName
             );
-            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
-            return true;
-        } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
-            var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
-            self.logger.info(
-                'hyperbahn service is rate-limited by the service rps limit',
-                self.extendLogInfo(conn.extendLogInfo({
-                    rpsLimit: serviceLimit,
-                    serviceCounters: self.rateLimiter.serviceCounters,
-                    edgeCounters: self.rateLimiter.edgeCounters
-                }))
-            );
-            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
             return true;
         }
     }
