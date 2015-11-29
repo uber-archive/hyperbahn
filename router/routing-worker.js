@@ -61,6 +61,8 @@ function RoutingWorker(discoveryWorker, opts) {
         channel: self.tchannel,
         serviceRoutingTable: self.serviceRoutingTable
     });
+
+    self.tchannel.handler = self.serviceProxyHandler;
 }
 
 function isReqDrainExempt(req) {
