@@ -197,7 +197,7 @@ function refresh() {
     );
 
     self.refreshEachCounter(self.edgeCounters,
-        'tchannel.rate-limiting.edge-rps',
+        null,
         null,
         createEdgeTag,
         true
