@@ -65,7 +65,7 @@
   "licenses": [],
   "scripts": {
     "add-licence": "uber-licence",
-    "check-benchmark": "node benchmarks --relay -- --relay -r 10000 -p 10000 --skipPing",
+    "check-benchmark": "node benchmarks --relay -- --relay -r 10000 -p 1000 --skipPing",
     "check-files": "bash ./scripts/verify_included.sh",
     "check-licence": "uber-licence --dry",
     "check-cover": "istanbul check-coverage || echo coverage failed",
