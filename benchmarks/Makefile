@@ -1,20 +1,20 @@
-torch-relay-bench:
-	node index.js --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
-		-- --relay --skipPing -s 4096,16384 -p 10000,20000
-
-torch-relay-multi-bench:
-	node index.js --multi --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
-		-- --relay --skipPing -s 4096,16384 -p 100,200
-
 take-relay:
 	node index.js --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json \
 		-- --relay --skipPing -m 3 -s 4096,16384 -p 10000,20000
 	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
 
+torch-relay-bench:
+	node index.js --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
+		-- --relay --skipPing -s 4096,16384 -p 10000,20000
+
 take-relay-multi:
 	node index.js --multi --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json \
 		-- --relay --skipPing -m 3 -s 4096,16384 -p 1000,2000
 	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
+
+torch-relay-multi-bench:
+	node index.js --multi --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
+		-- --relay --skipPing -s 4096,16384 -p 100,200
 
 take-relay-bad:
 	node index.js --bad --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD)-bad.json \
