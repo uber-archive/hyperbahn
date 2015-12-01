@@ -1,23 +1,24 @@
 SIZES=4096,16384
 PIPELINE=10000,20000
 BENCH_ARGS=--relay --skipPing -s ${SIZES} -p ${PIPELINE}
+TAKE_RUN_ARGS=--relay --noEndpointOverhead
 
 take-relay:
-	node index.js --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json -- -m 3 ${BENCH_ARGS}
+	node index.js ${TAKE_RUN_ARGS} -o relay-$$(git rev-parse --short HEAD).json -- -m 3 ${BENCH_ARGS}
 	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
 
 torch-relay-bench:
 	node index.js --relay --torch relay --torchFile ./flame.raw --torchTime 10 -- ${BENCH_ARGS}
 
 take-relay-multi:
-	node index.js --multi --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json -- -m 3 ${BENCH_ARGS}
+	node index.js --multi ${TAKE_RUN_ARGS} -o relay-$$(git rev-parse --short HEAD).json -- -m 3 ${BENCH_ARGS}
 	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
 
 torch-relay-multi-bench:
 	node index.js --multi --relay --torch relay --torchFile ./flame.raw --torchTime 10 -- ${BENCH_ARGS}
 
 take-relay-bad:
-	node index.js --bad --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD)-bad.json -- --bad -m 3 ${BENCH_ARGS}
+	node index.js --bad ${TAKE_RUN_ARGS} -o relay-$$(git rev-parse --short HEAD)-bad.json -- --bad -m 3 ${BENCH_ARGS}
 	ln -sf relay-$$(git rev-parse --short HEAD)-bad.json relay-$$(basename $$(git symbolic-ref HEAD))-bad.json
 
 torch-relay-bad-bench:
