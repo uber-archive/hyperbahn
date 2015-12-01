@@ -71,7 +71,9 @@ function DualStatsd(options) {
             options.project,
             'all-workers',
             process.env.NODE_ENV
-        ]
+        ].join('.'),
+        packetQueue: options.packetQueue || null,
+        socketTimeout: options.socketTimeout || null
     });
 }
 
