@@ -432,7 +432,7 @@ function handleRequest(req, buildRes) {
                 }))
             );
             if (rd) {
-                buildRes().sendError('Busy', 'Routing delegate ' + rd + ' is rate-limited by the rps of ' + serviceLimit);
+                buildRes().sendError('Busy', 'Routing delegate ' + rd + ' is rate-limited by the service rps of ' + serviceLimit);
             } else {
                 buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
             }
