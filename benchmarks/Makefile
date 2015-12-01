@@ -1,5 +1,5 @@
 SIZES=4096,16384
-PIPELINE=10000,20000
+PIPELINE=100,200
 BENCH_ARGS=--relay --skipPing -s ${SIZES} -p ${PIPELINE}
 TAKE_RUN_ARGS=--relay --noEndpointOverhead
 TORCH_RUN_ARGS=--relay --torch relay --torchFile ./flame.raw --torchTime 10
