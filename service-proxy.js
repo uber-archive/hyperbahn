@@ -302,11 +302,6 @@ function handleLazily(conn, reqFrame) {
 
     var rdBuf = res.value && res.value.getValue(RD_HEADER_BUFFER);
     var rd = rdBuf && rdBuf.toString();
-    if (rd) {
-        // routing delegate header; forward this to the routing service to
-        // delegate to
-        return self._callLazyHandler(rd, conn, reqFrame);
-    }
 
     var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
     var cn = cnBuf && cnBuf.toString();
@@ -359,16 +354,10 @@ function handleLazily(conn, reqFrame) {
         }
     }
 
-    return self._callLazyHandler(serviceName, conn, reqFrame);
-};
-
-ServiceDispatchHandler.prototype._callLazyHandler =
-function _callLazyHandler(serviceName, conn, reqFrame) {
-    var self = this;
-
-    var serviceChannel = self.channel.subChannels[serviceName];
+    // use the rd (routing delegate) or the serviceName if there was no rd set
+    var serviceChannel = self.channel.subChannels[rd || serviceName];
     if (!serviceChannel) {
-        serviceChannel = self.createServiceChannel(serviceName);
+        serviceChannel = self.createServiceChannel(rd || serviceName);
     }
 
     if (serviceChannel.handler.handleLazily) {
