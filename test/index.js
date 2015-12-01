@@ -62,6 +62,7 @@ require('./forward/forwarding-huge-buffer.js');
 require('./forward/forwarding-respects-relay-flags.js');
 require('./forward/forwarding-under-membershipchange-is-non-event.js');
 require('./forward/dead-remote-reaped.js');
+require('./forward/routing-delegate.js');
 
 require('./hosts/happy-path.js');
 require('./hosts/no-body.js');
