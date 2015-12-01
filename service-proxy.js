@@ -322,7 +322,7 @@ function handleLazily(conn, reqFrame) {
     }
 
     if (self.rateLimiterEnabled) {
-        var rateLimitReason = self.rateLimit(cn, serviceName);
+        var rateLimitReason = self.rateLimit(cn, rd || serviceName);
 
         if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
             conn.ops.popInReq(reqFrame.id);
@@ -340,7 +340,7 @@ function handleLazily(conn, reqFrame) {
             conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
             return true;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
-            var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
+            var serviceLimit = self.rateLimiter.getRpsLimitForService(rd || serviceName);
             self.logger.info(
                 'hyperbahn service is rate-limited by the service rps limit',
                 self.extendLogInfo(conn.extendLogInfo({
@@ -349,7 +349,11 @@ function handleLazily(conn, reqFrame) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 }))
             );
-            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+            if (rd) {
+                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'Routing delegate ' + rd + ' is rate-limited by the service rps of ' + serviceLimit);
+            } else {
+                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+            }
             return true;
         }
     }
@@ -381,13 +385,15 @@ function handleRequest(req, buildRes) {
         return;
     }
 
-    if (self.isBlocked(req.headers && req.headers.cn, req.serviceName)) {
+    var rd = req.headers && req.headers.rd;
+
+    if (self.isBlocked(req.headers && req.headers.cn, rd || req.serviceName)) {
         req.operations.popInReq(req.id);
         return;
     }
 
     if (self.rateLimiterEnabled) {
-        var rateLimitReason = self.rateLimit(req.headers && req.headers.cn, req.serviceName);
+        var rateLimitReason = self.rateLimit(req.headers && req.headers.cn, rd || req.serviceName);
         if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
             if (req.connection &&
                 req.connection.ops) {
@@ -416,7 +422,7 @@ function handleRequest(req, buildRes) {
             buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
             return;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
-            var serviceLimit = self.rateLimiter.getRpsLimitForService(req.serviceName);
+            var serviceLimit = self.rateLimiter.getRpsLimitForService(rd || req.serviceName);
             self.logger.info(
                 'hyperbahn service is rate-limited by the service rps limit',
                 self.extendLogInfo(req.extendLogInfo({
@@ -425,14 +431,18 @@ function handleRequest(req, buildRes) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 }))
             );
-            buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+            if (rd) {
+                buildRes().sendError('Busy', 'Routing delegate ' + rd + ' is rate-limited by the rps of ' + serviceLimit);
+            } else {
+                buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+            }
             return;
         }
     }
 
-    var serviceChannel = self.channel.subChannels[req.serviceName];
+    var serviceChannel = self.channel.subChannels[rd || req.serviceName];
     if (!serviceChannel) {
-        serviceChannel = self.createServiceChannel(req.serviceName);
+        serviceChannel = self.createServiceChannel(rd || req.serviceName);
     }
 
     // Temporary hack. Need to set json by default because
