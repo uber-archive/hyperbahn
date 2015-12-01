@@ -25,9 +25,11 @@ take-relay-bad:
 torch-relay-bad-bench:
 	node index.js --bad ${TORCH_RUN_ARGS} -- --bad ${BENCH_ARGS}
 
-create-flame: flame.raw
-	stackcollapse-stap.pl $< | tr -d "\0" > ./flame.folded
-	flamegraph.pl ./flame.folded > ./flame.svg
+%.folded: %.raw
+	stackcollapse-stap.pl $< | tr -d "\0" > $@
+
+create-flame: flame.folded
+	flamegraph.pl $< > ./flame.svg
 	google-chrome ./flame.svg
 
 kill-dead-benchmarks:
