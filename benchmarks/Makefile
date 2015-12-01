@@ -28,9 +28,11 @@ torch-relay-bad-bench:
 %.folded: %.raw
 	stackcollapse-stap.pl $< | tr -d "\0" > $@
 
-create-flame: flame.folded
-	flamegraph.pl $< > ./flame.svg
-	google-chrome ./flame.svg
+%.svg: %.folded
+	flamegraph.pl $< > $@
+
+create-flame: flame.svg
+	google-chrome $<
 
 kill-dead-benchmarks:
 	pkill -f nodejs-benchmarks;
