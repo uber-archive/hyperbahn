@@ -50,6 +50,7 @@ var RATE_LIMIT_SERVICE = 'service';
 var RATE_LIMIT_KILLSWITCH = 'killswitch';
 
 var CN_HEADER_BUFFER = new Buffer('cn');
+var RD_HEADER_BUFFER = new Buffer('rd');
 
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
@@ -299,6 +300,14 @@ function handleLazily(conn, reqFrame) {
         return false;
     }
 
+    var rdBuf = res.value && res.value.getValue(RD_HEADER_BUFFER);
+    var rd = rdBuf && rdBuf.toString();
+    if (rd) {
+        // routing delegate header; forward this to the routing service to
+        // delegate to
+        return self._callLazyHandler(rd, conn, reqFrame);
+    }
+
     var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
     var cn = cnBuf && cnBuf.toString();
     if (!cn) {
@@ -349,6 +358,13 @@ function handleLazily(conn, reqFrame) {
             return true;
         }
     }
+
+    return self._callLazyHandler(serviceName, conn, reqFrame);
+};
+
+ServiceDispatchHandler.prototype._callLazyHandler =
+function _callLazyHandler(serviceName, conn, reqFrame) {
+    var self = this;
 
     var serviceChannel = self.channel.subChannels[serviceName];
     if (!serviceChannel) {
