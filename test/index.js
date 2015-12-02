@@ -79,7 +79,6 @@ require('./hyperbahn-client/forward-retry.js')(TestCluster);
 require('./hyperbahn-client/hyperbahn-down.js')(TestCluster);
 require('./hyperbahn-client/hyperbahn-times-out.js')(TestCluster);
 require('./hyperbahn-client/rate-limiter.js')(TestCluster);
-require('./hyperbahn-client/rate-limiter-lazy.js')(TestCluster);
 require('./hyperbahn-client/advertise-with-purge-interval.js')(TestCluster);
 
 require('./register/to-connected-node.js');
