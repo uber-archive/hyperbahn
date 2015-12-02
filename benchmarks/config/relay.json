@@ -30,6 +30,10 @@
             "value": {
                 "benchmark": 50000
             }
+        },
+        {
+            "key": "peer-heap.enabled.global",
+            "value": true
         }
     ]
 }
