@@ -1,0 +1,9 @@
+{
+    "_extends": "relay-ad.json",
+    "remoteConfig": [
+        {
+            "key": "partialAffinity.enabled",
+            "value": true
+        }
+    ]
+}
