@@ -21,7 +21,6 @@
 'use strict';
 
 /*eslint no-console: 0*/
-var parseArgs = require('minimist');
 var process = require('process');
 var util = require('util');
 var path = require('path');
@@ -31,6 +30,7 @@ var setTimeout = require('timers').setTimeout;
 var console = require('console');
 
 var BenchmarkRunner = require('tchannel/benchmarks/');
+var readBenchConfig = require('tchannel/benchmarks/read-bench-config.js');
 
 var bahn = path.join(__dirname, 'hyperbahn-worker.js');
 var multiBahn = path.join(__dirname, 'hyperbahn-multi-worker.js');
@@ -162,7 +162,7 @@ HyperbahnBenchmarkRunner.prototype.close = function close() {
 };
 
 if (require.main === module) {
-    var argv = parseArgs(process.argv.slice(2), {
+    var argv = readBenchConfig({
         '--': true,
         alias: {
             o: 'output'

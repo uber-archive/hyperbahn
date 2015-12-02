@@ -20,11 +20,11 @@
 
 'use strict';
 
-var parseArgs = require('minimist');
 var process = require('process');
 var assert = require('assert');
 var path = require('path');
 var StaticConfig = require('static-config');
+var readBenchConfig = require('tchannel/benchmarks/read-bench-config.js');
 
 var HyperbahnApplication = require('../app.js');
 
@@ -119,7 +119,7 @@ HyperbahnWorker.prototype.createConfig = function createConfig() {
 };
 
 if (require.main === module) {
-    var argv = parseArgs(process.argv.slice(2));
+    var argv = readBenchConfig();
     process.title = 'nodejs-benchmarks-hyperbahn_worker';
 
     var worker = HyperbahnWorker(argv);

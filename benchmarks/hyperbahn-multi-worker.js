@@ -20,8 +20,8 @@
 
 'use strict';
 
-var parseArgs = require('minimist');
 var process = require('process');
+var readBenchConfig = require('tchannel/benchmarks/read-bench-config.js');
 
 var HyperbahnWorker = require('./hyperbahn-worker.js');
 
@@ -60,7 +60,7 @@ HyperbahnMultiWorker.prototype.start = function start() {
 };
 
 if (require.main === module) {
-    var argv = parseArgs(process.argv.slice(2));
+    var argv = readBenchConfig();
     process.title = 'nodejs-benchmarks-hyperbahn_multi_worker';
 
     var worker = HyperbahnMultiWorker(argv);
