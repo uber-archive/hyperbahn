@@ -420,7 +420,7 @@ function handleRequest(req, buildRes) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 }))
             );
-            buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
+            buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
             return;
         }
     }
