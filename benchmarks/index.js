@@ -48,7 +48,7 @@ function HyperbahnBenchmarkRunner(opts) {
     if (self.opts.multi) {
         self.startClientDelay = 5000;
     } else {
-        self.startClientDelay = 500;
+        self.startClientDelay = 1000;
     }
 
     self.ports.relayServerPort = RELAY_SERVER_PORT;
