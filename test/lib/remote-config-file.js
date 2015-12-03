@@ -50,7 +50,7 @@ function write(opts) {
             value: opts[keys[i]]
         });
     }
-    var json = JSON.stringify(obj || {});
+    var json = JSON.stringify(obj);
     self.writeFile(json);
 };
 
