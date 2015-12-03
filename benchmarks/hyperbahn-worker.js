@@ -20,12 +20,13 @@
 
 'use strict';
 
-var parseArgs = require('minimist');
 var process = require('process');
 var assert = require('assert');
 var path = require('path');
 var StaticConfig = require('static-config');
+var readBenchConfig = require('tchannel/benchmarks/read-bench-config.js');
 
+var RemoteConfigFile = require('../test/lib/remote-config-file.js');
 var HyperbahnApplication = require('../app.js');
 
 module.exports = HyperbahnWorker;
@@ -50,6 +51,13 @@ function HyperbahnWorker(opts) {
     self.kafkaPort = Number(opts.kafkaPort);
     self.sentryPort = Number(opts.sentryPort);
     self.ringpopList = opts.ringpopList ? opts.ringpopList.split(',') : [];
+    self.instances = Number(opts.instances);
+    self.serverServiceName = opts.serverServiceName;
+    self.serverPort = Number(opts.serverPort);
+
+    self.remoteConfigFile = RemoteConfigFile(String(self.serverPort));
+    self.remoteConfigFile.write(opts.remoteConfig);
+
     self.config = self.createConfig();
     self.app = HyperbahnApplication(self.config, {
         processTitle: process.title,
@@ -57,10 +65,6 @@ function HyperbahnWorker(opts) {
             port: Number(opts.workerPort)
         }
     });
-
-    self.instances = Number(opts.instances);
-    self.serverServiceName = opts.serverServiceName;
-    self.serverPort = Number(opts.serverPort);
 }
 
 HyperbahnWorker.prototype.start = function start() {
@@ -90,14 +94,13 @@ HyperbahnWorker.prototype.createConfig = function createConfig() {
     var self = this;
 
     var configDir = path.join(__dirname, '..', 'config');
-    var remoteConfigFile = path.join(__dirname, 'remote_config.json');
 
     return StaticConfig({
         files: [
             path.join(configDir, 'production.json')
         ],
         seedConfig: {
-            'clients.remote-config.file': remoteConfigFile,
+            'clients.remote-config.file': self.remoteConfigFile.filePath,
 
             'clients.uber-statsd-client': {
                 host: '127.0.0.1',
@@ -119,7 +122,7 @@ HyperbahnWorker.prototype.createConfig = function createConfig() {
 };
 
 if (require.main === module) {
-    var argv = parseArgs(process.argv.slice(2));
+    var argv = readBenchConfig();
     process.title = 'nodejs-benchmarks-hyperbahn_worker';
 
     var worker = HyperbahnWorker(argv);

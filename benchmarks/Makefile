@@ -1,29 +1,25 @@
-SIZES=4096,16384
-PIPELINE=100,200
-BENCH_ARGS=--relay --skipPing -s ${SIZES} -p ${PIPELINE}
-TAKE_RUN_ARGS=--relay --noEndpointOverhead
-TORCH_RUN_ARGS=--relay --torch relay --torchFile ./flame.raw --torchTime 10
+take-%: results/%.json
+	echo "Done $< -> $$(readlink -f $<)"
 
-take-relay:
-	node index.js ${TAKE_RUN_ARGS} -o relay-$$(git rev-parse --short HEAD).json -- -m 3 ${BENCH_ARGS}
-	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
+torch-%: results/%.svg
+	echo "Done $< -> $$(readlink -f $<)"
 
-torch-relay:
-	node index.js ${TORCH_RUN_ARGS} -- ${BENCH_ARGS}
+results/%.json: results/HEAD/%.json
+	ln -sf $$(readlink -f $<) $@
 
-take-relay-multi:
-	node index.js --multi ${TAKE_RUN_ARGS} -o relay-$$(git rev-parse --short HEAD).json -- -m 3 ${BENCH_ARGS}
-	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
+results/%.raw: results/HEAD/%.raw
+	ln -sf $$(readlink -f $<) $@
 
-torch-relay-multi:
-	node index.js --multi ${TORCH_RUN_ARGS} -- ${BENCH_ARGS}
+results/HEAD:
+	mkdir -p results/$$(git rev-parse --short HEAD)
+	ln -nsf $$(git rev-parse --short HEAD) results/$$(basename $$(git symbolic-ref HEAD))
+	ln -nsf $$(basename $$(git symbolic-ref HEAD)) results/HEAD
 
-take-relay-bad:
-	node index.js --bad ${TAKE_RUN_ARGS} -o relay-$$(git rev-parse --short HEAD)-bad.json -- --bad -m 3 ${BENCH_ARGS}
-	ln -sf relay-$$(git rev-parse --short HEAD)-bad.json relay-$$(basename $$(git symbolic-ref HEAD))-bad.json
+results/HEAD/%.json: config/%.json results/HEAD kill-dead-benchmarks
+	BENCH_CONFIG=$<,config/take.json node index.js -o $@
 
-torch-relay-bad:
-	node index.js --bad ${TORCH_RUN_ARGS} -- --bad ${BENCH_ARGS}
+results/HEAD/%.raw: config/%.json results/HEAD kill-dead-benchmarks
+	BENCH_CONFIG=$<,config/torch.json node index.js --torchFile $@
 
 %.folded: %.raw
 	stackcollapse-stap.pl $< | tr -d "\0" > $@
@@ -31,13 +27,12 @@ torch-relay-bad:
 %.svg: %.folded
 	flamegraph.pl $< > $@
 
-create-flame: flame.svg
-	google-chrome $<
-
 kill-dead-benchmarks:
-	pkill -f nodejs-benchmarks;
+	pkill -f '^nodejs-benchmarks' || true
 
 top-benchmark:
 	top -d1 -cp `pgrep -f nodejs-benchmarks | tr "\\n" "," | sed 's/,$$//'`;
 
-.PHONY: create-flame kill-dead-benchmarks top-benchmark
+.PRECIOUS: results/%.json results/HEAD/%.json results/%.raw results/HEAD/%.raw
+
+.PHONY: results/HEAD create-flame kill-dead-benchmarks top-benchmark
