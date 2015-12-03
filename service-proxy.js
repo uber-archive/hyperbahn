@@ -717,11 +717,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     var partialRange = self.partialRanges[serviceName];
     if (partialRange) {
-        // TODO: would be better to do an incremental update, all we really
-        // care to do is "add (if not already in) this hostPort, then recompute
-        // the range if added
-        var workers = serviceChannel.peers.keys().sort();
-        partialRange.compute(null, workers, now);
+        partialRange.addWorker(hostPort, now);
     }
 
     peer = self._getServicePeer(serviceChannel, hostPort);
