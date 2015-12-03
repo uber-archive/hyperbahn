@@ -21,6 +21,7 @@
 'use strict';
 var fs = require('fs');
 var path = require('path');
+var process = require('process');
 var RemoteConfig = require('../../clients/remote-config.js');
 var DebugLogtron = require('debug-logtron');
 
@@ -32,7 +33,7 @@ function RemoteConfigFile(name) {
     }
 
     var self = this;
-    name = name || '';
+    name = name || 'UNKNOWN[' + process.pid + ']';
     self.filePath = path.join('/tmp',
                               name + 'config.json');
 }
