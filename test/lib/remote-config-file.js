@@ -41,16 +41,8 @@ function RemoteConfigFile(name) {
 RemoteConfigFile.prototype.write =
 function write(opts) {
     var self = this;
-    var obj = [];
-    opts = opts || {};
-    var keys = Object.keys(opts);
-    for (var i = 0; i < keys.length; i++) {
-        obj.push({
-            key: keys[i],
-            value: opts[keys[i]]
-        });
-    }
-    var json = JSON.stringify(obj, null, 4);
+    var arr = objToKeyValArray(opts);
+    var json = JSON.stringify(arr, null, 4);
     self.writeFile(json);
 };
 
@@ -83,3 +75,15 @@ RemoteConfigFile.prototype.clear = function clear() {
         fs.unlinkSync(self.filePath);
     }
 };
+
+function objToKeyValArray(obj) {
+    var arr = [];
+    obj = obj || {};
+    for (var keys = Object.keys(obj), i = 0; i < keys.length; i++) {
+        arr.push({
+            key: keys[i],
+            value: obj[keys[i]]
+        });
+    }
+    return arr;
+}
