@@ -77,8 +77,13 @@ RemoteConfigFile.prototype.clear = function clear() {
 };
 
 function objToKeyValArray(obj) {
+    if (obj === null ||
+        obj === undefined ||
+        typeof obj !== 'object') {
+        return [];
+    }
+
     var arr = [];
-    obj = obj || {};
     for (var keys = Object.keys(obj), i = 0; i < keys.length; i++) {
         arr.push({
             key: keys[i],
