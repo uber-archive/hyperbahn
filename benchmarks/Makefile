@@ -1,7 +1,7 @@
 take-%: results/%.json
 	echo "Done $< -> $$(readlink -f $<)"
 
-torch-%: results/%.svg
+torch-%: results/HEAD/%.svg
 	echo "Done $< -> $$(readlink -f $<)"
 
 results/%.json: results/HEAD/%.json
@@ -33,6 +33,6 @@ kill-dead-benchmarks:
 top-benchmark:
 	top -d1 -cp `pgrep -f nodejs-benchmarks | tr "\\n" "," | sed 's/,$$//'`;
 
-.PRECIOUS: results/%.json results/HEAD/%.json results/%.raw results/HEAD/%.raw
+.PRECIOUS: results/%.json results/HEAD/%.json results/%.raw results/HEAD/%.raw results/%.svg results/HEAD/%.svg
 
 .PHONY: results/HEAD create-flame kill-dead-benchmarks top-benchmark
