@@ -551,7 +551,7 @@ function createServiceChannel(serviceName) {
     var exitNames = self.relaysFor[serviceName];
     if (!exitNames) {
         var exitNodes = self.egressNodes.exitsFor(serviceName);
-        exitNames = Object.keys(exitNodes);
+        exitNames = Object.keys(exitNodes).sort();
         self.relaysFor[serviceName] = exitNames;
     }
 
@@ -672,7 +672,7 @@ function getPartialRange(serviceName, reason, now) {
     var partialRange = self.partialRanges[serviceName];
     if (!partialRange) {
         var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-        var relays = self.relaysFor[serviceName].sort();
+        var relays = self.relaysFor[serviceName];
         var workers = serviceChannel.peers.keys().sort();
         partialRange = new PartialRange(
             self.channel.hostPort,
@@ -1056,14 +1056,14 @@ function updateServiceChannel(serviceChannel, now) {
 
     // TODO: would be nice to do a more incremental update
     var exitNodes = self.egressNodes.exitsFor(serviceChannel.serviceName);
-    self.relaysFor[serviceChannel.serviceName] = Object.keys(exitNodes);
+    self.relaysFor[serviceChannel.serviceName] = Object.keys(exitNodes).sort();
 
     var isExit = self.egressNodes.isExitFor(serviceChannel.serviceName);
     if (isExit) {
         if (self.partialAffinityEnabled) {
             var partialRange = self.partialRanges[serviceChannel.serviceName];
             if (partialRange) {
-                partialRange.compute(self.relaysFor[serviceChannel.serviceName].sort(), null, now);
+                partialRange.compute(self.relaysFor[serviceChannel.serviceName], null, now);
             }
         }
 
