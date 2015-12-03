@@ -82,6 +82,7 @@ function spawnRelayServer() {
     self.startFakeSentry();
 
     var procOpts = [
+        '--refreshServicePeersPeriod', self.opts.refreshServicePeersPeriod,
         '--serverPort', String(self.ports.serverPort),
         '--serverServiceName', String(self.serviceName),
         '--instances', String(self.instanceCount),

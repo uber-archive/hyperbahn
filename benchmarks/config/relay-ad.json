@@ -1,0 +1,5 @@
+{
+    "_extends": "relay.json",
+    "refreshServicePeersPeriod": 10,
+    "instances": 100
+}

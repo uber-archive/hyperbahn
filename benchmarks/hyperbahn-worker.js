@@ -20,6 +20,8 @@
 
 'use strict';
 
+var clearTimeout = require('timers').clearTimeout;
+var setTimeout = require('timers').setTimeout;
 var process = require('process');
 var assert = require('assert');
 var path = require('path');
@@ -58,6 +60,9 @@ function HyperbahnWorker(opts) {
     self.remoteConfigFile = RemoteConfigFile(String(self.serverPort));
     self.remoteConfigFile.write(opts.remoteConfig);
 
+    self.refreshServicePeersPeriod = opts.refreshServicePeersPeriod || 0;
+    self.refreshServicePeersTimer = null;
+
     self.config = self.createConfig();
     self.app = HyperbahnApplication(self.config, {
         processTitle: process.title,
@@ -76,16 +81,30 @@ HyperbahnWorker.prototype.start = function start() {
         if (err) {
             throw err;
         }
+        refreshServicePeers();
+        self.app.on('destroy', onAppDestroyed);
+    }
+
+    function onAppDestroyed() {
+        clearTimeout(self.refreshServicePeersTimer);
+        self.refreshServicePeersTimer = null;
+    }
+
+    function refreshServicePeers() {
+        clearTimeout(self.refreshServicePeersTimer);
+        self.refreshServicePeersTimer = null;
 
         var basePort = self.serverPort;
         var serviceProxy = self.app.clients.serviceProxy;
-
         for (var i = 0; i < self.instances; i++) {
             var targetHostPort = '127.0.0.1:' + (basePort + i);
-
             serviceProxy.refreshServicePeer(
                 self.serverServiceName, targetHostPort
             );
+        }
+
+        if (self.refreshServicePeersPeriod) {
+            self.refreshServicePeersTimer = setTimeout(refreshServicePeers, self.refreshServicePeersPeriod);
         }
     }
 };
