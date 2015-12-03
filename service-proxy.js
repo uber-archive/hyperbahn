@@ -170,8 +170,8 @@ function ServiceDispatchHandler(options) {
         name: 'peer-reap',
         timers: self.channel.timers,
         interval: options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD,
-        each: function reapSinglePeer(hostPort, serviceNames) {
-            self.reapSinglePeer(hostPort, serviceNames);
+        each: function reapSinglePeer(hostPort, serviceNames, now) {
+            self.reapSinglePeer(hostPort, serviceNames, now);
         },
         getCollection: function getPeersToReap() {
             var peersToReap = self.peersToReap;
@@ -1312,7 +1312,7 @@ function pruneSinglePeer(hostPort, pruneInfo) {
 };
 
 ServiceDispatchHandler.prototype.reapSinglePeer =
-function reapSinglePeer(hostPort, serviceNames) {
+function reapSinglePeer(hostPort, serviceNames, now) {
     var self = this;
 
     if (self.knownPeers[hostPort]) {
@@ -1350,7 +1350,8 @@ function reapSinglePeer(hostPort, serviceNames) {
             serviceChannel.peers.delete(hostPort);
         }
         self.deletePeerIndex(serviceName, hostPort);
-        delete self.partialRanges[serviceName];
+        var partialRange = self.partialRanges[serviceName];
+        partialRange.removeWorker(hostPort, now);
     }
 
     peer.drain({
