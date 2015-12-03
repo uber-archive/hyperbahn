@@ -35,7 +35,7 @@ function RemoteConfigFile(name) {
     var self = this;
     name = name || 'UNKNOWN[' + process.pid + ']';
     self.filePath = path.join('/tmp',
-                              name + 'config.json');
+                              'remote_config_' + name + '.json');
 }
 
 RemoteConfigFile.prototype.write =
