@@ -33,10 +33,12 @@ function RemoteConfigFile(name) {
 
     var self = this;
     name = name || '';
-    self.filePath = path.join('/tmp', name + 'config.json');
+    self.filePath = path.join('/tmp',
+                              name + 'config.json');
 }
 
-RemoteConfigFile.prototype.write = function write(opts) {
+RemoteConfigFile.prototype.write =
+function write(opts) {
     var self = this;
     var obj = [];
     opts = opts || {};
@@ -47,8 +49,8 @@ RemoteConfigFile.prototype.write = function write(opts) {
             value: opts[keys[i]]
         });
     }
-
-    self.writeFile(JSON.stringify(obj || {}));
+    var json = JSON.stringify(obj || {});
+    self.writeFile(json);
 };
 
 RemoteConfigFile.prototype.writeFile = function writeFile(content) {
