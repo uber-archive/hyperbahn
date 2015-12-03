@@ -2,7 +2,7 @@
     "relay": true,
     "skipPing": true,
 
-    "sizes": [4096],
+    "sizes": [4096,16384],
     "pipeline": [10],
 
     "remoteConfig": [
