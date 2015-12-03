@@ -28,7 +28,7 @@ results/HEAD/%.raw: config/%.json results/HEAD kill-dead-benchmarks
 	flamegraph.pl $< > $@
 
 kill-dead-benchmarks:
-	pkill -f '^nodejs-benchmarks' || true
+	pkill -u $$USER -f '^nodejs-benchmarks' || true
 
 top-benchmark:
 	top -d1 -cp `pgrep -f nodejs-benchmarks | tr "\\n" "," | sed 's/,$$//'`;
