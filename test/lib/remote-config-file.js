@@ -83,6 +83,10 @@ function objToKeyValArray(obj) {
         return [];
     }
 
+    if (Array.isArray(obj)) {
+        return obj;
+    }
+
     var arr = [];
     for (var keys = Object.keys(obj), i = 0; i < keys.length; i++) {
         arr.push({
