@@ -78,6 +78,11 @@ function compute(relays, workers, now) {
         return;
     }
 
+    this.recompute(now);
+};
+
+PartialRange.prototype.recompute =
+function recompute(now) {
     this.lastComputed = now;
     this.ratio        = this.workers.length / this.relays.length;
     this.relayIndex   = sortedIndexOf(this.relays, this.relayHostPort);
