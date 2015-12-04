@@ -784,7 +784,7 @@ function freshenPartialPeer(peer, serviceName, now) {
                     serviceHostPort: hostPort,
                     isConnected: isConnected,
                     shouldConnect: shouldConnect,
-                    connectedPeers: objectTuples(connectedPeers)
+                    numConnectedPeers: countKeys(connectedPeers)
                 }))
             );
             if (shouldConnect) {
@@ -853,7 +853,7 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
                     serviceName: serviceName,
                     isConnected: false,
                     shouldConnect: true,
-                    connectedPeers: objectTuples(connectedPeers)
+                    numConnectedPeers: countKeys(connectedPeers)
                 }))
             );
             toConnect.push(worker);
@@ -1645,14 +1645,6 @@ function countKeys(obj) {
         ++count;
     }
     return count;
-}
-
-function objectTuples(obj) {
-    var tuples = [];
-    for (var key in obj) {
-        tuples.push([key, obj[key]]);
-    }
-    return tuples;
 }
 
 /* eslint-enable guard-for-in, no-unused-vars */
