@@ -20,7 +20,11 @@
 
 'use strict';
 
-var InstanceBlackList = require('./instance-black-list.js');
+var InstanceBanList = require('./instance-ban-list.js');
+var validateHostPort = require('./lib/validate-host-port');
+
+// 10 minutes in seconds
+var MAX_BAN_TIME = 60 * 10;
 
 module.exports = HyperbahnService;
 
@@ -37,29 +41,57 @@ function HyperbahnService(options) {
     self.egressNodes = options.egressNodes;
     self.serviceProxy = self.channel.handler;
 
-    self.instanceBlackList = new InstanceBlackList({
+    self.instanceBanList = new InstanceBanList({
         channel: self.channel
     });
 
-    // TODO: listen to egressNodes and fanout to re-blacklist ?
+    // TODO: listen to egressNodes and fanout to re-BanList ?
 }
 
-HyperbahnService.prototype.blacklist =
-function blacklist(req, headers, body, cb) {
+HyperbahnService.prototype.ban =
+function ban(req, headers, body, cb) {
     var self = this;
 
-    // TODO: validate body.serviceName
-    // TODO: validate body.instanceHostPort
-    // TODO: validate body.timeToBan
-    // TODO: check that we are affine for serviceName
+    if (!validateHostPort(body.query.instanceHostPort)) {
+        return cb(null, {
+            ok: false,
+            body: {
+                typeName: 'InvalidInstanceHostPort',
+                message: 'instanceHostPort is invalid',
+                instanceHostPort: body.query.instanceHostPort
+            }
+        });
+    }
 
-    self.instanceBlackList.blacklist(
+    if (body.query.timeToBan > MAX_BAN_TIME) {
+        return cb(null, {
+            ok: false,
+            body: {
+                typeName: 'InvalidTimeToBan',
+                message: 'timeToBan must be less than ' + MAX_BAN_TIME + 's',
+                instanceHostPort: body.query.instanceHostPort
+            }
+        });
+    }
+
+    if (!self.egressNodes.isExitFor(body.query.serviceName)) {
+        return cb(null, {
+            ok: false,
+            body: {
+                typeName: 'NotAffineForServiceName',
+                message: 'Hyperbahn worker not affine for service',
+                serviceName: body.serviceName
+            }
+        });
+    }
+
+    self.instanceBanList.ban(
         body.query.serviceName,
         body.query.instanceHostPort,
         body.query.timeToBan
     );
 
-    // TODO ask serviceProxy to drain & purge peer.
+    self.serviceProxy.removeServicePeer(body.query.serviceName, body.query.instanceHostPort);
 
     return cb(null, {
         ok: true,

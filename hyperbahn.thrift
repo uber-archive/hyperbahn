@@ -40,13 +40,13 @@ struct DiscoveryResult {
     1: required list<ServicePeer> peers
 }
 
-struct BlackListQuery {
+struct BanQuery {
     1: required string serviceName
     2: required string instanceHostPort
     3: required i32 timeToBan
 }
 
-struct BlackListResult {
+struct BanResult {
     1: required bool wasConnected
 }
 
@@ -58,13 +58,13 @@ service Hyperbahn {
         2: InvalidServiceName invalidServiceName
     )
 
-    /*  blacklist() only operates locally.
+    /*  ban() only operates locally.
 
         It must be called on an affinity node and fanout
         is out of band for now.
     */
-    BlackListResult blacklist(
-        1: required BlackListQuery query
+    BanResult ban(
+        1: required BanQuery query
     ) throws (
         1: InvalidServiceName invalidServiceName
         2: InvalidInstanceHostPort invalidInstanceHostPort

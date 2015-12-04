@@ -95,7 +95,7 @@ function HyperbahnHandler(options) {
         egressNodes: options.egressNodes
     });
 
-    self.instanceBlackList = self.hyperbahnService.instanceBlackList;
+    self.instanceBanList = self.hyperbahnService.instanceBanList;
 
     // TODO replace JSON with real bufrw handlers for this
     self.tchannelJSON.register(self, 'ad', self,
@@ -146,11 +146,11 @@ function handleAdvertise(handler, req, arg2, arg3, cb) {
     var fanoutServices = [];
 
     for (var i = 0; i < services.length; i++) {
-        var isBlackListed = handler.instanceBlackList.isBlackListed(
+        var isBanned = handler.instanceBanList.isBanned(
             services[i].serviceName, req.connection.remoteName
         );
 
-        if (!isBlackListed) {
+        if (!isBanned) {
             fanoutServices.push(services[i]);
         }
     }
