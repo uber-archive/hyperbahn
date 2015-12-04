@@ -803,16 +803,6 @@ function freshenPartialPeer(peer, serviceName, now) {
     } else {
         self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity refresh', now);
     }
-
-    self.logger.info(
-        'refreshed peer partially',
-        self.extendLogInfo({
-            serviceName: serviceName,
-            serviceHostPort: hostPort,
-            numConnectedPeers: countKeys(connectedPeers),
-            isConnected: connected
-        })
-    );
 };
 
 ServiceDispatchHandler.prototype.ensurePartialConnections =
