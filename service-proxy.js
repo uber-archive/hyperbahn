@@ -679,6 +679,7 @@ function getPartialRange(serviceName, reason, now) {
             self.minPeersPerWorker,
             self.minPeersPerRelay
         );
+        self.partialRanges[serviceName] = partialRange;
         partialRange.compute(relays, workers, now);
     }
 
