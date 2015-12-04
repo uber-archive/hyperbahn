@@ -1,4 +1,6 @@
 {
     "torch": "relay",
-    "torchTime": 10
+    "torchTime": 10,
+    "multiplicity": 3,
+    "noEndpointOverhead": true
 }
