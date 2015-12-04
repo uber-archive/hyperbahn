@@ -1049,8 +1049,7 @@ function updateServiceChannel(serviceChannel, now) {
     var exitNodes = self.egressNodes.exitsFor(serviceChannel.serviceName);
     self.relaysFor[serviceChannel.serviceName] = Object.keys(exitNodes).sort();
 
-    var isExit = self.egressNodes.isExitFor(serviceChannel.serviceName);
-    if (isExit) {
+    if (self.egressNodes.isExitFor(serviceChannel.serviceName)) {
         if (self.partialAffinityEnabled) {
             var partialRange = self.partialRanges[serviceChannel.serviceName];
             if (partialRange) {
@@ -1063,7 +1062,7 @@ function updateServiceChannel(serviceChannel, now) {
         } else {
             self.updateServiceNodes(serviceChannel, now);
         }
-    } else if (!isExit) {
+    } else {
         if (self.partialAffinityEnabled) {
             delete self.partialRanges[serviceChannel.serviceName];
         }
