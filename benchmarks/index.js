@@ -43,6 +43,7 @@ function HyperbahnBenchmarkRunner(opts) {
     }
 
     var self = this;
+    opts.torchDelay = opts.torchDelay || 15 * 1000;
     BenchmarkRunner.call(self, opts);
 
     if (self.opts.multi) {
