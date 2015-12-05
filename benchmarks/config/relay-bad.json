@@ -1,0 +1,4 @@
+{
+    "_extends": "relay.json",
+    "bad": true
+}

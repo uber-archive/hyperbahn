@@ -78,6 +78,33 @@ function compute(relays, workers, now) {
         return;
     }
 
+    this.recompute(now);
+};
+
+PartialRange.prototype.addWorker =
+function addWorker(hostPort, now) {
+    var i = sortedIndexOf(this.workers, hostPort);
+    if (i >= 0) {
+        return;
+    }
+
+    this.workers.splice(~i, 0, hostPort);
+    this.recompute(now);
+};
+
+PartialRange.prototype.removeWorker =
+function removeWorker(hostPort, now) {
+    var i = sortedIndexOf(this.workers, hostPort);
+    if (i < 0) {
+        return;
+    }
+
+    this.workers.splice(i, 0); // XXX swap-out? sliceNconcat?
+    this.recompute(now);
+};
+
+PartialRange.prototype.recompute =
+function recompute(now) {
     this.lastComputed = now;
     this.ratio        = this.workers.length / this.relays.length;
     this.relayIndex   = sortedIndexOf(this.relays, this.relayHostPort);

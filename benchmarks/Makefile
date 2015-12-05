@@ -1,39 +1,38 @@
-torch-relay-bench:
-	node index.js --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
-		-- --relay --skipPing -s 4096,16384 -p 10000,20000
+take-%: results/%.json
+	echo "Done $< -> $$(readlink -f $<)"
 
-torch-relay-multi-bench:
-	node index.js --multi --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
-		-- --relay --skipPing -s 4096,16384 -p 100,200
+torch-%: results/HEAD/%.svg
+	echo "Done $< -> $$(readlink -f $<)"
 
-take-relay:
-	node index.js --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json \
-		-- --relay --skipPing -m 3 -s 4096,16384 -p 10000,20000
-	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
+results/%.json: results/HEAD/%.json
+	ln -sf $$(readlink -f $<) $@
 
-take-relay-multi:
-	node index.js --multi --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD).json \
-		-- --relay --skipPing -m 3 -s 4096,16384 -p 1000,2000
-	ln -sf relay-$$(git rev-parse --short HEAD).json relay-$$(basename $$(git symbolic-ref HEAD)).json
+results/%.raw: results/HEAD/%.raw
+	ln -sf $$(readlink -f $<) $@
+
+results/HEAD:
+	mkdir -p results/$$(git rev-parse --short HEAD)
+	ln -nsf $$(git rev-parse --short HEAD) results/$$(basename $$(git symbolic-ref HEAD))
+	ln -nsf $$(basename $$(git symbolic-ref HEAD)) results/HEAD
+
+results/HEAD/%.json: config/%.json results/HEAD kill-dead-benchmarks
+	BENCH_CONFIG=$<,config/take.json node index.js -o $@
+
+results/HEAD/%.raw: config/%.json results/HEAD kill-dead-benchmarks
+	BENCH_CONFIG=$<,config/torch.json node index.js --torchFile $@
+
+%.folded: %.raw
+	stackcollapse-stap.pl $< | tr -d "\0" > $@
+
+%.svg: %.folded
+	flamegraph.pl $< > $@
 
 kill-dead-benchmarks:
-	pkill -f nodejs-benchmarks;
+	pkill -u $$USER -f '^nodejs-benchmarks' || true
 
 top-benchmark:
 	top -d1 -cp `pgrep -f nodejs-benchmarks | tr "\\n" "," | sed 's/,$$//'`;
 
-create-flame:
-	stackcollapse-stap.pl ./flame.raw | tr -d "\0" > ./flame.folded
-	flamegraph.pl ./flame.folded > ./flame.svg
-	google-chrome ./flame.svg
+.PRECIOUS: results/%.json results/HEAD/%.json results/%.raw results/HEAD/%.raw results/%.svg results/HEAD/%.svg
 
-take-relay-bad:
-	node index.js --bad --relay --noEndpointOverhead -o relay-$$(git rev-parse --short HEAD)-bad.json \
-		-- --bad --relay --skipPing -m 3 -s 4096,16384 -p 10000,20000
-	ln -sf relay-$$(git rev-parse --short HEAD)-bad.json relay-$$(basename $$(git symbolic-ref HEAD))-bad.json
-
-torch-relay-bad-bench:
-	node index.js --bad --relay --torch relay --torchFile ./flame.raw --torchTime 10 \
-		-- --bad --relay --skipPing -s 4096,16384 -p 10000,20000
-
-.PHONY: take-relay take-relay-bad create-flame top-benchmark kill-dead-benchmarks torch-relay-bench
+.PHONY: results/HEAD create-flame kill-dead-benchmarks top-benchmark

@@ -22,7 +22,6 @@
 
 var assert = require('assert');
 var http = require('http');
-var timers = require('timers');
 // TODO use better module. This sometimes fails when you
 // move around and change wifi networks.
 var myLocalIp = require('my-local-ip');
@@ -37,7 +36,6 @@ var fs = require('fs');
 var ProcessReporter = require('process-reporter');
 var NullStatsd = require('uber-statsd-client/null');
 var extendInto = require('xtend/mutable');
-var BatchStatsd = require('tchannel/lib/statsd');
 
 var ServiceProxy = require('../service-proxy.js');
 var createLogger = require('./logger.js');
@@ -48,6 +46,7 @@ var RemoteConfig = require('./remote-config.js');
 var HyperbahnEgressNodes = require('../egress-nodes.js');
 var HyperbahnHandler = require('../handler.js');
 var SocketInspector = require('./socket-inspector.js');
+var HyperbahnBatchStats = require('./batch-stats.js');
 
 module.exports = ApplicationClients;
 
@@ -141,14 +140,9 @@ function ApplicationClients(options) {
         res.end('OK');
     }
 
-    self.batchStats = new BatchStatsd({
+    self.batchStats = HyperbahnBatchStats({
         statsd: self.statsd,
-        logger: self.logger,
-        timers: timers,
-        baseTags: {
-            app: 'autobahn',
-            host: os.hostname()
-        }
+        logger: self.logger
     });
     self.batchStats.flushStats();
 
@@ -322,6 +316,7 @@ function setupRingpop(cb) {
         pingTimeout: self.ringpopTimeouts.pingTimeout,
         joinTimeout: self.ringpopTimeouts.joinTimeout
     });
+    self.ringpop.statPrefix = 'ringpop.hyperbahn';
     self.ringpop.setupChannel();
 
     self.egressNodes.setRingpop(self.ringpop);

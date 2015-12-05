@@ -21,7 +21,6 @@
 'use strict';
 
 /*eslint no-console: 0*/
-var parseArgs = require('minimist');
 var process = require('process');
 var util = require('util');
 var path = require('path');
@@ -31,6 +30,7 @@ var setTimeout = require('timers').setTimeout;
 var console = require('console');
 
 var BenchmarkRunner = require('tchannel/benchmarks/');
+var readBenchConfig = require('tchannel/benchmarks/read-bench-config.js');
 
 var bahn = path.join(__dirname, 'hyperbahn-worker.js');
 var multiBahn = path.join(__dirname, 'hyperbahn-multi-worker.js');
@@ -43,12 +43,13 @@ function HyperbahnBenchmarkRunner(opts) {
     }
 
     var self = this;
+    opts.torchDelay = opts.torchDelay || 15 * 1000;
     BenchmarkRunner.call(self, opts);
 
     if (self.opts.multi) {
         self.startClientDelay = 5000;
     } else {
-        self.startClientDelay = 500;
+        self.startClientDelay = 1000;
     }
 
     self.ports.relayServerPort = RELAY_SERVER_PORT;
@@ -82,6 +83,7 @@ function spawnRelayServer() {
     self.startFakeSentry();
 
     var procOpts = [
+        '--refreshServicePeersPeriod', self.opts.refreshServicePeersPeriod,
         '--serverPort', String(self.ports.serverPort),
         '--serverServiceName', String(self.serviceName),
         '--instances', String(self.instanceCount),
@@ -162,7 +164,7 @@ HyperbahnBenchmarkRunner.prototype.close = function close() {
 };
 
 if (require.main === module) {
-    var argv = parseArgs(process.argv.slice(2), {
+    var argv = readBenchConfig({
         '--': true,
         alias: {
             o: 'output'

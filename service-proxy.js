@@ -50,6 +50,7 @@ var RATE_LIMIT_SERVICE = 'service';
 var RATE_LIMIT_KILLSWITCH = 'killswitch';
 
 var CN_HEADER_BUFFER = new Buffer('cn');
+var RD_HEADER_BUFFER = new Buffer('rd');
 
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
@@ -99,6 +100,7 @@ function ServiceDispatchHandler(options) {
      * serviceName           :: string
      * hostPort              :: string
      * lastRefresh           :: number // timestamp
+     * relaysFor             :: Map<serviceName, List<hostPort>>
      * partialRanges         :: Map<serviceName, PartialRange>
      * exitServices          :: Map<serviceName, lastRefresh>
      * peersToReap           :: Map<hostPort, lastRefresh>
@@ -126,6 +128,7 @@ function ServiceDispatchHandler(options) {
      * However every reap period, knownPeers gets rolled over into peersToReap
      * and emptied, so it represents the "peers seen this reap round"
      */
+    self.relaysFor = Object.create(null);
     self.partialRanges = Object.create(null);
     self.exitServices = Object.create(null);
     self.connectedServicePeers = Object.create(null);
@@ -167,8 +170,8 @@ function ServiceDispatchHandler(options) {
         name: 'peer-reap',
         timers: self.channel.timers,
         interval: options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD,
-        each: function reapSinglePeer(hostPort, serviceNames) {
-            self.reapSinglePeer(hostPort, serviceNames);
+        each: function reapSinglePeer(hostPort, serviceNames, now) {
+            self.reapSinglePeer(hostPort, serviceNames, now);
         },
         getCollection: function getPeersToReap() {
             var peersToReap = self.peersToReap;
@@ -253,7 +256,7 @@ function handleLazily(conn, reqFrame) {
     var self = this;
 
     /*eslint max-statements: [2, 45]*/
-    /*eslint complexity: [2, 15]*/
+    /*eslint complexity: [2, 17]*/
 
     var res = reqFrame.bodyRW.lazy.readService(reqFrame);
     if (res.err) {
@@ -299,6 +302,11 @@ function handleLazily(conn, reqFrame) {
         return false;
     }
 
+    var rdBuf = res.value && res.value.getValue(RD_HEADER_BUFFER);
+    var routingDelegate = rdBuf && rdBuf.toString();
+
+    var nextService = routingDelegate || serviceName;
+
     var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
     var cn = cnBuf && cnBuf.toString();
     if (!cn) {
@@ -318,7 +326,7 @@ function handleLazily(conn, reqFrame) {
     }
 
     if (self.rateLimiterEnabled) {
-        var rateLimitReason = self.rateLimit(cn, serviceName);
+        var rateLimitReason = self.rateLimit(cn, nextService);
 
         if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
             conn.ops.popInReq(reqFrame.id);
@@ -336,7 +344,7 @@ function handleLazily(conn, reqFrame) {
             conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
             return true;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
-            var serviceLimit = self.rateLimiter.getRpsLimitForService(serviceName);
+            var serviceLimit = self.rateLimiter.getRpsLimitForService(nextService);
             self.logger.info(
                 'hyperbahn service is rate-limited by the service rps limit',
                 self.extendLogInfo(conn.extendLogInfo({
@@ -345,14 +353,19 @@ function handleLazily(conn, reqFrame) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 }))
             );
-            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+            if (routingDelegate) {
+                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'Routing delegate ' + routingDelegate + ' is rate-limited by the service rps of ' + serviceLimit);
+            } else {
+                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+            }
             return true;
         }
     }
 
-    var serviceChannel = self.channel.subChannels[serviceName];
+    // use the rd (routing delegate) or the serviceName if there was no rd set
+    var serviceChannel = self.channel.subChannels[nextService];
     if (!serviceChannel) {
-        serviceChannel = self.createServiceChannel(serviceName);
+        serviceChannel = self.createServiceChannel(nextService);
     }
 
     if (serviceChannel.handler.handleLazily) {
@@ -376,13 +389,16 @@ function handleRequest(req, buildRes) {
         return;
     }
 
-    if (self.isBlocked(req.headers && req.headers.cn, req.serviceName)) {
+    var routingDelegate = req.headers && req.headers.rd;
+    var nextService = routingDelegate || req.serviceName;
+
+    if (self.isBlocked(req.headers && req.headers.cn, nextService)) {
         req.operations.popInReq(req.id);
         return;
     }
 
     if (self.rateLimiterEnabled) {
-        var rateLimitReason = self.rateLimit(req.headers && req.headers.cn, req.serviceName);
+        var rateLimitReason = self.rateLimit(req.headers && req.headers.cn, nextService);
         if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
             if (req.connection &&
                 req.connection.ops) {
@@ -411,7 +427,7 @@ function handleRequest(req, buildRes) {
             buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
             return;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
-            var serviceLimit = self.rateLimiter.getRpsLimitForService(req.serviceName);
+            var serviceLimit = self.rateLimiter.getRpsLimitForService(nextService);
             self.logger.info(
                 'hyperbahn service is rate-limited by the service rps limit',
                 self.extendLogInfo(req.extendLogInfo({
@@ -420,14 +436,18 @@ function handleRequest(req, buildRes) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 }))
             );
-            buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the rps of ' + serviceLimit);
+            if (routingDelegate) {
+                buildRes().sendError('Busy', 'Routing delegate ' + routingDelegate + ' is rate-limited by the service rps of ' + serviceLimit);
+            } else {
+                buildRes().sendError('Busy', req.serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+            }
             return;
         }
     }
 
-    var serviceChannel = self.channel.subChannels[req.serviceName];
+    var serviceChannel = self.channel.subChannels[nextService];
     if (!serviceChannel) {
-        serviceChannel = self.createServiceChannel(req.serviceName);
+        serviceChannel = self.createServiceChannel(nextService);
     }
 
     // Temporary hack. Need to set json by default because
@@ -528,7 +548,13 @@ function createServiceChannel(serviceName) {
         );
     }
 
-    var exitNodes = self.egressNodes.exitsFor(serviceName);
+    var exitNames = self.relaysFor[serviceName];
+    if (!exitNames) {
+        var exitNodes = self.egressNodes.exitsFor(serviceName);
+        exitNames = Object.keys(exitNodes).sort();
+        self.relaysFor[serviceName] = exitNames;
+    }
+
     var isExit = self.egressNodes.isExitFor(serviceName);
     var mode = isExit ? 'exit' : 'forward';
 
@@ -554,7 +580,6 @@ function createServiceChannel(serviceName) {
     serviceChannel.serviceProxyMode = mode; // duck: punched
 
     if (mode === 'forward') {
-        var exitNames = Object.keys(exitNodes);
         for (var i = 0; i < exitNames.length; i++) {
             self._getServicePeer(serviceChannel, exitNames[i]);
         }
@@ -590,9 +615,7 @@ function refreshServicePeer(serviceName, hostPort) {
 
     // -- The old way: fully connect every egress to all affine peers.
 
-    // Update secondary indices
-    addIndexEntry(self.connectedServicePeers, serviceName, hostPort, now);
-    addIndexEntry(self.connectedPeerServices, hostPort, serviceName, now);
+    // cancel any prune
     delete self.peersToPrune[hostPort];
 
     // Unmark recently seen peers, so they don't get reaped
@@ -608,8 +631,10 @@ ServiceDispatchHandler.prototype.deletePeerIndex =
 function deletePeerIndex(serviceName, hostPort) {
     var self = this;
 
-    deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
-    deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
+    if (self.partialAffinityEnabled) {
+        deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+        deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
+    }
     deleteIndexEntry(self.knownPeers, hostPort, serviceName);
 };
 
@@ -617,8 +642,10 @@ ServiceDispatchHandler.prototype.ensurePeerConnected =
 function ensurePeerConnected(serviceName, peer, reason, now) {
     var self = this;
 
-    addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
-    addIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName, now);
+    if (self.partialAffinityEnabled) {
+        addIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort, now);
+        addIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName, now);
+    }
     delete self.peersToPrune[peer.hostPort];
 
     if (peer.isConnected('out')) {
@@ -644,15 +671,15 @@ function getPartialRange(serviceName, reason, now) {
 
     var partialRange = self.partialRanges[serviceName];
     if (!partialRange) {
-        var exitNodes = self.egressNodes.exitsFor(serviceName);
         var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-        var relays = Object.keys(exitNodes).sort();
+        var relays = self.relaysFor[serviceName];
         var workers = serviceChannel.peers.keys().sort();
         partialRange = new PartialRange(
             self.channel.hostPort,
             self.minPeersPerWorker,
             self.minPeersPerRelay
         );
+        self.partialRanges[serviceName] = partialRange;
         partialRange.compute(relays, workers, now);
     }
 
@@ -690,11 +717,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     var partialRange = self.partialRanges[serviceName];
     if (partialRange) {
-        // TODO: would be better to do an incremental update, all we really
-        // care to do is "add (if not already in) this hostPort, then recompute
-        // the range if added
-        var workers = serviceChannel.peers.keys().sort();
-        partialRange.compute(null, workers, now);
+        partialRange.addWorker(hostPort, now);
     }
 
     peer = self._getServicePeer(serviceChannel, hostPort);
@@ -761,7 +784,7 @@ function freshenPartialPeer(peer, serviceName, now) {
                     serviceHostPort: hostPort,
                     isConnected: isConnected,
                     shouldConnect: shouldConnect,
-                    connectedPeers: objectTuples(connectedPeers)
+                    numConnectedPeers: countKeys(connectedPeers)
                 }))
             );
             if (shouldConnect) {
@@ -777,16 +800,6 @@ function freshenPartialPeer(peer, serviceName, now) {
     } else {
         self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity refresh', now);
     }
-
-    self.logger.info(
-        'refreshed peer partially',
-        self.extendLogInfo({
-            serviceName: serviceName,
-            serviceHostPort: hostPort,
-            numConnectedPeers: countKeys(connectedPeers),
-            isConnected: connected
-        })
-    );
 };
 
 ServiceDispatchHandler.prototype.ensurePartialConnections =
@@ -840,7 +853,7 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
                     serviceName: serviceName,
                     isConnected: false,
                     shouldConnect: true,
-                    connectedPeers: objectTuples(connectedPeers)
+                    numConnectedPeers: countKeys(connectedPeers)
                 }))
             );
             toConnect.push(worker);
@@ -885,8 +898,10 @@ ServiceDispatchHandler.prototype.ensurePeerDisconnected =
 function ensurePeerDisconnected(serviceName, peer, reason, now) {
     var self = this;
 
-    deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
-    deleteIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName);
+    if (self.partialAffinityEnabled) {
+        deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
+        deleteIndexEntry(self.connectedPeerServices, peer.hostPort, serviceName);
+    }
 
     var peerServices = self.connectedPeerServices[peer.hostPort];
     if (!peerServices || isObjectEmpty(peerServices)) {
@@ -1026,15 +1041,15 @@ ServiceDispatchHandler.prototype.updateServiceChannel =
 function updateServiceChannel(serviceChannel, now) {
     var self = this;
 
+    // TODO: would be nice to do a more incremental update
     var exitNodes = self.egressNodes.exitsFor(serviceChannel.serviceName);
-    var isExit = self.egressNodes.isExitFor(serviceChannel.serviceName);
-    if (isExit) {
+    self.relaysFor[serviceChannel.serviceName] = Object.keys(exitNodes).sort();
+
+    if (self.egressNodes.isExitFor(serviceChannel.serviceName)) {
         if (self.partialAffinityEnabled) {
             var partialRange = self.partialRanges[serviceChannel.serviceName];
             if (partialRange) {
-                // TODO: would be nice to do a more incremental update
-                var relays = Object.keys(exitNodes).sort();
-                partialRange.compute(relays, null, now);
+                partialRange.compute(self.relaysFor[serviceChannel.serviceName], null, now);
             }
         }
 
@@ -1043,7 +1058,7 @@ function updateServiceChannel(serviceChannel, now) {
         } else {
             self.updateServiceNodes(serviceChannel, now);
         }
-    } else if (!isExit) {
+    } else {
         if (self.partialAffinityEnabled) {
             delete self.partialRanges[serviceChannel.serviceName];
         }
@@ -1293,7 +1308,7 @@ function pruneSinglePeer(hostPort, pruneInfo) {
 };
 
 ServiceDispatchHandler.prototype.reapSinglePeer =
-function reapSinglePeer(hostPort, serviceNames) {
+function reapSinglePeer(hostPort, serviceNames, now) {
     var self = this;
 
     if (self.knownPeers[hostPort]) {
@@ -1327,12 +1342,12 @@ function reapSinglePeer(hostPort, serviceNames) {
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
         var serviceChannel = self.getServiceChannel(serviceName);
-        if (!serviceChannel) {
-            return;
+        if (serviceChannel) {
+            serviceChannel.peers.delete(hostPort);
         }
-        serviceChannel.peers.delete(hostPort);
         self.deletePeerIndex(serviceName, hostPort);
-        delete self.partialRanges[serviceName];
+        var partialRange = self.partialRanges[serviceName];
+        partialRange.removeWorker(hostPort, now);
     }
 
     peer.drain({
@@ -1539,10 +1554,12 @@ function disableRateLimiter() {
 };
 
 ServiceDispatchHandler.prototype.setPartialAffinityEnabled =
-function enablePartialAffinity(enabled) {
+function setPartialAffinityEnabled(enabled) {
     var self = this;
     self.partialAffinityEnabled = !!enabled;
     self.partialRanges = Object.create(null);
+    self.connectedServicePeers = Object.create(null);
+    self.connectedPeerServices = Object.create(null);
 };
 
 ServiceDispatchHandler.prototype.extendLogInfo =
@@ -1628,14 +1645,6 @@ function countKeys(obj) {
         ++count;
     }
     return count;
-}
-
-function objectTuples(obj) {
-    var tuples = [];
-    for (var key in obj) {
-        tuples.push([key, obj[key]]);
-    }
-    return tuples;
 }
 
 /* eslint-enable guard-for-in, no-unused-vars */

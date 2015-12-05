@@ -6,7 +6,7 @@ before_install:
 env:
 # Get some of them configs
 - HYPERBAHN_REMOTE_TEST_CONFIG=
-- HYPERBAHN_REMOTE_TEST_CONFIG=test/config/with_lazy_relay.json
+- HYPERBAHN_REMOTE_TEST_CONFIG=test/config/without_lazy_relay.json
 - HYPERBAHN_REMOTE_TEST_CONFIG=test/config/with_peer_heap.json
 - HYPERBAHN_REMOTE_TEST_CONFIG=test/config/with_partial_affinity.json
 script: npm run travis

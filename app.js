@@ -260,7 +260,8 @@ function bootstrapAndListen(callback) {
     self.bootstrap(callback);
 };
 
-Application.prototype.destroy = function destroy(opts) {
+Application.prototype.destroy =
+function destroy(opts) {
     var self = this;
 
     if (self.destroyed && !self.forceDestroyed) {
@@ -277,4 +278,5 @@ Application.prototype.destroy = function destroy(opts) {
     self.destroyed = true;
 
     self.clients.destroy();
+    self.emit('destroy');
 };

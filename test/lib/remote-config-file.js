@@ -21,6 +21,7 @@
 'use strict';
 var fs = require('fs');
 var path = require('path');
+var process = require('process');
 var RemoteConfig = require('../../clients/remote-config.js');
 var DebugLogtron = require('debug-logtron');
 
@@ -32,23 +33,17 @@ function RemoteConfigFile(name) {
     }
 
     var self = this;
-    name = name || '';
-    self.filePath = path.join('/tmp', name + 'config.json');
+    name = name || 'UNKNOWN[' + process.pid + ']';
+    self.filePath = path.join('/tmp',
+                              'remote_config_' + name + '.json');
 }
 
-RemoteConfigFile.prototype.write = function write(opts) {
+RemoteConfigFile.prototype.write =
+function write(opts) {
     var self = this;
-    var obj = [];
-    opts = opts || {};
-    var keys = Object.keys(opts);
-    for (var i = 0; i < keys.length; i++) {
-        obj.push({
-            key: keys[i],
-            value: opts[keys[i]]
-        });
-    }
-
-    self.writeFile(JSON.stringify(obj || {}));
+    var arr = objToKeyValArray(opts);
+    var json = JSON.stringify(arr, null, 4);
+    self.writeFile(json);
 };
 
 RemoteConfigFile.prototype.writeFile = function writeFile(content) {
@@ -80,3 +75,24 @@ RemoteConfigFile.prototype.clear = function clear() {
         fs.unlinkSync(self.filePath);
     }
 };
+
+function objToKeyValArray(obj) {
+    if (obj === null ||
+        obj === undefined ||
+        typeof obj !== 'object') {
+        return [];
+    }
+
+    if (Array.isArray(obj)) {
+        return obj;
+    }
+
+    var arr = [];
+    for (var keys = Object.keys(obj), i = 0; i < keys.length; i++) {
+        arr.push({
+            key: keys[i],
+            value: obj[keys[i]]
+        });
+    }
+    return arr;
+}

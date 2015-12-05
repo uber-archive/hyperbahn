@@ -1,6 +1,6 @@
 {
   "name": "hyperbahn",
-  "version": "2.13.25",
+  "version": "2.14.1",
   "description": "Service Discovery and Routing",
   "keywords": [],
   "author": "Raynos <raynos2@gmail.com>",
@@ -41,7 +41,7 @@
     "safe-json-parse": "4.0.0",
     "static-config": "2.1.0",
     "tape-cluster": "2.0.1",
-    "tchannel": "3.5.39",
+    "tchannel": "3.6.2",
     "uber-statsd-client": "1.4.0",
     "uncaught-exception": "6.0.2",
     "xtend": "4.0.0"
@@ -65,7 +65,7 @@
   "licenses": [],
   "scripts": {
     "add-licence": "uber-licence",
-    "check-benchmark": "node benchmarks --relay -- --relay -r 10000 -p 10000 --skipPing",
+    "check-benchmark": "node benchmarks --relay -- --relay -r 10000 -p 1000 --skipPing",
     "check-files": "bash ./scripts/verify_included.sh",
     "check-licence": "uber-licence --dry",
     "check-cover": "istanbul check-coverage || echo coverage failed",
