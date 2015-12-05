@@ -23,6 +23,15 @@
 module.exports = getPeerInfo;
 
 function getPeerInfo(peer) {
+    var inConn = peer.getInConnection();
+    if (inConn && inConn.direction !== 'in') {
+        inConn = null;
+    }
+    var outConn = peer.getOutConnection();
+    if (outConn && outConn.direction !== 'out') {
+        outConn = null;
+    }
+
     return {
         connected: {
             in: peer.isConnected('in', false),
@@ -31,6 +40,10 @@ function getPeerInfo(peer) {
         identified: {
             in: peer.isConnected('in', true),
             out: peer.isConnected('out', true)
+        },
+        initHeaders: {
+            in: inConn && inConn.initHeaders,
+            out: outConn && outConn.initHeaders
         },
         serviceNames: Object.keys(peer.serviceProxyServices || {})
     };
