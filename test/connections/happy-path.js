@@ -22,6 +22,10 @@
 
 var collectParallel = require('collect-parallel/array');
 var allocCluster = require('../lib/test-cluster.js');
+var CollapsedAssert = require('../lib/collapsed-assert.js');
+
+var realTchannelVersion = require('../../package.json').dependencies.tchannel;
+
 
 allocCluster.test('find connections for service', {
     size: 10,
@@ -88,6 +92,8 @@ allocCluster.test('find connections for service', {
 
         var exitHosts = entryNode.hostsFor('Dummy');
 
+        var cassert = CollapsedAssert();
+
         var body = resp.body;
         assert.deepEqual(
             exitHosts.sort(),
@@ -101,7 +107,8 @@ allocCluster.test('find connections for service', {
             }
 
             var exitInstances = body[key].instances;
-            var areConnected = Object.keys(exitInstances).map(function getInstanceConnected(key2) {
+            var exitInstancesKeys = Object.keys(exitInstances);
+            var areConnected = exitInstancesKeys.map(function getInstanceConnected(key2) {
                 var exitInstance = exitInstances[key2];
                 return exitInstance.connected.out ||
                        exitInstance.connected.in;
@@ -114,7 +121,29 @@ allocCluster.test('find connections for service', {
                 assert.ok(areConnected.every(boolEye),
                           'all exit instances are connected');
             }
+
+            for (var i = 0; i < exitInstancesKeys.length; i++) {
+                var instance = exitInstances[exitInstancesKeys[i]];
+                var initHeaders = instance.initHeaders;
+
+                var inHeaders = initHeaders.in;
+                var outHeaders = initHeaders.out;
+
+                var procName = 'node[' + process.pid + ']';
+
+                if (inHeaders) {
+                    cassert.equal(inHeaders.tchannelLanguage, 'node');
+                    cassert.equal(inHeaders.tchannelVersion, realTchannelVersion);
+                    cassert.equal(inHeaders.processName, procName);
+                }
+
+                cassert.equal(outHeaders.tchannelLanguage, 'node');
+                cassert.equal(outHeaders.tchannelVersion, realTchannelVersion);
+                cassert.equal(outHeaders.processName, procName);
+            }
         });
+
+        cassert.report(assert, 'initHeaders are correct');
 
         finish(null);
     }
