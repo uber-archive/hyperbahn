@@ -136,6 +136,12 @@ Admin.prototype.run = function run(cb) {
             argv: argv
         });
         rateLimiter.run(cb);
+    } else if (endpoint === 'channels') {
+        var channels = Channels({
+            admin: self,
+            argv: argv
+        });
+        channels.run(cb);
     } else {
         console.log('unknown sub system ' + endpoint);
         process.exit(0);
@@ -161,6 +167,8 @@ Admin.prototype.help = function help() {
     console.log('    total-limit default:                             set the total RPS limit per node as the default value');
     console.log('    admin rate-limiter exempt add {serviceName}:     set the service exempt by rate limiter');
     console.log('    admin rate-limiter exempt remove {serviceName}:  remove the service exempt by rate limiter');
+    console.log('admin channels');
+    console.log('    query:                                           query existing channels');
     process.exit(0);
     return;
 };
@@ -203,6 +211,7 @@ function send(endpoint, body, query, cb) {
     }
 
     function done(err, results) {
+        // console.log(results);
         assert(!err);
 
         var failures = [];
@@ -483,6 +492,64 @@ KillSwitchQuery.prototype.toJson = function toJson() {
     }
 
     return JSON.stringify(object);
+};
+
+function Channels(options) {
+    if (!(this instanceof Channels)) {
+        return new Channels(options);
+    }
+
+    var self = this;
+    self.argv = options.argv;
+    self.admin = options.admin;
+    self.hosts = options.admin.hosts;
+    self.endpoint = 'channels_v1';
+}
+
+Channels.prototype.query = function query(cb) {
+    var self = this;
+    var body = '';
+    self.admin.send(self.endpoint, body, ChannelsQuery, cb);
+};
+
+Channels.prototype.run = function run(cb) {
+    var self = this;
+    var argv = self.argv;
+
+    if (argv._[1] === 'query') {
+        self.query(cb);
+    } else {
+        self.admin.help();
+    }
+};
+
+function ChannelsQuery(host, body) {
+    if (!(this instanceof ChannelsQuery)) {
+        return new ChannelsQuery(host, body);
+    }
+
+    var self = this;
+
+    self.host = host;
+    self.channels = body;
+}
+
+ChannelsQuery.prototype.toString = function toString() {
+    var self = this;
+
+    var res = self.host + '\n';
+    if (!self.channels) {
+        res += '    empty';
+        return res;
+    }
+
+    var keys = Object.keys(self.channels);
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        res += key + ' ';
+    }
+
+    return res;
 };
 
 if (require.main === module) {
