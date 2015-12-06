@@ -23,18 +23,21 @@
 var Admin = require('../../bin/admin.js');
 var allocCluster = require('../lib/test-cluster.js');
 
+var CLUSTER_SIZE = 4;
+
 allocCluster.test('query channels', {
-    size: 4
+    size: CLUSTER_SIZE
 }, function t(cluster, assert) {
     Admin.exec('channels query', {
         hosts: cluster.hostPortList
     }, function onQuery(err, arr) {
         assert.ifError(err);
-        assert.equal(arr.length, 4);
+        assert.equal(arr.length, CLUSTER_SIZE);
         for (var i = 0; i < arr.length; i++) {
             var result = arr[i];
             assert.ok(result.channels);
-            assert.notEqual(result.channels, 0);
+            assert.ok(result.channels.ringpop);
+            assert.ok(result.channels.autobahn);
         }
         assert.end();
     });
