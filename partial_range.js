@@ -47,15 +47,16 @@ function extendLogInfo(info) {
     info.minPeersPerWorker = this.minPeersPerWorker;
     info.minPeersPerRelay  = this.minPeersPerRelay;
     info.rangeIsValid      = this.isValid();
-    info.serviceRelays     = this.relays;
-    info.serviceWorkers    = this.workers;
-    info.affineWorkers     = this.affineWorkers;
     info.relayIndex        = this.relayIndex;
     info.rangeRatio        = this.ratio;
     info.rangeLength       = this.length;
     info.rangeStart        = this.start;
     info.rangeStop         = this.stop;
     info.rangeLastComputed = this.lastComputed;
+    // TODO: consider adding back in compressed form or behind a flag:
+    // info.serviceRelays     = this.relays;        // K-scale array
+    // info.serviceWorkers    = this.workers;       // service-scale array
+    // info.affineWorkers     = this.affineWorkers; // length-scale array
     return info;
 };
 
