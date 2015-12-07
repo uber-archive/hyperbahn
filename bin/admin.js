@@ -552,6 +552,24 @@ ChannelsQuery.prototype.toString = function toString() {
     return res;
 };
 
+ChannelsQuery.prototype.toJson = function toJson() {
+    var self = this;
+
+    var object = {
+        host: self.host
+    };
+
+    self.channels = self.channels || {};
+    var keys = Object.keys(self.channels);
+    object.channels = [];
+    for (var i = 0; i < keys.length; i++) {
+        var key = keys[i];
+        object.channels.push(key);
+    }
+
+    return JSON.stringify(object);
+};
+
 if (require.main === module) {
     main();
 }
