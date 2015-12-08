@@ -211,7 +211,6 @@ function send(endpoint, body, query, cb) {
     }
 
     function done(err, results) {
-        // console.log(results);
         assert(!err);
 
         var failures = [];
