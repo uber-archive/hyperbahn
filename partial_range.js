@@ -53,10 +53,9 @@ function extendLogInfo(info) {
     info.rangeStart        = this.start;
     info.rangeStop         = this.stop;
     info.rangeLastComputed = this.lastComputed;
-    // TODO: consider adding back in compressed form or behind a flag:
-    // info.serviceRelays     = this.relays;        // K-scale array
-    // info.serviceWorkers    = this.workers;       // service-scale array
-    // info.affineWorkers     = this.affineWorkers; // length-scale array
+    info.numServiceRelays  = this.relays.length;
+    info.numServiceWorkers = this.workers.length;
+    info.numAffineWorkers  = this.affineWorkers.length;
     return info;
 };
 
