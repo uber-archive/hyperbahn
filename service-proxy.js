@@ -28,8 +28,9 @@ var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
-var IntervalScan = require('./lib/interval-scan.js');
+var setImmediate = require('timers').setImmediate;
 
+var IntervalScan = require('./lib/interval-scan.js');
 var RateLimiter = require('./rate_limiter.js');
 var PartialRange = require('./partial_range.js');
 var Circuits = require('./circuits.js');
@@ -232,7 +233,7 @@ function ServiceDispatchHandler(options) {
 
     self.destroyed = false;
 
-    self.egressNodes.on('membershipChanged', onMembershipChanged);
+    self.egressNodes.changedEvent.on(onEgressNodesChanged);
 
     if (self.circuitsConfig && self.circuitsConfig.enabled) {
         self.enableCircuits();
@@ -242,7 +243,11 @@ function ServiceDispatchHandler(options) {
         self.onCircuitStateChange(stateChange);
     }
 
-    function onMembershipChanged() {
+    function onEgressNodesChanged() {
+        setImmediate(updateServiceChannels);
+    }
+
+    function updateServiceChannels() {
         self.updateServiceChannels();
     }
 }
@@ -783,8 +788,7 @@ function freshenPartialPeer(peer, serviceName, now) {
                     serviceName: serviceName,
                     serviceHostPort: hostPort,
                     isConnected: isConnected,
-                    shouldConnect: shouldConnect,
-                    numConnectedPeers: countKeys(connectedPeers)
+                    shouldConnect: shouldConnect
                 }))
             );
             if (shouldConnect) {
@@ -852,8 +856,7 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
                     serviceHostPort: worker,
                     serviceName: serviceName,
                     isConnected: false,
-                    shouldConnect: true,
-                    numConnectedPeers: countKeys(connectedPeers)
+                    shouldConnect: true
                 }))
             );
             toConnect.push(worker);
@@ -1637,14 +1640,6 @@ function isObjectEmpty(obj) {
         return false;
     }
     return true;
-}
-
-function countKeys(obj) {
-    var count = 0;
-    for (var key in obj) {
-        ++count;
-    }
-    return count;
 }
 
 /* eslint-enable guard-for-in, no-unused-vars */

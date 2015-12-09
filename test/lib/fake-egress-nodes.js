@@ -42,7 +42,7 @@ function FakeEgressNodes(options) {
     self.kValue = options.kValue;
     self.relayChannels = options.relayChannels;
 
-    self.membershipChangedEvent = self.defineEvent('membershipChanged');
+    self.changedEvent = self.defineEvent('changed');
 }
 
 inherits(FakeEgressNodes, EventEmitter);

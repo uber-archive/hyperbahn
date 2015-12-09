@@ -43,7 +43,7 @@ function EgressNodes(options) {
 
     // Surface the membership changed event (for use in particular by service
     // proxies).
-    self.membershipChangedEvent = self.defineEvent('membershipChanged');
+    self.changedEvent = self.defineEvent('changed');
 }
 
 inherits(EgressNodes, EventEmitter);
@@ -55,9 +55,9 @@ EgressNodes.prototype.setRingpop = function setRingpop(ringpop) {
 
     self.ringpop = ringpop;
 
-    self.ringpop.on('membershipChanged', onMembershipChanged);
-    function onMembershipChanged() {
-        self.membershipChangedEvent.emit(self);
+    self.ringpop.on('ringChanged', onRingChanged);
+    function onRingChanged() {
+        self.changedEvent.emit(self);
     }
 };
 
