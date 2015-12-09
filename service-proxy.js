@@ -233,7 +233,7 @@ function ServiceDispatchHandler(options) {
 
     self.destroyed = false;
 
-    self.egressNodes.on('membershipChanged', onMembershipChanged);
+    self.egressNodes.changedEvent.on(onEgressNodesChanged);
 
     if (self.circuitsConfig && self.circuitsConfig.enabled) {
         self.enableCircuits();
@@ -243,7 +243,7 @@ function ServiceDispatchHandler(options) {
         self.onCircuitStateChange(stateChange);
     }
 
-    function onMembershipChanged() {
+    function onEgressNodesChanged() {
         setImmediate(updateServiceChannels);
     }
 

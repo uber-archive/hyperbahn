@@ -58,7 +58,7 @@ allocCluster.test('register and forward', {
         var exitNodes = cluster.getExitNodes(bob.serviceName);
 
         for (var i = 0; i < exitNodes.length; i++) {
-            exitNodes[i].clients.egressNodes.membershipChangedEvent.emit();
+            exitNodes[i].clients.egressNodes.changedEvent.emit();
         }
 
         makeRequest();
