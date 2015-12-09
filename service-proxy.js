@@ -848,7 +848,7 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
             self.logger.warn(
                 'partial affinity audit fail',
                 self.extendLogInfo(partialRange.extendLogInfo({
-                    path: 'ensurePartialConnections',
+                    path: 'ensurePartialConnections: ' + reason,
                     serviceHostPort: worker,
                     serviceName: serviceName,
                     isConnected: false,
