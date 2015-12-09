@@ -28,8 +28,9 @@ var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
-var IntervalScan = require('./lib/interval-scan.js');
+var setImmediate = require('timers').setImmediate;
 
+var IntervalScan = require('./lib/interval-scan.js');
 var RateLimiter = require('./rate_limiter.js');
 var PartialRange = require('./partial_range.js');
 var Circuits = require('./circuits.js');
@@ -243,6 +244,10 @@ function ServiceDispatchHandler(options) {
     }
 
     function onMembershipChanged() {
+        setImmediate(updateServiceChannels);
+    }
+
+    function updateServiceChannels() {
         self.updateServiceChannels();
     }
 }
