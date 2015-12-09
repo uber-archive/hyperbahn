@@ -55,8 +55,8 @@ EgressNodes.prototype.setRingpop = function setRingpop(ringpop) {
 
     self.ringpop = ringpop;
 
-    self.ringpop.on('membershipChanged', onMembershipChanged);
-    function onMembershipChanged() {
+    self.ringpop.on('ringChanged', onRingChanged);
+    function onRingChanged() {
         self.changedEvent.emit(self);
     }
 };
