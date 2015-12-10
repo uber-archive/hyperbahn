@@ -733,7 +733,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 
     var result = self.ensurePartialConnections(
-        serviceChannel, serviceName,
+        serviceChannel, serviceName, hostPort,
         'advertise', now);
 
     if (result && result.noop) {
@@ -807,7 +807,7 @@ function freshenPartialPeer(peer, serviceName, now) {
 };
 
 ServiceDispatchHandler.prototype.ensurePartialConnections =
-function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
+function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason, now) {
     var self = this;
 
     var partialRange = self.getPartialRange(serviceName, reason, now);
@@ -843,23 +843,26 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
         worker = partialRange.affineWorkers[i];
         peer = self._getServicePeer(serviceChannel, worker);
         isAffine[worker] = true;
+        toConnect.push(worker);
 
-        if (!connectedPeers || !connectedPeers[worker]) {
-            toConnect.push(worker);
-        } else if (!peer.isConnected('out')) {
-            // TODO: this audit shouldn't be necessary once we understand and fix
-            // why it was needed in the first place
-            self.logger.warn(
-                'partial affinity audit fail',
-                self.extendLogInfo(partialRange.extendLogInfo({
-                    path: 'ensurePartialConnections: ' + reason,
-                    serviceHostPort: worker,
-                    serviceName: serviceName,
-                    isConnected: false,
-                    shouldConnect: true
-                }))
-            );
-            toConnect.push(worker);
+        if (connectedPeers && connectedPeers[worker] && !peer.isConnected('out')) {
+            // NOTE: this happens because we have no low-level goal states for
+            // being connected to a peer; the advertise signal is the only way
+            // we pump ensurePartialConnections.
+
+            // TODO: we may just want to drop this log entirely
+            if (worker !== hostPort) {
+                self.logger.warn(
+                    'partial affinity audit fail',
+                    self.extendLogInfo(partialRange.extendLogInfo({
+                        path: 'ensurePartialConnections: ' + reason,
+                        serviceHostPort: worker,
+                        serviceName: serviceName,
+                        isConnected: false,
+                        shouldConnect: true
+                    }))
+                );
+            }
         }
     }
 
@@ -942,7 +945,7 @@ function removeServicePeer(serviceName, hostPort) {
         }
 
         var result = self.ensurePartialConnections(
-            serviceChannel, serviceName,
+            serviceChannel, serviceName, hostPort,
             'unadvertise', now);
         if (result && result.noop) {
             // if ensurePartialConnections did no work, we need to celar the
@@ -1103,8 +1106,8 @@ function updateServiceNodes(serviceChannel, now) {
 
     if (self.partialAffinityEnabled) {
         self.ensurePartialConnections(
-            serviceChannel, serviceChannel.serviceName,
-            'hyperbahn membership change', now);
+            serviceChannel, serviceChannel.serviceName, null,
+            'topologyChange', now);
     }
 };
 
