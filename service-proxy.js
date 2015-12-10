@@ -843,7 +843,9 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
         worker = partialRange.affineWorkers[i];
         peer = self._getServicePeer(serviceChannel, worker);
         isAffine[worker] = true;
-        toConnect.push(worker);
+        if (!(connectedPeers && connectedPeers[worker]) || !peer.isConnected('out')) {
+            toConnect.push(worker);
+        }
     }
 
     for (i = 0; i < connectedPeerKeys.length; i++) {
