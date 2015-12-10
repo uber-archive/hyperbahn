@@ -1106,7 +1106,7 @@ function updateServiceNodes(serviceChannel, now) {
     if (self.partialAffinityEnabled) {
         self.ensurePartialConnections(
             serviceChannel, serviceChannel.serviceName,
-            'hyperbahn membership change', now);
+            'topologyChange', now);
     }
 };
 
