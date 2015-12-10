@@ -827,23 +827,19 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
     }
 
     var result = self.computeAffinityChange(serviceChannel, partialRange, now);
-
-    if (result.noop) {
-        return result;
+    if (!result.noop) {
+        self.logger.info(
+            'implementing affinity change',
+            self.extendLogInfo(partialRange.extendLogInfo({
+                serviceName: serviceName,
+                reason: reason,
+                causingWorker: hostPort,
+                numToConnect: result.toConnect.length,
+                numToDisconnect: result.toDisconnect.length
+            }))
+        );
+        self.implementAffinityChange(serviceChannel, result.toConnect, result.toDisconnect, now);
     }
-
-    self.logger.info(
-        'implementing affinity change',
-        self.extendLogInfo(partialRange.extendLogInfo({
-            serviceName: serviceName,
-            reason: reason,
-            causingWorker: hostPort,
-            numToConnect: result.toConnect.length,
-            numToDisconnect: result.toDisconnect.length
-        }))
-    );
-    self.implementAffinityChange(serviceChannel, result.toConnect, result.toDisconnect, now);
-
     return result;
 };
 
