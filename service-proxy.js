@@ -850,18 +850,19 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
             // being connected to a peer; the advertise signal is the only way
             // we pump ensurePartialConnections.
 
-            // TODO: this audit shouldn't be necessary once we understand and fix
-            // why it was needed in the first place
-            self.logger.warn(
-                'partial affinity audit fail',
-                self.extendLogInfo(partialRange.extendLogInfo({
-                    path: 'ensurePartialConnections: ' + reason,
-                    serviceHostPort: worker,
-                    serviceName: serviceName,
-                    isConnected: false,
-                    shouldConnect: true
-                }))
-            );
+            // TODO: we may just want to drop this log entirely
+            if (worker !== hostPort) {
+                self.logger.warn(
+                    'partial affinity audit fail',
+                    self.extendLogInfo(partialRange.extendLogInfo({
+                        path: 'ensurePartialConnections: ' + reason,
+                        serviceHostPort: worker,
+                        serviceName: serviceName,
+                        isConnected: false,
+                        shouldConnect: true
+                    }))
+                );
+            }
         }
     }
 
