@@ -826,36 +826,9 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
         // TODO: why not return early
     }
 
-    var connectedPeers = self.connectedServicePeers[serviceName];
-    var connectedPeerKeys = connectedPeers ? Object.keys(connectedPeers) : [];
-    var toConnect = [];
-    var toDisconnect = [];
-    var isAffine = {};
-    var i;
-    var worker;
-    var peer;
-    var result = {
-        noop: false,
-        toConnect: toConnect,
-        isAffine: isAffine
-    };
-    for (i = 0; i < partialRange.affineWorkers.length; i++) {
-        worker = partialRange.affineWorkers[i];
-        peer = self._getServicePeer(serviceChannel, worker);
-        isAffine[worker] = true;
-        if (!(connectedPeers && connectedPeers[worker]) || !peer.isConnected('out')) {
-            toConnect.push(worker);
-        }
-    }
+    var result = self.computeAffinityChange(serviceChannel, partialRange, now);
 
-    for (i = 0; i < connectedPeerKeys.length; i++) {
-        worker = connectedPeerKeys[i];
-        if (!isAffine[worker] && !self.peersToPrune[worker]) {
-            toDisconnect.push(worker);
-        }
-    }
-
-    if (!toConnect.length && !toDisconnect.length) {
+    if (!result.toConnect.length && !result.toDisconnect.length) {
         result.noop = true;
         return result;
     }
@@ -866,11 +839,47 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
             serviceName: serviceName,
             reason: reason,
             causingWorker: hostPort,
-            numToConnect: toConnect.length,
-            numToDisconnect: toDisconnect.length
+            numToConnect: result.toConnect.length,
+            numToDisconnect: result.toDisconnect.length
         }))
     );
-    self.implementAffinityChange(serviceChannel, toConnect, toDisconnect, now);
+    self.implementAffinityChange(serviceChannel, result.toConnect, result.toDisconnect, now);
+
+    return result;
+};
+
+ServiceDispatchHandler.prototype.computeAffinityChange =
+function computeAffinityChange(serviceChannel, partialRange, now) {
+    var self = this;
+
+    var connectedPeers = self.connectedServicePeers[serviceChannel.serviceName];
+    var connectedPeerKeys = connectedPeers ? Object.keys(connectedPeers) : [];
+    var toConnect = [];
+    var toDisconnect = [];
+    var isAffine = {};
+    var i;
+    var worker;
+    var peer;
+    var result = {
+        noop: false,
+        toConnect: toConnect,
+        toDisconnect: toDisconnect,
+        isAffine: isAffine
+    };
+    for (i = 0; i < partialRange.affineWorkers.length; i++) {
+        worker = partialRange.affineWorkers[i];
+        peer = self._getServicePeer(serviceChannel, worker);
+        isAffine[worker] = true;
+        if (!(connectedPeers && connectedPeers[worker]) || !peer.isConnected('out')) {
+            toConnect.push(worker);
+        }
+    }
+    for (i = 0; i < connectedPeerKeys.length; i++) {
+        worker = connectedPeerKeys[i];
+        if (!isAffine[worker] && !self.peersToPrune[worker]) {
+            toDisconnect.push(worker);
+        }
+    }
 
     return result;
 };
