@@ -883,8 +883,9 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
         self.extendLogInfo(partialRange.extendLogInfo({
             serviceName: serviceName,
             reason: reason,
-            toConnect: toConnect,
-            toDisconnect: toDisconnect
+            causingWorker: hostPort,
+            numToConnect: toConnect.length,
+            numToDisconnect: toDisconnect.length
         }))
     );
 
