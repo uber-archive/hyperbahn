@@ -460,6 +460,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateReservoir(hasChanged, forceUpdate);
     self.updateReapPeersPeriod(hasChanged, forceUpdate);
     self.updatePrunePeersPeriod(hasChanged, forceUpdate);
+    self.updateConnectPeersPeriod(hasChanged, forceUpdate);
     self.updatePartialAffinityEnabled(hasChanged, forceUpdate);
     self.setMaximumRelayTTL(hasChanged, forceUpdate);
     self.updatePeerHeapEnabled(hasChanged, forceUpdate);
@@ -575,6 +576,15 @@ function updatePrunePeersPeriod(hasChanged, forceUpdate) {
     if (forceUpdate || hasChanged['peerPruner.period']) {
         var period = self.remoteConfig.get('peerPruner.period', 0);
         self.serviceProxy.setPrunePeersPeriod(period);
+    }
+};
+
+ApplicationClients.prototype.updateConnectPeersPeriod =
+function updateConnectPeersPeriod(hasChanged, forceUpdate) {
+    var self = this;
+    if (forceUpdate || hasChanged['peerConnecter.period']) {
+        var period = self.remoteConfig.get('peerConnecter.period', 100);
+        self.serviceProxy.setConnectPeersPeriod(period);
     }
 };
 

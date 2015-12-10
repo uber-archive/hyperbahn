@@ -41,6 +41,7 @@ var DEFAULT_MIN_PEERS_PER_RELAY = 5;
 var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
 var DEFAULT_REAP_PEERS_PERIOD = 5 * 60 * 1000; // every 5 minutes
 var DEFAULT_PRUNE_PEERS_PERIOD = 2 * 60 * 1000; // every 2 minutes
+var DEFAULT_CONNECT_PEERS_PERIOD = 100; // every 100 ms
 
 // our call SLA is 30 seconds currently
 var DEFAULT_DRAIN_TIMEOUT = 30 * 1000;
@@ -136,6 +137,7 @@ function ServiceDispatchHandler(options) {
     self.peersToReap = Object.create(null);
     self.knownPeers = Object.create(null);
     self.peersToPrune = Object.create(null);
+    self.peersToConnect = Object.create(null);
 
     self.peerPruner = new IntervalScan({
         name: 'peer-prune',
@@ -164,6 +166,34 @@ function ServiceDispatchHandler(options) {
         }
     });
     self.peerPruner.start();
+
+    self.peerConnecter = new IntervalScan({
+        name: 'peer-connect',
+        timers: self.channel.timers,
+        interval: options.connectPeersPeriod || DEFAULT_CONNECT_PEERS_PERIOD,
+        each: function connectEachPeer(hostPort, connectInfo) {
+            self.connectSinglePeer(hostPort, connectInfo);
+        },
+        getCollection: function getPeersToConnect() {
+            var peersToConnect = self.peersToConnect;
+            if (!Object.keys(peersToConnect).length) {
+                return null;
+            }
+            self.peersToConnect = Object.create(null);
+            return peersToConnect;
+        }
+    });
+    self.peerConnecter.runBeginEvent.on(function onPeerConnectBegin(run) {
+        if (run.keys.length) {
+            self.logger.info(
+                'connecting peers',
+                self.extendLogInfo({
+                    numPeersToConnect: run.keys.length
+                })
+            );
+        }
+    });
+    self.peerConnecter.start();
 
     // Populated by remote-config
     self.peerHeapEnabledServices = Object.create(null);
@@ -675,6 +705,36 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
         peer.clearDrain('canceled to ensure peer connection');
     }
 
+    self.peersToConnect[peer.hostPort] = {
+        lastRefresh: now,
+        serviceName: serviceName,
+        reason: reason
+    };
+};
+
+ServiceDispatchHandler.prototype.connectSinglePeer =
+function connectSinglePeer(hostPort, connectInfo) {
+    var self = this;
+
+    if (self.peersToPrune[hostPort]) {
+        return;
+    }
+
+    var serviceName = connectInfo.serviceName;
+    var serviceChannel = self.getServiceChannel(serviceName);
+    if (!serviceChannel) {
+        return;
+    }
+
+    var peer = serviceChannel.peers.get(hostPort);
+    if (!peer) {
+        return;
+    }
+
+    if (peer.draining) {
+        return;
+    }
+
     peer.connectTo();
 };
 
@@ -918,6 +978,7 @@ function ensurePeerDisconnected(serviceName, peer, reason, now) {
 
     var peerServices = self.connectedPeerServices[peer.hostPort];
     if (!peerServices || isObjectEmpty(peerServices)) {
+        delete self.peersToConnect[peer.hostPort];
         self.peersToPrune[peer.hostPort] = {
             lastRefresh: now,
             reason: reason
@@ -1270,6 +1331,14 @@ function setPrunePeersPeriod(period) {
     self.peerPruner.setInterval(period);
 };
 
+ServiceDispatchHandler.prototype.setConnectPeersPeriod =
+function setConnectPeersPeriod(period) {
+    // period === 0 means never / disabled, and is the default
+    var self = this;
+
+    self.peerConnecter.setInterval(period);
+};
+
 ServiceDispatchHandler.prototype.pruneSinglePeer =
 function pruneSinglePeer(hostPort, pruneInfo) {
     var self = this;
@@ -1432,6 +1501,7 @@ function destroy() {
     }
     self.destroyed = true;
     self.peerPruner.stop();
+    self.peerConnecter.stop();
     self.peerReaper.stop();
     self.servicePurger.stop();
     self.statEmitter.stop();
