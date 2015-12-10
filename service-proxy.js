@@ -147,6 +147,9 @@ function ServiceDispatchHandler(options) {
         },
         getCollection: function getPeersToPrune() {
             var peersToPrune = self.peersToPrune;
+            if (!Object.keys(peersToPrune).length) {
+                return null;
+            }
             self.peersToPrune = Object.create(null);
             return peersToPrune;
         }
