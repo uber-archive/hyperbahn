@@ -826,7 +826,28 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
         // TODO: why not return early
     }
 
-    var connectedPeers = self.connectedServicePeers[serviceName];
+    var result = self.computeAffinityChange(serviceChannel, partialRange, now);
+    if (!result.noop) {
+        self.logger.info(
+            'implementing affinity change',
+            self.extendLogInfo(partialRange.extendLogInfo({
+                serviceName: serviceName,
+                reason: reason,
+                causingWorker: hostPort,
+                numToConnect: result.toConnect.length,
+                numToDisconnect: result.toDisconnect.length
+            }))
+        );
+        self.implementAffinityChange(serviceChannel, result.toConnect, result.toDisconnect, now);
+    }
+    return result;
+};
+
+ServiceDispatchHandler.prototype.computeAffinityChange =
+function computeAffinityChange(serviceChannel, partialRange, now) {
+    var self = this;
+
+    var connectedPeers = self.connectedServicePeers[serviceChannel.serviceName];
     var connectedPeerKeys = connectedPeers ? Object.keys(connectedPeers) : [];
     var toConnect = [];
     var toDisconnect = [];
@@ -837,6 +858,7 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
     var result = {
         noop: false,
         toConnect: toConnect,
+        toDisconnect: toDisconnect,
         isAffine: isAffine
     };
     for (i = 0; i < partialRange.affineWorkers.length; i++) {
@@ -847,40 +869,34 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
             toConnect.push(worker);
         }
     }
-
     for (i = 0; i < connectedPeerKeys.length; i++) {
         worker = connectedPeerKeys[i];
         if (!isAffine[worker] && !self.peersToPrune[worker]) {
             toDisconnect.push(worker);
         }
     }
-
     if (!toConnect.length && !toDisconnect.length) {
         result.noop = true;
-        return result;
     }
 
-    self.logger.info(
-        'implementing affinity change',
-        self.extendLogInfo(partialRange.extendLogInfo({
-            serviceName: serviceName,
-            reason: reason,
-            causingWorker: hostPort,
-            numToConnect: toConnect.length,
-            numToDisconnect: toDisconnect.length
-        }))
-    );
+    return result;
+};
 
+ServiceDispatchHandler.prototype.implementAffinityChange =
+function implementAffinityChange(serviceChannel, toConnect, toDisconnect, now) {
+    var self = this;
+
+    var serviceName = serviceChannel.serviceName;
+    var peer = null;
+    var i;
     for (i = 0; i < toConnect.length; i++) {
         peer = self._getServicePeer(serviceChannel, toConnect[i]);
         self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
     }
-
     for (i = 0; i < toDisconnect.length; i++) {
         peer = self._getServicePeer(serviceChannel, toDisconnect[i]);
         self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', now);
     }
-    return result;
 };
 
 ServiceDispatchHandler.prototype.ensurePeerDisconnected =
