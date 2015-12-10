@@ -733,7 +733,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 
     var result = self.ensurePartialConnections(
-        serviceChannel, serviceName,
+        serviceChannel, serviceName, hostPort,
         'advertise', now);
 
     if (result && result.noop) {
@@ -807,7 +807,7 @@ function freshenPartialPeer(peer, serviceName, now) {
 };
 
 ServiceDispatchHandler.prototype.ensurePartialConnections =
-function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
+function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason, now) {
     var self = this;
 
     var partialRange = self.getPartialRange(serviceName, reason, now);
@@ -944,7 +944,7 @@ function removeServicePeer(serviceName, hostPort) {
         }
 
         var result = self.ensurePartialConnections(
-            serviceChannel, serviceName,
+            serviceChannel, serviceName, hostPort,
             'unadvertise', now);
         if (result && result.noop) {
             // if ensurePartialConnections did no work, we need to celar the
@@ -1105,7 +1105,7 @@ function updateServiceNodes(serviceChannel, now) {
 
     if (self.partialAffinityEnabled) {
         self.ensurePartialConnections(
-            serviceChannel, serviceChannel.serviceName,
+            serviceChannel, serviceChannel.serviceName, null,
             'topologyChange', now);
     }
 };
