@@ -828,8 +828,7 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
 
     var result = self.computeAffinityChange(serviceChannel, partialRange, now);
 
-    if (!result.toConnect.length && !result.toDisconnect.length) {
-        result.noop = true;
+    if (result.noop) {
         return result;
     }
 
@@ -879,6 +878,9 @@ function computeAffinityChange(serviceChannel, partialRange, now) {
         if (!isAffine[worker] && !self.peersToPrune[worker]) {
             toDisconnect.push(worker);
         }
+    }
+    if (!toConnect.length && !toDisconnect.length) {
+        result.noop = true;
     }
 
     return result;
