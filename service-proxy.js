@@ -870,17 +870,26 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
             numToDisconnect: toDisconnect.length
         }))
     );
+    self.implementAffinityChange(serviceChannel, toConnect, toDisconnect, now);
 
+    return result;
+};
+
+ServiceDispatchHandler.prototype.implementAffinityChange =
+function implementAffinityChange(serviceChannel, toConnect, toDisconnect, now) {
+    var self = this;
+
+    var serviceName = serviceChannel.serviceName;
+    var peer = null;
+    var i;
     for (i = 0; i < toConnect.length; i++) {
         peer = self._getServicePeer(serviceChannel, toConnect[i]);
         self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
     }
-
     for (i = 0; i < toDisconnect.length; i++) {
         peer = self._getServicePeer(serviceChannel, toDisconnect[i]);
         self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', now);
     }
-    return result;
 };
 
 ServiceDispatchHandler.prototype.ensurePeerDisconnected =
