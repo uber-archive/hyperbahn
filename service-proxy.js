@@ -843,10 +843,13 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
         worker = partialRange.affineWorkers[i];
         peer = self._getServicePeer(serviceChannel, worker);
         isAffine[worker] = true;
+        toConnect.push(worker);
 
-        if (!connectedPeers || !connectedPeers[worker]) {
-            toConnect.push(worker);
-        } else if (!peer.isConnected('out')) {
+        if (connectedPeers && connectedPeers[worker] && !peer.isConnected('out')) {
+            // NOTE: this happens because we have no low-level goal states for
+            // being connected to a peer; the advertise signal is the only way
+            // we pump ensurePartialConnections.
+
             // TODO: this audit shouldn't be necessary once we understand and fix
             // why it was needed in the first place
             self.logger.warn(
@@ -859,7 +862,6 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
                     shouldConnect: true
                 }))
             );
-            toConnect.push(worker);
         }
     }
 
