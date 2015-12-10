@@ -734,7 +734,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     var result = self.ensurePartialConnections(
         serviceChannel, serviceName,
-        'advertise from ' + hostPort, now);
+        'advertise', now);
 
     if (result && result.noop) {
         // if ensurePartialConnections did no work, we need to freshen the
@@ -943,7 +943,7 @@ function removeServicePeer(serviceName, hostPort) {
 
         var result = self.ensurePartialConnections(
             serviceChannel, serviceName,
-            'unadvertise from ' + hostPort, now);
+            'unadvertise', now);
         if (result && result.noop) {
             // if ensurePartialConnections did no work, we need to celar the
             // secondary indices since neither ensurePeerDisconnected was called
