@@ -843,26 +843,8 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
         worker = partialRange.affineWorkers[i];
         peer = self._getServicePeer(serviceChannel, worker);
         isAffine[worker] = true;
-        toConnect.push(worker);
-
-        if (connectedPeers && connectedPeers[worker] && !peer.isConnected('out')) {
-            // NOTE: this happens because we have no low-level goal states for
-            // being connected to a peer; the advertise signal is the only way
-            // we pump ensurePartialConnections.
-
-            // TODO: we may just want to drop this log entirely
-            if (worker !== hostPort) {
-                self.logger.warn(
-                    'partial affinity audit fail',
-                    self.extendLogInfo(partialRange.extendLogInfo({
-                        path: 'ensurePartialConnections: ' + reason,
-                        serviceHostPort: worker,
-                        serviceName: serviceName,
-                        isConnected: false,
-                        shouldConnect: true
-                    }))
-                );
-            }
+        if (!(connectedPeers && connectedPeers[worker]) || !peer.isConnected('out')) {
+            toConnect.push(worker);
         }
     }
 
