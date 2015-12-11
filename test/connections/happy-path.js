@@ -25,7 +25,7 @@ var collectParallel = require('collect-parallel/array');
 var allocCluster = require('../lib/test-cluster.js');
 var CollapsedAssert = require('../lib/collapsed-assert.js');
 
-var realTchannelVersion = require('../../package.json').dependencies.tchannel;
+var realTchannelVersion = require('tchannel/package.json').version;
 
 allocCluster.test('find connections for service', {
     size: 10,
