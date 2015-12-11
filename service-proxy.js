@@ -813,6 +813,19 @@ ServiceDispatchHandler.prototype.ensurePartialConnections =
 function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason, now) {
     var self = this;
 
+    // TODO: could debounce up to N-ms per serviceName
+
+    setImmediate(deferEnsure);
+
+    function deferEnsure() {
+        self._ensurePartialConnections(serviceChannel, serviceName, hostPort, reason, now);
+    }
+};
+
+ServiceDispatchHandler.prototype._ensurePartialConnections =
+function _ensurePartialConnections(serviceChannel, serviceName, hostPort, reason, now) {
+    var self = this;
+
     var partialRange = self.getPartialRange(serviceName, reason, now);
     if (!partialRange) {
         return null;
