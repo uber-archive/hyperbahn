@@ -56,11 +56,11 @@ function ServiceDispatchHandler(options) {
     assert(options, 'service dispatch handler options not actually optional');
     self.channel = options.channel;
     self.worker = options.worker;
-    self.logger = options.logger || self.channel.logger;
+    self.logger = options.logger;
     self.batchStats = options.batchStats;
     self.statsd = options.statsd;
     self.egressNodes = options.egressNodes;
-    self.createdAt = self.channel.timers.now();
+    self.createdAt = Date.now();
     self.logGracePeriod = options.logGracePeriod ||
         DEFAULT_LOG_GRACE_PERIOD;
     self.permissionsCache = options.permissionsCache;
@@ -118,7 +118,6 @@ function ServiceDispatchHandler(options) {
 
     self.peerPruner = new IntervalScan({
         name: 'peer-prune',
-        timers: self.channel.timers,
         interval: options.prunePeersPeriod || DEFAULT_PRUNE_PEERS_PERIOD,
         each: function pruneEachPeer(hostPort, pruneInfo) {
             self.pruneSinglePeer(hostPort, pruneInfo);
@@ -147,7 +146,6 @@ function ServiceDispatchHandler(options) {
 
     self.peerReaper = new IntervalScan({
         name: 'peer-reap',
-        timers: self.channel.timers,
         interval: options.reapPeersPeriod || DEFAULT_REAP_PEERS_PERIOD,
         each: function reapSinglePeer(hostPort, serviceNames) {
             self.reapSinglePeer(hostPort, serviceNames);
@@ -173,10 +171,9 @@ function ServiceDispatchHandler(options) {
 
     self.servicePurger = new IntervalScan({
         name: 'service-purge',
-        timers: self.channel.timers,
         interval: options.servicePurgePeriod || SERVICE_PURGE_PERIOD,
         each: function maybePurgeEachService(serviceName, lastRefresh) {
-            var now = self.channel.timers.now();
+            var now = Date.now();
             if (now - lastRefresh > self.servicePurgePeriod) {
                 delete self.exitServices[serviceName];
                 var serviceChannel = self.channel.subChannels[serviceName];
@@ -197,7 +194,6 @@ function ServiceDispatchHandler(options) {
 
     self.statEmitter = new IntervalScan({
         name: 'channel-stat-emit',
-        timers: self.channel.timers,
         interval: options.statsPeriod || DEFAULT_STATS_PERIOD,
         each: function emitEachSubChannelStats(serviceName, serviceChannel) {
             // TODO: only if it's a service channel (relay handler, maybe check

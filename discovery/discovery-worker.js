@@ -154,7 +154,7 @@ function setupServices() {
     var self = this;
 
     var hyperbahnTimeouts = self.config.get('hyperbahn.timeouts');
-    // TODO: naughty, dont touch self.tchannel
+    // TODO: naughty, dont touch self._proxyChannel
     var hyperbahnChannel = self._proxyChannel.makeSubChannel({
         serviceName: 'hyperbahn',
         trace: false
