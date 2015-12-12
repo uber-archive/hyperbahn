@@ -51,7 +51,6 @@ function ServiceDispatchHandler(options) {
 
     assert(options.batchStats, 'batchStats required');
 
-    // TODO: port over rate limiter itself
     self.rateLimiterEnabled = false;
 
     self.blockingTable = new BlockingTable();
@@ -59,14 +58,7 @@ function ServiceDispatchHandler(options) {
     self.rateLimiter = new RateLimiter({
         channel: self.channel,
         batchStats: options.batchStats
-        // rpsLimitForServiceName: options.rpsLimitForServiceName,
-        // exemptServices: options.exemptServices,
-        // totalRpsLimit: options.totalRpsLimit,
-        // defaultServiceRpsLimit: options.defaultServiceRpsLimit,
-        // defaultTotalKillSwitchBuffer: options.defaultTotalKillSwitchBuffer,
-        // numOfBuckets: options.rateLimiterBuckets
     });
-    // self.rateLimiterEnabled = options.rateLimiterEnabled;
 }
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';

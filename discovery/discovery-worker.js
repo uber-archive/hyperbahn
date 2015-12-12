@@ -32,7 +32,7 @@ var DiscoveryWorkerClients = require('../clients/');
 var DrainSignalHandler = require('./drain-signal-handler.js');
 var RemoteConfigUpdater = require('./remote-config-update.js');
 var HyperbahnHandler = require('../handler.js');
-var ServiceProxy = require('../service-proxy.js');
+var ServiceProxy = require('./service-proxy.js');
 var RoutingWorker = require('../router/routing-worker.js');
 var RoutingBridge = require('./routing-bridge.js');
 

@@ -27,10 +27,10 @@ var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
-var IntervalScan = require('./lib/interval-scan.js');
+var IntervalScan = require('../lib/interval-scan.js');
 
-var PartialRange = require('./partial_range.js');
-var Circuits = require('./circuits.js');
+var PartialRange = require('../partial_range.js');
+var Circuits = require('../circuits.js');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;

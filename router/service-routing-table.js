@@ -54,9 +54,6 @@ function ServiceRoutingTable(options) {
 
     // TODO: port over circuits itself
     self.circuitsEnabled = false;
-
-    // TODO: wtf egressNodes
-    self.egressNodes = null;
 }
 
 ServiceRoutingTable.prototype.createServiceChannel =
