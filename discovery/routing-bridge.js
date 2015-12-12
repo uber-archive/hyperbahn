@@ -274,3 +274,12 @@ function updateTotalKillSwitchBuffer(totalBuffer) {
 
     serviceProxyHandler.rateLimiter.updateTotalKillSwitchBuffer(totalBuffer);
 };
+
+RoutingBridge.prototype.updateRoutingTable =
+function updateRoutingTable(serviceName, mode, peers) {
+    var self = this;
+
+    var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
+
+    serviceRoutingTable.updateRoutingTable(serviceName, mode, peers);
+};

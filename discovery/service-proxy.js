@@ -55,6 +55,7 @@ function ServiceDispatchHandler(options) {
 
     assert(options, 'service dispatch handler options not actually optional');
     self.channel = options.channel;
+    self.worker = options.worker;
     self.logger = options.logger || self.channel.logger;
     self.batchStats = options.batchStats;
     self.statsd = options.statsd;
@@ -1281,6 +1282,23 @@ function setPeerHeapEnabled(peerHeapEnabledServices, peerHeapEnabledGlobal) {
         }
         self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
     }
+};
+
+ServiceDispatchHandler.prototype.notifyNewRoutingService =
+function notifyNewRoutingService(serviceName) {
+    var self = this;
+
+    var isExit = self.egressNodes.isExitFor(serviceName);
+    var mode = isExit ? 'exit' : 'forward';
+
+    var peers = [];
+    if (mode === 'forward') {
+        peers = Object.keys(self.egressNodes.exitsFor(serviceName));
+    }
+
+    self.worker.routingBridge.updateRoutingTable(
+        serviceName, mode, peers
+    );
 };
 
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.

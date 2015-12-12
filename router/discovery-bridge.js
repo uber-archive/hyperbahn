@@ -66,3 +66,10 @@ function unsafeGetServicePeer(serviceChannel, hostPort) {
 
     return self._discoveryWorker.serviceProxy._getServicePeer(serviceChannel, hostPort);
 };
+
+DiscoveryBridge.prototype.notifyNewRoutingService =
+function notifyNewRoutingService(serviceName) {
+    var self = this;
+
+    return self._discoveryWorker.serviceProxy.notifyNewRoutingService(serviceName);
+};

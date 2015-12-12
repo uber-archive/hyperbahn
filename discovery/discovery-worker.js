@@ -84,6 +84,7 @@ function DiscoveryWorker(config, opts) {
     var serviceProxyOpts = {
         // TODO: holy batman, so naughty
         channel: self._proxyChannel,
+        worker: self,
         logger: self.logger,
         statsd: self.clients.statsd,
         batchStats: self.clients.batchStats,

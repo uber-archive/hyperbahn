@@ -83,27 +83,21 @@ function createServiceChannel(serviceName) {
     var serviceChannel = self.channel.makeSubChannel(options);
     serviceChannel.handler = new RelayHandler(serviceChannel);
 
-    // TODO: this belongs in discovery...
-    self.transitionChannelToMode(serviceName);
+    self.discoveryBridge.notifyNewRoutingService(serviceName);
 
     return serviceChannel;
 };
 
-ServiceRoutingTable.prototype.transitionChannelToMode =
-function transitionChannelToMode(serviceName) {
+ServiceRoutingTable.prototype.updateRoutingTable =
+function updateRoutingTable(serviceName, mode, initialPeers) {
     var self = this;
-
-    var isExit = self.discoveryBridge.unsafeIsExitFor(serviceName);
-    var mode = isExit ? 'exit' : 'forward';
-    var exitNodes = self.discoveryBridge.unsafeExitsFor(serviceName);
 
     var serviceChannel = self.channel.subChannels[serviceName];
     serviceChannel.serviceProxyMode = mode; // duck: punched
 
     if (mode === 'forward') {
-        var exitNames = Object.keys(exitNodes);
-        for (var i = 0; i < exitNames.length; i++) {
-            self.discoveryBridge.unsafeGetServicePeer(serviceChannel, exitNames[i]);
+        for (var i = 0; i < initialPeers.length; i++) {
+            self.getServicePeer(serviceChannel, initialPeers[i]);
         }
     }
 
@@ -117,6 +111,19 @@ function transitionChannelToMode(serviceName) {
     for (var j = 0; j < peers.length; j++) {
         peers[j].setPreferConnectionDirection(preferConnectionDirection);
     }
+};
+
+ServiceRoutingTable.prototype.getServicePeer =
+function getServicePeer(serviceChannel, hostPort) {
+    var peer = serviceChannel.peers.get(hostPort);
+    if (!peer) {
+        peer = serviceChannel.peers.add(hostPort);
+    }
+    if (!peer.serviceProxyServices) {
+        peer.serviceProxyServices = {};
+    }
+    peer.serviceProxyServices[serviceChannel.serviceName] = true;
+    return peer;
 };
 
 ServiceRoutingTable.prototype.setPeerHeapEnabled =
