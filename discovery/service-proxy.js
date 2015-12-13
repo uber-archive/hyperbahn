@@ -27,8 +27,8 @@ var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
-var IntervalScan = require('../lib/interval-scan.js');
 
+var IntervalScan = require('../lib/interval-scan.js');
 var PartialRange = require('../partial_range.js');
 var Circuits = require('../circuits.js');
 
@@ -36,7 +36,6 @@ var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 var DEFAULT_MIN_PEERS_PER_WORKER = 5;
 var DEFAULT_MIN_PEERS_PER_RELAY = 5;
-var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
 var DEFAULT_REAP_PEERS_PERIOD = 5 * 60 * 1000; // every 5 minutes
 var DEFAULT_PRUNE_PEERS_PERIOD = 2 * 60 * 1000; // every 2 minutes
 
@@ -191,20 +190,6 @@ function ServiceDispatchHandler(options) {
         }
     });
     self.servicePurger.start();
-
-    self.statEmitter = new IntervalScan({
-        name: 'channel-stat-emit',
-        interval: options.statsPeriod || DEFAULT_STATS_PERIOD,
-        each: function emitEachSubChannelStats(serviceName, serviceChannel) {
-            // TODO: only if it's a service channel (relay handler, maybe check
-            // for exit mode?)
-            self.emitPeriodicServiceStats(serviceChannel, serviceName);
-        },
-        getCollection: function getSubChannels() {
-            return self.channel.subChannels;
-        }
-    });
-    self.statEmitter.start();
 
     self.destroyed = false;
 
@@ -1169,7 +1154,6 @@ function destroy() {
     self.peerPruner.stop();
     self.peerReaper.stop();
     self.servicePurger.stop();
-    self.statEmitter.stop();
 };
 
 ServiceDispatchHandler.prototype.initCircuits =

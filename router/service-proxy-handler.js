@@ -23,10 +23,12 @@
 var assert = require('assert');
 var Buffer = require('buffer').Buffer;
 
+var IntervalScan = require('../lib/interval-scan.js');
 var BlockingTable = require('./blocking-table.js');
 var RateLimiter = require('../rate_limiter.js');
 
 var CN_HEADER_BUFFER = new Buffer('cn');
+var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
 var RATE_LIMIT_TOTAL = 'total';
 var RATE_LIMIT_SERVICE = 'service';
 var RATE_LIMIT_KILLSWITCH = 'killswitch';
@@ -59,6 +61,20 @@ function ServiceDispatchHandler(options) {
         channel: self.channel,
         batchStats: options.batchStats
     });
+
+    self.statEmitter = new IntervalScan({
+        name: 'channel-stat-emit',
+        interval: options.statsPeriod || DEFAULT_STATS_PERIOD,
+        each: function emitEachSubChannelStats(serviceName, serviceChannel) {
+            // TODO: only if it's a service channel (relay handler, maybe check
+            // for exit mode?)
+            self.emitPeriodicServiceStats(serviceChannel, serviceName);
+        },
+        getCollection: function getSubChannels() {
+            return self.channel.subChannels;
+        }
+    });
+    self.statEmitter.start();
 }
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
@@ -336,4 +352,5 @@ function destroy() {
     var self = this;
 
     self.rateLimiter.destroy();
+    self.statEmitter.stop();
 };
