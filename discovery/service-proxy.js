@@ -245,7 +245,7 @@ ServiceDispatchHandler.prototype.createServiceChannel =
 function createServiceChannel(serviceName) {
     var self = this;
 
-    var now = self.channel.timers.now();
+    var now = Date.now();
     if (now >= self.createdAt + self.logGracePeriod) {
         self.logger.info(
             'Creating new sub channel',
@@ -304,7 +304,7 @@ function refreshServicePeer(serviceName, hostPort) {
         return;
     }
 
-    var now = self.channel.timers.now();
+    var now = Date.now();
 
     // Reset the expiration time for this service peer
     self.exitServices[serviceName] = now;
@@ -651,7 +651,7 @@ function ensurePeerDisconnected(serviceName, peer, reason, now) {
 ServiceDispatchHandler.prototype.removeServicePeer =
 function removeServicePeer(serviceName, hostPort) {
     var self = this;
-    var now = self.channel.timers.now();
+    var now = Date.now();
 
     var serviceChannel = self.channel.subChannels[serviceName];
     if (!serviceChannel) {
@@ -758,7 +758,7 @@ ServiceDispatchHandler.prototype.updateServiceChannels =
 function updateServiceChannels() {
     var self = this;
 
-    var now = self.channel.timers.now();
+    var now = Date.now();
     var serviceNames = Object.keys(self.channel.subChannels);
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
