@@ -37,9 +37,9 @@ function RoutingWorker(discoveryWorker, opts) {
     var self = this;
 
     self.discoveryBridge = DiscoveryBridge(discoveryWorker);
-    self.logger = self.discoveryBridge.createLogger();
-    self.batchStats = self.discoveryBridge.createBatchStats();
-    self.statsd = self.discoveryBridge.createStatsd();
+    self.logger = self.discoveryBridge.unsafeCreateLogger();
+    self.batchStats = self.discoveryBridge.unsafeCreateBatchStats();
+    self.statsd = self.discoveryBridge.unsafeCreateStatsd();
 
     self.tchannel = TChannel(extendInto({
         logger: self.logger,

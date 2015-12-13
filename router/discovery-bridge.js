@@ -32,22 +32,22 @@ function DiscoveryBridge(discoveryWorker) {
     self._discoveryWorker = discoveryWorker;
 }
 
-DiscoveryBridge.prototype.createLogger =
-function createLogger() {
+DiscoveryBridge.prototype.unsafeCreateLogger =
+function unsafeCreateLogger() {
     var self = this;
 
     return self._discoveryWorker.logger;
 };
 
-DiscoveryBridge.prototype.createBatchStats =
-function createBatchStats() {
+DiscoveryBridge.prototype.unsafeCreateBatchStats =
+function unsafeCreateBatchStats() {
     var self = this;
 
     return self._discoveryWorker.clients.batchStats;
 };
 
-DiscoveryBridge.prototype.createStatsd =
-function createStatsd() {
+DiscoveryBridge.prototype.unsafeCreateStatsd =
+function unsafeCreateStatsd() {
     var self = this;
 
     return self._discoveryWorker.clients.statsd;
