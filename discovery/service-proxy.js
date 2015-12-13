@@ -819,12 +819,12 @@ function isExitFor(serviceName) {
     var self = this;
 
     // faster check than calls into ringpop
-    var serviceChannel = self.channel.subChannels[serviceName];
-    if (!serviceChannel) {
+    var routingChannel = self.routingServices.getChannel(serviceName);
+    if (!routingChannel) {
         return self.egressNodes.isExitFor(serviceName);
     }
 
-    return serviceChannel.serviceProxyMode === 'exit';
+    return routingChannel.serviceMode === 'exit';
 };
 
 ServiceDispatchHandler.prototype.setReapPeersPeriod =
