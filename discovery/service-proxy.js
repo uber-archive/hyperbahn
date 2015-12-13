@@ -311,7 +311,7 @@ function getPartialRange(serviceName, reason, now) {
         var peers = self.worker.routingBridge.unsafeGetPeers(serviceName);
         var workers = peers.keys().sort();
         partialRange = new PartialRange(
-            self.channel.hostPort,
+            self.worker.hostPort,
             self.minPeersPerWorker,
             self.minPeersPerRelay
         );
@@ -1018,8 +1018,6 @@ ServiceDispatchHandler.prototype.extendLogInfo =
 function extendLogInfo(info) {
     var self = this;
 
-    self.channel.extendLogInfo(info);
-
     info.affineServices = Object.keys(self.exitServices);
 
     info.rateLimiterEnabled = self.rateLimiterEnabled;
@@ -1029,26 +1027,6 @@ function extendLogInfo(info) {
     info.minPeersPerRelay = self.minPeersPerRelay;
 
     return info;
-};
-
-ServiceDispatchHandler.prototype.setPeerHeapEnabled =
-function setPeerHeapEnabled(peerHeapEnabledServices, peerHeapEnabledGlobal) {
-    var self = this;
-
-    assert(typeof peerHeapEnabledServices === 'object');
-    self.peerHeapEnabledServices = peerHeapEnabledServices;
-    self.peerHeapEnabledGlobal = peerHeapEnabledGlobal;
-
-    var keys = Object.keys(self.channel.subChannels);
-    var i;
-    for (i = 0; i < keys.length; i++) {
-        var serviceName = keys[i];
-        var enabled = self.peerHeapEnabledGlobal;
-        if (serviceName in self.peerHeapEnabledServices) {
-            enabled = self.peerHeapEnabledServices[serviceName];
-        }
-        self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
-    }
 };
 
 ServiceDispatchHandler.prototype.notifyNewRoutingService =
