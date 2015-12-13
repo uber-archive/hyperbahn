@@ -126,8 +126,6 @@ allocCluster.test('request circuit state from endpoint', {
             return assert.end(err);
         }
 
-        console.log('circuits?', res.body);
-
         assert.equals(res.ok, true);
         var circuits = res.body;
         assert.equals(circuits.length, 1);
