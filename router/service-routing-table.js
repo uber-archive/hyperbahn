@@ -84,6 +84,24 @@ function extendLogInfo(info) {
     return info;
 };
 
+ServiceRoutingTable.prototype.channelInfos =
+function channelInfos() {
+    var self = this;
+
+    var channels = {};
+    Object.keys(self.channel.subChannels)
+    .forEach(function eachService(serviceName) {
+        var channel = self.channel.subChannels[serviceName];
+        channels[serviceName] = {
+            serviceName: serviceName,
+            handlerType: channel.handler.type,
+            mode: channel.options && channel.options.autobahnMode
+        };
+    });
+
+    return channels;
+};
+
 ServiceRoutingTable.prototype.enableCircuits =
 function enableCircuits() {
     var self = this;

@@ -340,3 +340,12 @@ function unsafeGetCircuits() {
 
     return serviceRoutingTable.circuits;
 };
+
+RoutingBridge.prototype.unsafeGetChannelInfos =
+function unsafeGetChannelInfos() {
+    var self = this;
+
+    var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
+
+    return serviceRoutingTable.channelInfos();
+};

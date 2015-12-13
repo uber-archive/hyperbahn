@@ -23,9 +23,7 @@
 module.exports = channelsEndpoint;
 
 function channelsEndpoint(opts, req, head, body, cb) {
-    var serviceProxy = opts.worker.serviceProxy;
-
-    var channels = serviceProxy.channelInfos();
+    var channels = opts.worker.routingBridge.unsafeGetChannelInfos();
 
     cb(null, {
         ok: true,
