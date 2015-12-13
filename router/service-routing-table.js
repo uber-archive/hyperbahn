@@ -24,7 +24,7 @@ var assert = require('assert');
 var clean = require('tchannel/lib/statsd').clean;
 var RelayHandler = require('tchannel/relay_handler');
 
-var Circuits = require('../circuits.js');
+var Circuits = require('./circuits.js');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
