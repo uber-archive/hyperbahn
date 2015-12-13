@@ -218,14 +218,6 @@ function getOrCreateRoutingChannel(serviceName) {
     return chan;
 };
 
-ServiceDispatchHandler.prototype._getServicePeer =
-function _getServicePeer(serviceName, hostPort) {
-    var self = this;
-
-    return self.worker.routingBridge
-        .unsafeGetOrCreatePeer(serviceName, hostPort);
-};
-
 ServiceDispatchHandler.prototype.refreshServicePeer =
 function refreshServicePeer(serviceName, hostPort) {
     var self = this;
@@ -257,7 +249,7 @@ function refreshServicePeer(serviceName, hostPort) {
     // Mark known peers, so they are candidates for future reaping
     addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 
-    var peer = self._getServicePeer(serviceName, hostPort);
+    var peer = self.worker.routingBridge.unsafeGetOrCreatePeer(serviceName, hostPort);
     self.ensurePeerConnected(serviceName, peer, 'service peer refresh', now);
 };
 
@@ -359,7 +351,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         partialRange.compute(null, workers, now);
     }
 
-    peer = self._getServicePeer(serviceName, hostPort);
+    peer = self.worker.routingBridge.unsafeGetOrCreatePeer(serviceName, hostPort);
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
@@ -486,7 +478,7 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     };
     for (i = 0; i < partialRange.affineWorkers.length; i++) {
         worker = partialRange.affineWorkers[i];
-        peer = self._getServicePeer(serviceName, worker);
+        peer = self.worker.routingBridge.unsafeGetOrCreatePeer(serviceName, worker);
         isAffine[worker] = true;
 
         if (!connectedPeers || !connectedPeers[worker]) {
@@ -532,12 +524,12 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     );
 
     for (i = 0; i < toConnect.length; i++) {
-        peer = self._getServicePeer(serviceName, toConnect[i]);
+        peer = self.worker.routingBridge.unsafeGetOrCreatePeer(serviceName, toConnect[i]);
         self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
     }
 
     for (i = 0; i < toDisconnect.length; i++) {
-        peer = self._getServicePeer(serviceName, toDisconnect[i]);
+        peer = self.worker.routingBridge.unsafeGetOrCreatePeer(serviceName, toDisconnect[i]);
         self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', now);
     }
     return result;
@@ -780,7 +772,9 @@ function changeToForward(exitNodes, serviceChannel, now) {
     //     ... send rpc to new exit nodes
     var exitNames = Object.keys(exitNodes);
     for (i = 0; i < exitNames.length; i++) {
-        self._getServicePeer(serviceChannel.serviceName, exitNames[i]);
+        self.worker.routingBridge.unsafeGetOrCreatePeer(
+            serviceChannel.serviceName, exitNames[i]
+        );
     }
     self.roleTransitionEvent.emit(self, {
         serviceChannel: serviceChannel,
@@ -810,7 +804,7 @@ function updateExitNodes(exitNodes, serviceChannel) {
     }
     var exitNames = Object.keys(exitNodes);
     for (i = 0; i < exitNames.length; i++) {
-        self._getServicePeer(serviceChannel.serviceName, exitNames[i]);
+        self.worker.routingBridge.unsafeGetServicePeer(serviceChannel.serviceName, exitNames[i]);
     }
 };
 
