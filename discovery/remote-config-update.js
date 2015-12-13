@@ -104,11 +104,8 @@ RemoteConfigUpdater.prototype.updateReservoir = function updateReservoir() {
 RemoteConfigUpdater.prototype.updateCircuitsEnabled = function updateCircuitsEnabled() {
     var self = this;
     var enabled = self.remoteConfig.get('circuits.enabled', false);
-    if (enabled) {
-        self.worker.serviceProxy.enableCircuits();
-    } else {
-        self.worker.serviceProxy.disableCircuits();
-    }
+
+    self.worker.routingBridge.toggleCircuitBreaker(enabled);
 };
 
 RemoteConfigUpdater.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled() {
@@ -116,11 +113,6 @@ RemoteConfigUpdater.prototype.updateRateLimitingEnabled = function updateRateLim
     var enabled = self.remoteConfig.get('rateLimiting.enabled', false);
 
     self.worker.routingBridge.toggleRateLimiter(enabled);
-    // if (enabled) {
-    //     self.worker.serviceProxy.enableRateLimiter();
-    // } else {
-    //     self.worker.serviceProxy.disableRateLimiter();
-    // }
 };
 
 RemoteConfigUpdater.prototype.updateReapPeersPeriod =

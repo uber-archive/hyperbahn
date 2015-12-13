@@ -46,6 +46,13 @@ function createBatchStats() {
     return self._discoveryWorker.clients.batchStats;
 };
 
+DiscoveryBridge.prototype.createStatsd =
+function createStatsd() {
+    var self = this;
+
+    return self._discoveryWorker.clients.statsd;
+};
+
 DiscoveryBridge.prototype.notifyNewRoutingService =
 function notifyNewRoutingService(serviceName) {
     var self = this;

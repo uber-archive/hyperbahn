@@ -71,15 +71,13 @@ function DiscoveryWorker(config, opts) {
     self.logger = self.clients.logger;
 
     var router = RoutingWorker(self, {
-        testChannelConfigOverlay: opts.testChannelConfigOverlay
+        testChannelConfigOverlay: opts.testChannelConfigOverlay,
+        circuitsConfig: config.get('hyperbahn.circuits')
     });
     self.routingBridge = RoutingBridge(router);
 
     // TODO: holy batman. so naughty.
     self._proxyChannel = router.tchannel;
-
-    // Circuit health monitor and control
-    var circuitsConfig = config.get('hyperbahn.circuits');
 
     var serviceProxyOpts = {
         // TODO: holy batman, so naughty
@@ -94,7 +92,6 @@ function DiscoveryWorker(config, opts) {
         rateLimiterEnabled: false,
         defaultTotalKillSwitchBuffer: opts.defaultTotalKillSwitchBuffer,
         rateLimiterBuckets: opts.rateLimiterBuckets,
-        circuitsConfig: circuitsConfig,
         partialAffinityEnabled: false,
         minPeersPerRelay: opts.minPeersPerRelay,
         minPeersPerWorker: opts.minPeersPerWorker

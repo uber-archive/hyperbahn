@@ -189,6 +189,18 @@ function toggleRateLimiter(enabled) {
     }
 };
 
+RoutingBridge.prototype.toggleCircuitBreaker =
+function toggleCircuitBreaker(enabled) {
+    var self = this;
+
+    var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
+    if (enabled) {
+        serviceRoutingTable.enableCircuits();
+    } else {
+        serviceRoutingTable.disableCircuits();
+    }
+};
+
 RoutingBridge.prototype.updateTotalRateLimit =
 function updateTotalRateLimit(limit) {
     var self = this;
@@ -318,4 +330,13 @@ function unsafeGetPeers(serviceName) {
 
     var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
     return serviceRoutingTable.getOrCreateServiceChannel(serviceName).peers;
+};
+
+RoutingBridge.prototype.unsafeGetCircuits =
+function unsafeGetCircuits() {
+    var self = this;
+
+    var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
+
+    return serviceRoutingTable.circuits;
 };

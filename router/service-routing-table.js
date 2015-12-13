@@ -21,8 +21,10 @@
 'use strict';
 
 var assert = require('assert');
-
+var clean = require('tchannel/lib/statsd').clean;
 var RelayHandler = require('tchannel/relay_handler');
+
+var Circuits = require('../circuits.js');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 
@@ -37,6 +39,9 @@ function ServiceRoutingTable(options) {
 
     assert(options.logger, 'logger required');
     self.logger = options.logger;
+
+    assert(options.statsd, 'statsd required');
+    self.statsd = options.statsd;
 
     assert(options.channel, 'channel required');
     self.channel = options.channel;
@@ -54,7 +59,145 @@ function ServiceRoutingTable(options) {
 
     // TODO: port over circuits itself
     self.circuitsEnabled = false;
+    assert(options.circuitsConfig, 'circuitsConfig required');
+    self.circuitsConfig = options.circuitsConfig;
+    self.circuits = null;
+    self.boundOnCircuitStateChange = onCircuitStateChange;
+
+    if (self.circuitsConfig && self.circuitsConfig.enabled) {
+        self.enableCircuits();
+    }
+
+    function onCircuitStateChange(stateChange) {
+        self.onCircuitStateChange(stateChange);
+    }
 }
+
+ServiceRoutingTable.prototype.extendLogInfo =
+function extendLogInfo(info) {
+    var self = this;
+
+    self.channel.extendLogInfo(info);
+
+    info.circuitsEnabled = self.circuitsEnabled;
+
+    return info;
+};
+
+ServiceRoutingTable.prototype.enableCircuits =
+function enableCircuits() {
+    var self = this;
+
+    if (self.circuitsEnabled) {
+        return;
+    }
+    self.circuitsEnabled = true;
+
+    if (!self.circuits) {
+        self.initCircuits();
+    }
+
+    var serviceNames = Object.keys(self.channel.subChannels);
+    for (var index = 0; index < serviceNames.length; index++) {
+        var serviceName = serviceNames[index];
+        var subChannel = self.channel.subChannels[serviceName];
+        if (subChannel.handler.type === 'tchannel.relay-handler' &&
+            subChannel.serviceProxyMode === 'exit'
+        ) {
+            subChannel.handler.circuits = self.circuits;
+        }
+    }
+};
+
+ServiceRoutingTable.prototype.initCircuits =
+function initCircuits() {
+    var self = this;
+
+    self.circuits = new Circuits({
+        timeHeap: self.channel.timeHeap,
+        timers: self.channel.timers,
+        random: self.random,
+        config: self.circuitsConfig
+    });
+
+    self.circuits.circuitStateChangeEvent.on(self.boundOnCircuitStateChange);
+};
+
+ServiceRoutingTable.prototype.disableCircuits =
+function disableCircuits() {
+    var self = this;
+
+    if (!self.circuitsEnabled) {
+        return;
+    }
+    self.circuitsEnabled = false;
+
+    var serviceNames = Object.keys(self.channel.subChannels);
+    for (var index = 0; index < serviceNames.length; index++) {
+        var serviceName = serviceNames[index];
+        var subChannel = self.channel.subChannels[serviceName];
+        if (subChannel.handler.type === 'tchannel.relay-handler' &&
+            subChannel.serviceProxyMode === 'exit'
+        ) {
+            subChannel.handler.circuits = null;
+        }
+    }
+};
+
+ServiceRoutingTable.prototype.onCircuitStateChange =
+function onCircuitStateChange(change) {
+    var self = this;
+
+    var circuit = change.circuit;
+    var oldState = change.oldState;
+    var state = change.state;
+
+    if (oldState && oldState.healthy !== state.healthy) {
+        // unhealthy -> healthy
+        if (state.healthy) {
+            self.statsd.increment('circuits.healthy.total', 1);
+            self.statsd.increment(
+                'circuits.healthy.by-caller.' +
+                    clean(circuit.callerName) + '.' +
+                    clean(circuit.serviceName) + '.' +
+                    clean(circuit.endpointName),
+                1
+            );
+            self.statsd.increment(
+                'circuits.healthy.by-service.' +
+                    clean(circuit.serviceName) + '.' +
+                    clean(circuit.callerName) + '.' +
+                    clean(circuit.endpointName),
+                1
+            );
+            self.logger.info(
+                'circuit returned to good health',
+                self.extendLogInfo(circuit.extendLogInfo({}))
+            );
+        // healthy -> unhealthy
+        } else {
+            self.statsd.increment('circuits.unhealthy.total', 1);
+            self.statsd.increment(
+                'circuits.unhealthy.by-caller.' +
+                    clean(circuit.callerName) + '.' +
+                    clean(circuit.serviceName) + '.' +
+                    clean(circuit.endpointName),
+                1
+            );
+            self.statsd.increment(
+                'circuits.unhealthy.by-service.' +
+                    clean(circuit.serviceName) + '.' +
+                    clean(circuit.callerName) + '.' +
+                    clean(circuit.endpointName),
+                1
+            );
+            self.logger.info(
+                'circuit became unhealthy',
+                self.extendLogInfo(circuit.extendLogInfo({}))
+            );
+        }
+    }
+};
 
 ServiceRoutingTable.prototype.createServiceChannel =
 function createServiceChannel(serviceName) {
@@ -114,7 +257,7 @@ function updateRoutingTable(serviceName, mode, initialPeers) {
     }
 
     if (mode === 'exit' && self.circuitsEnabled) {
-        serviceChannel.handler.circuit = self.circuits;
+        serviceChannel.handler.circuits = self.circuits;
     }
 
     var preferConnectionDirection = mode === 'exit' ? 'out' : 'any';

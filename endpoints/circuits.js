@@ -23,7 +23,7 @@
 module.exports = circuitsEndpoint;
 
 function circuitsEndpoint(opts, req, head, body, cb) {
-    var circuits = opts.worker.serviceProxy.circuits;
+    var circuits = opts.worker.routingBridge.unsafeGetCircuits();
 
     var response = [];
 

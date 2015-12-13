@@ -23,14 +23,12 @@
 /* eslint-disable max-statements */
 
 var assert = require('assert');
-var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
 
 var IntervalScan = require('../lib/interval-scan.js');
 var PartialRange = require('../partial_range.js');
-var Circuits = require('../circuits.js');
 
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
@@ -65,10 +63,6 @@ function ServiceDispatchHandler(options) {
     self.permissionsCache = options.permissionsCache;
     self.serviceReqDefaults = options.serviceReqDefaults || {};
 
-    self.circuitsEnabled = false;
-    self.circuitsConfig = options.circuitsConfig;
-    self.circuits = null;
-    self.boundOnCircuitStateChange = onCircuitStateChange;
     self.routingServices = new RoutingServices();
 
     self.partialAffinityEnabled = !!options.partialAffinityEnabled;
@@ -188,14 +182,6 @@ function ServiceDispatchHandler(options) {
     self.destroyed = false;
 
     self.egressNodes.on('membershipChanged', onMembershipChanged);
-
-    if (self.circuitsConfig && self.circuitsConfig.enabled) {
-        self.enableCircuits();
-    }
-
-    function onCircuitStateChange(stateChange) {
-        self.onCircuitStateChange(stateChange);
-    }
 
     function onMembershipChanged() {
         self.updateServiceChannels();
@@ -714,10 +700,6 @@ function updateServiceChannels() {
             self.updateServiceChannel(serviceChannel, now);
         }
     }
-
-    if (self.circuits) {
-        self.circuits.updateServices();
-    }
 };
 
 ServiceDispatchHandler.prototype.updateServiceChannel =
@@ -788,12 +770,14 @@ function updateServiceNodes(serviceChannel, now) {
     }
 };
 
+// TODO: FFFFFFFFFFFFFFFff-----
 ServiceDispatchHandler.prototype.changeToForward =
 function changeToForward(exitNodes, serviceChannel, now) {
     var self = this;
 
     var oldMode = serviceChannel.serviceProxyMode;
     serviceChannel.serviceProxyMode = 'forward';
+    serviceChannel.handler.circuits = null;
 
     var i;
     var peers = serviceChannel.peers.values();
@@ -804,6 +788,9 @@ function changeToForward(exitNodes, serviceChannel, now) {
             serviceChannel.serviceName, peer,
             'hyperbahn membership change', now);
     }
+
+    var circuits = self.worker.routingBridge.unsafeGetCircuits();
+    circuits.purgeServiceName(serviceChannel.serviceName);
 
     // TODO: transmit prior known registration data to new owner(s) to
     // speed convergence / deal with transitions better:
@@ -1026,61 +1013,6 @@ function emitPeriodicServiceStats(serviceChannel, serviceName) {
     self.statsd.gauge(prefix + 'connections.any', anyway);
 };
 
-ServiceDispatchHandler.prototype.onCircuitStateChange =
-function onCircuitStateChange(change) {
-    var self = this;
-
-    var circuit = change.circuit;
-    var oldState = change.oldState;
-    var state = change.state;
-
-    if (oldState && oldState.healthy !== state.healthy) {
-        // unhealthy -> healthy
-        if (state.healthy) {
-            self.statsd.increment('circuits.healthy.total', 1);
-            self.statsd.increment(
-                'circuits.healthy.by-caller.' +
-                    clean(circuit.callerName) + '.' +
-                    clean(circuit.serviceName) + '.' +
-                    clean(circuit.endpointName),
-                1
-            );
-            self.statsd.increment(
-                'circuits.healthy.by-service.' +
-                    clean(circuit.serviceName) + '.' +
-                    clean(circuit.callerName) + '.' +
-                    clean(circuit.endpointName),
-                1
-            );
-            self.logger.info(
-                'circuit returned to good health',
-                self.extendLogInfo(circuit.extendLogInfo({}))
-            );
-        // healthy -> unhealthy
-        } else {
-            self.statsd.increment('circuits.unhealthy.total', 1);
-            self.statsd.increment(
-                'circuits.unhealthy.by-caller.' +
-                    clean(circuit.callerName) + '.' +
-                    clean(circuit.serviceName) + '.' +
-                    clean(circuit.endpointName),
-                1
-            );
-            self.statsd.increment(
-                'circuits.unhealthy.by-service.' +
-                    clean(circuit.serviceName) + '.' +
-                    clean(circuit.callerName) + '.' +
-                    clean(circuit.endpointName),
-                1
-            );
-            self.logger.info(
-                'circuit became unhealthy',
-                self.extendLogInfo(circuit.extendLogInfo({}))
-            );
-        }
-    }
-};
-
 ServiceDispatchHandler.prototype.destroy =
 function destroy() {
     var self = this;
@@ -1091,67 +1023,6 @@ function destroy() {
     self.peerPruner.stop();
     self.peerReaper.stop();
     self.servicePurger.stop();
-};
-
-ServiceDispatchHandler.prototype.initCircuits =
-function initCircuits() {
-    var self = this;
-
-    self.circuits = new Circuits({
-        timeHeap: self.channel.timeHeap,
-        timers: self.channel.timers,
-        random: self.random,
-        egressNodes: self.egressNodes,
-        config: self.circuitsConfig
-    });
-
-    self.circuits.circuitStateChangeEvent.on(self.boundOnCircuitStateChange);
-};
-
-ServiceDispatchHandler.prototype.enableCircuits =
-function enableCircuits() {
-    var self = this;
-
-    if (self.circuitsEnabled) {
-        return;
-    }
-    self.circuitsEnabled = true;
-
-    if (!self.circuits) {
-        self.initCircuits();
-    }
-
-    var serviceNames = Object.keys(self.channel.subChannels);
-    for (var index = 0; index < serviceNames.length; index++) {
-        var serviceName = serviceNames[index];
-        var subChannel = self.channel.subChannels[serviceName];
-        if (subChannel.handler.type === 'tchannel.relay-handler' &&
-            subChannel.serviceProxyMode === 'exit'
-        ) {
-            subChannel.handler.circuits = self.circuits;
-        }
-    }
-};
-
-ServiceDispatchHandler.prototype.disableCircuits =
-function disableCircuits() {
-    var self = this;
-
-    if (!self.circuitsEnabled) {
-        return;
-    }
-    self.circuitsEnabled = false;
-
-    var serviceNames = Object.keys(self.channel.subChannels);
-    for (var index = 0; index < serviceNames.length; index++) {
-        var serviceName = serviceNames[index];
-        var subChannel = self.channel.subChannels[serviceName];
-        if (subChannel.handler.type === 'tchannel.relay-handler' &&
-            subChannel.serviceProxyMode === 'exit'
-        ) {
-            subChannel.handler.circuits = null;
-        }
-    }
 };
 
 ServiceDispatchHandler.prototype.setPartialAffinityEnabled =
@@ -1171,7 +1042,6 @@ function extendLogInfo(info) {
 
     info.affineServices = Object.keys(self.exitServices);
 
-    info.circuitsEnabled = self.circuitsEnabled;
     info.rateLimiterEnabled = self.rateLimiterEnabled;
     info.partialAffinityEnabled = self.partialAffinityEnabled;
 

@@ -39,6 +39,7 @@ function RoutingWorker(discoveryWorker, opts) {
     self.discoveryBridge = DiscoveryBridge(discoveryWorker);
     self.logger = self.discoveryBridge.createLogger();
     self.batchStats = self.discoveryBridge.createBatchStats();
+    self.statsd = self.discoveryBridge.createStatsd();
 
     self.tchannel = TChannel(extendInto({
         logger: self.logger,
@@ -48,6 +49,7 @@ function RoutingWorker(discoveryWorker, opts) {
         connectionStalePeriod: 1.5 * 1000,
         useLazyRelaying: false,
         useLazyHandling: false
+    // TODO remove this testTChannelConfigOverlay coupling
     }, opts.testChannelConfigOverlay));
 
     self.tchannel.drainExempt = isReqDrainExempt;
@@ -55,7 +57,10 @@ function RoutingWorker(discoveryWorker, opts) {
     self.serviceRoutingTable = new ServiceRoutingTable({
         logger: self.logger,
         channel: self.tchannel,
-        discoveryBridge: self.discoveryBridge
+        discoveryBridge: self.discoveryBridge,
+        statsd: self.statsd,
+        // TODO: remove this coupling...
+        circuitsConfig: opts.circuitsConfig
     });
     self.serviceProxyHandler = new ServiceProxyHandler({
         logger: self.logger,

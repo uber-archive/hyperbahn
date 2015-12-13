@@ -153,7 +153,7 @@ function extendLogInfo(info) {
 
     // info.affineServices = Object.keys(self.exitServices);
 
-    info.circuitsEnabled = self.circuitsEnabled;
+    // info.circuitsEnabled = self.circuitsEnabled;
     info.rateLimiterEnabled = self.rateLimiterEnabled;
     // info.partialAffinityEnabled = self.partialAffinityEnabled;
 

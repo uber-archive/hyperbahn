@@ -126,7 +126,6 @@ function Circuits(options) {
         minRequests: self.config.minRequests,
         probation: self.config.probation
     });
-    self.egressNodes = options.egressNodes;
 }
 
 inherits(Circuits, EventEmitter);
@@ -178,6 +177,15 @@ function ErrorFrame(codeName, message) {
     this.codeName = codeName;
     this.message = message;
 }
+
+Circuits.prototype.purgeServiceName =
+function purgeServiceName(serviceName) {
+    var self = this;
+
+    if (self.circuitsByServiceName[serviceName]) {
+        delete self.circuitsByServiceName[serviceName];
+    }
+};
 
 // Called upon membership change to collect services that the corresponding
 // exit node is no longer responsible for.
