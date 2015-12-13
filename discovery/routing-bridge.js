@@ -292,3 +292,30 @@ function closeChannel(serviceName) {
 
     serviceRoutingTable.closeChannel(serviceName);
 };
+
+RoutingBridge.prototype.forgetServicePeer =
+function forgetServicePeer(serviceName, hostPort) {
+    var self = this;
+
+    var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
+
+    serviceRoutingTable.forgetServicePeer(serviceName, hostPort);
+};
+
+RoutingBridge.prototype.unsafeGetOrCreatePeer =
+function unsafeGetOrCreatePeer(serviceName, hostPort) {
+    var self = this;
+
+    var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
+
+    var serviceChannel = serviceRoutingTable.channel.subChannels[serviceName];
+    return serviceRoutingTable.getServicePeer(serviceChannel, hostPort);
+};
+
+RoutingBridge.prototype.unsafeGetPeers =
+function unsafeGetPeers(serviceName) {
+    var self = this;
+
+    var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
+    return serviceRoutingTable.getOrCreateServiceChannel(serviceName).peers;
+};

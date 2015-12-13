@@ -30,16 +30,17 @@ function ExitNode(worker) {
     }
     var self = this;
 
+    self.worker = worker;
     self.serviceProxy = worker.serviceProxy;
 }
 
 ExitNode.prototype.getServiceConnections =
 function getServiceConnections(serviceName) {
     var self = this;
-    var svcchan = self.serviceProxy.getServiceChannel(serviceName);
+    var peers = self.worker.routingBridge.unsafeGetPeers(serviceName);
     var connectedHostPorts = {};
-    if (svcchan) {
-        svcchan.peers.entries().forEach(function each(ent) {
+    if (peers) {
+        peers.entries().forEach(function each(ent) {
             var hostPort = ent[0];
             var peer = ent[1];
             connectedHostPorts[hostPort] = getPeerInfo(peer);

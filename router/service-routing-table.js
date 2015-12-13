@@ -88,11 +88,23 @@ function createServiceChannel(serviceName) {
     return serviceChannel;
 };
 
+ServiceRoutingTable.prototype.getOrCreateServiceChannel =
+function getOrCreateServiceChannel(serviceName) {
+    var self = this;
+
+    var channel = self.channel.subChannels[serviceName];
+    if (channel) {
+        return channel;
+    }
+
+    return self.createServiceChannel(serviceName);
+};
+
 ServiceRoutingTable.prototype.updateRoutingTable =
 function updateRoutingTable(serviceName, mode, initialPeers) {
     var self = this;
 
-    var serviceChannel = self.channel.subChannels[serviceName];
+    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
     serviceChannel.serviceProxyMode = mode; // duck: punched
 
     if (mode === 'forward') {
@@ -171,3 +183,14 @@ function closeChannel(serviceName) {
         // self.rateLimiter.removeKillSwitchCounter(serviceName);
     }
 };
+
+ServiceRoutingTable.prototype.forgetServicePeer =
+function forgetServicePeer(serviceName, hostPort) {
+    var self = this;
+
+    var serviceChannel = self.channel.subChannels[serviceName];
+    if (serviceChannel) {
+        serviceChannel.peers.delete(hostPort);
+    }
+};
+

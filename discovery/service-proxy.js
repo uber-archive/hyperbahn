@@ -69,6 +69,7 @@ function ServiceDispatchHandler(options) {
     self.circuitsConfig = options.circuitsConfig;
     self.circuits = null;
     self.boundOnCircuitStateChange = onCircuitStateChange;
+    self.routingServices = new RoutingServices();
 
     self.partialAffinityEnabled = !!options.partialAffinityEnabled;
     self.minPeersPerWorker = options.minPeersPerWorker || DEFAULT_MIN_PEERS_PER_WORKER;
@@ -205,101 +206,46 @@ util.inherits(ServiceDispatchHandler, EventEmitter);
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
 
-ServiceDispatchHandler.prototype.getOrCreateServiceChannel =
-function getOrCreateServiceChannel(serviceName) {
-    var self = this;
-    return self.getServiceChannel(serviceName, true);
-};
-
-ServiceDispatchHandler.prototype.getServiceChannel =
-function getServiceChannel(serviceName, create) {
-    var self = this;
-    var serviceChannel = self.channel.subChannels[serviceName];
-    if (!serviceChannel && create) {
-        serviceChannel = self.createServiceChannel(serviceName);
-    }
-    return serviceChannel;
-};
-
-ServiceDispatchHandler.prototype.getServicePeer =
-function getServicePeer(serviceName, hostPort) {
-    var self = this;
-    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-    return self._getServicePeer(serviceChannel, hostPort);
-};
-
-ServiceDispatchHandler.prototype._getServicePeer =
-function _getServicePeer(serviceChannel, hostPort) {
-    var peer = serviceChannel.peers.get(hostPort);
-    if (!peer) {
-        peer = serviceChannel.peers.add(hostPort);
-    }
-    if (!peer.serviceProxyServices) {
-        peer.serviceProxyServices = {};
-    }
-    peer.serviceProxyServices[serviceChannel.serviceName] = true;
-    return peer;
-};
-
-ServiceDispatchHandler.prototype.createServiceChannel =
-function createServiceChannel(serviceName) {
+ServiceDispatchHandler.prototype.getOrCreateRoutingChannel =
+function getOrCreateRoutingChannel(serviceName) {
     var self = this;
 
-    var now = Date.now();
-    if (now >= self.createdAt + self.logGracePeriod) {
-        self.logger.info(
-            'Creating new sub channel',
-            self.extendLogInfo({
-                serviceName: serviceName
-            })
-        );
+    var chan = self.routingServices.getChannel(serviceName);
+    if (chan) {
+        return chan;
     }
 
-    var exitNodes = self.egressNodes.exitsFor(serviceName);
     var isExit = self.egressNodes.isExitFor(serviceName);
     var mode = isExit ? 'exit' : 'forward';
 
-    var choosePeerWithHeap = self.peerHeapEnabledGlobal;
-    if (serviceName in self.peerHeapEnabledServices) {
-        choosePeerWithHeap = self.peerHeapEnabledServices[serviceName];
-    }
-
-    var options = {
-        serviceName: serviceName,
-        choosePeerWithHeap: choosePeerWithHeap
-    };
-
-    if (self.serviceReqDefaults[serviceName]) {
-        options.requestDefaults = self.serviceReqDefaults[serviceName];
-    }
-
-    if (mode === 'exit') {
-        options.preferConnectionDirection = 'out';
-    }
-
-    var serviceChannel = self.channel.makeSubChannel(options);
-    serviceChannel.serviceProxyMode = mode; // duck: punched
-
+    var peers = [];
     if (mode === 'forward') {
-        var exitNames = Object.keys(exitNodes);
-        for (var i = 0; i < exitNames.length; i++) {
-            self._getServicePeer(serviceChannel, exitNames[i]);
-        }
+        peers = Object.keys(self.egressNodes.exitsFor(serviceName));
     }
 
-    serviceChannel.handler = new RelayHandler(
-        serviceChannel,
-        mode === 'exit' && self.circuitsEnabled && self.circuits);
+    chan = self.routingServices.addChannel(serviceName, mode, peers);
 
-    return serviceChannel;
+    self.worker.routingBridge.updateRoutingTable(
+        serviceName, mode, peers
+    );
+
+    return chan;
+};
+
+ServiceDispatchHandler.prototype._getServicePeer =
+function _getServicePeer(serviceName, hostPort) {
+    var self = this;
+
+    return self.worker.routingBridge
+        .unsafeGetOrCreatePeer(serviceName, hostPort);
 };
 
 ServiceDispatchHandler.prototype.refreshServicePeer =
 function refreshServicePeer(serviceName, hostPort) {
     var self = this;
 
-    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-    if (serviceChannel.serviceProxyMode !== 'exit') {
+    var routingChannel = self.getOrCreateRoutingChannel(serviceName);
+    if (routingChannel.serviceMode !== 'exit') {
         // TODO: stat, log
         return;
     }
@@ -325,7 +271,7 @@ function refreshServicePeer(serviceName, hostPort) {
     // Mark known peers, so they are candidates for future reaping
     addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 
-    var peer = self.getServicePeer(serviceName, hostPort);
+    var peer = self._getServicePeer(serviceName, hostPort);
     self.ensurePeerConnected(serviceName, peer, 'service peer refresh', now);
 };
 
@@ -394,9 +340,10 @@ function getPartialRange(serviceName, reason, now) {
     var partialRange = self.partialRanges[serviceName];
     if (!partialRange) {
         var exitNodes = self.egressNodes.exitsFor(serviceName);
-        var serviceChannel = self.getOrCreateServiceChannel(serviceName);
         var relays = Object.keys(exitNodes).sort();
-        var workers = serviceChannel.peers.keys().sort();
+
+        var peers = self.worker.routingBridge.unsafeGetPeers(serviceName);
+        var workers = peers.keys().sort();
         partialRange = new PartialRange(
             self.channel.hostPort,
             self.minPeersPerWorker,
@@ -428,7 +375,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
 
     // guaranteed non-null by refreshServicePeer above; we call this only so
     // as not to pass another arg along to the partial path.
-    var serviceChannel = self.getServiceChannel(serviceName, false);
+    var serviceChannel = self.channel.subChannels[serviceName];
     var peer = serviceChannel.peers.get(hostPort);
 
     // simply freshen if not new
@@ -446,7 +393,7 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         partialRange.compute(null, workers, now);
     }
 
-    peer = self._getServicePeer(serviceChannel, hostPort);
+    peer = self._getServicePeer(serviceName, hostPort);
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
@@ -573,7 +520,7 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     };
     for (i = 0; i < partialRange.affineWorkers.length; i++) {
         worker = partialRange.affineWorkers[i];
-        peer = self._getServicePeer(serviceChannel, worker);
+        peer = self._getServicePeer(serviceName, worker);
         isAffine[worker] = true;
 
         if (!connectedPeers || !connectedPeers[worker]) {
@@ -619,12 +566,12 @@ function ensurePartialConnections(serviceChannel, serviceName, reason, now) {
     );
 
     for (i = 0; i < toConnect.length; i++) {
-        peer = self._getServicePeer(serviceChannel, toConnect[i]);
+        peer = self._getServicePeer(serviceName, toConnect[i]);
         self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
     }
 
     for (i = 0; i < toDisconnect.length; i++) {
-        peer = self._getServicePeer(serviceChannel, toDisconnect[i]);
+        peer = self._getServicePeer(serviceName, toDisconnect[i]);
         self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', now);
     }
     return result;
@@ -866,7 +813,7 @@ function changeToForward(exitNodes, serviceChannel, now) {
     //     ... send rpc to new exit nodes
     var exitNames = Object.keys(exitNodes);
     for (i = 0; i < exitNames.length; i++) {
-        self._getServicePeer(serviceChannel, exitNames[i]);
+        self._getServicePeer(serviceChannel.serviceName, exitNames[i]);
     }
     self.roleTransitionEvent.emit(self, {
         serviceChannel: serviceChannel,
@@ -896,7 +843,7 @@ function updateExitNodes(exitNodes, serviceChannel) {
     }
     var exitNames = Object.keys(exitNodes);
     for (i = 0; i < exitNames.length; i++) {
-        self._getServicePeer(serviceChannel, exitNames[i]);
+        self._getServicePeer(serviceChannel.serviceName, exitNames[i]);
     }
 };
 
@@ -1013,10 +960,7 @@ function reapSinglePeer(hostPort, serviceNames) {
 
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
-        var serviceChannel = self.getServiceChannel(serviceName);
-        if (serviceChannel) {
-            serviceChannel.peers.delete(hostPort);
-        }
+        self.worker.routingBridge.forgetServicePeer(serviceName, hostPort);
         self.deletePeerIndex(serviceName, hostPort);
         delete self.partialRanges[serviceName];
     }
@@ -1261,18 +1205,34 @@ ServiceDispatchHandler.prototype.notifyNewRoutingService =
 function notifyNewRoutingService(serviceName) {
     var self = this;
 
-    var isExit = self.egressNodes.isExitFor(serviceName);
-    var mode = isExit ? 'exit' : 'forward';
-
-    var peers = [];
-    if (mode === 'forward') {
-        peers = Object.keys(self.egressNodes.exitsFor(serviceName));
-    }
-
-    self.worker.routingBridge.updateRoutingTable(
-        serviceName, mode, peers
-    );
+    self.getOrCreateRoutingChannel(serviceName);
 };
+
+function RoutingServices() {
+    this.routerChannels = Object.create(null);
+}
+
+RoutingServices.prototype.getChannel =
+function getChannel(serviceName) {
+    var self = this;
+
+    return self.routerChannels[serviceName] || null;
+};
+
+RoutingServices.prototype.addChannel =
+function addChannel(serviceName, serviceMode, peers) {
+    var self = this;
+
+    var chan = new RouterChannel(serviceMode, peers);
+    self.routerChannels[serviceName] = chan;
+
+    return chan;
+};
+
+function RouterChannel(serviceMode, peers) {
+    this.serviceMode = serviceMode;
+    this.peers = peers;
+}
 
 // TODO Consider sharding by hostPort and indexing exit exitNodes by hostPort.
 // We also have to shard by serviceName and store the serviceName <-> hostPort

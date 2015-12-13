@@ -401,7 +401,8 @@ function discover(handler, req, head, body, cb) {
     if (exitHosts.indexOf(myHost) === -1) {
         // Since Hyperbahn is fully connected to service hosts,
         // any exit node suffices.
-        svcchan = handler.serviceProxy.getOrCreateServiceChannel(serviceName);
+        handler.serviceProxy.getOrCreateRoutingChannel(serviceName);
+        svcchan = handler.channel.topChannel.subChannels[serviceName];
         handler.tchannelThrift.send(svcchan.request({
             serviceName: 'hyperbahn',
             headers: {
