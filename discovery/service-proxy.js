@@ -175,14 +175,7 @@ function ServiceDispatchHandler(options) {
             var now = Date.now();
             if (now - lastRefresh > self.servicePurgePeriod) {
                 delete self.exitServices[serviceName];
-                var serviceChannel = self.channel.subChannels[serviceName];
-                if (serviceChannel) {
-                    serviceChannel.close();
-                    delete self.channel.subChannels[serviceName];
-                    // TODO: wat even self.rateLimiter...
-                    // self.rateLimiter.removeServiceCounter(serviceName);
-                    // self.rateLimiter.removeKillSwitchCounter(serviceName);
-                }
+                self.worker.routingBridge.closeChannel(serviceName);
             }
         },
         getCollection: function getExitServices() {

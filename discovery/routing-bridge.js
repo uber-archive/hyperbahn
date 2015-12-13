@@ -283,3 +283,12 @@ function updateRoutingTable(serviceName, mode, peers) {
 
     serviceRoutingTable.updateRoutingTable(serviceName, mode, peers);
 };
+
+RoutingBridge.prototype.closeChannel =
+function closeChannel(serviceName) {
+    var self = this;
+
+    var serviceRoutingTable = self._routingWorker.serviceRoutingTable;
+
+    serviceRoutingTable.closeChannel(serviceName);
+};
