@@ -1,0 +1,5 @@
+{
+    "_extends": "relay.json",
+    "remoteConfigPeriod": 5,
+    "instances": 100
+}
