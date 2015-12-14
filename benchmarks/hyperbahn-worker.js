@@ -70,6 +70,12 @@ function HyperbahnWorker(opts) {
             port: Number(opts.workerPort)
         }
     });
+
+    self.boundRefreshServicePeers = boundRefreshServicePeers;
+
+    function boundRefreshServicePeers() {
+        self.refreshServicePeers();
+    }
 }
 
 HyperbahnWorker.prototype.start = function start() {
@@ -81,7 +87,8 @@ HyperbahnWorker.prototype.start = function start() {
         if (err) {
             throw err;
         }
-        refreshServicePeers();
+
+        self.refreshServicePeers();
         self.app.on('destroy', onAppDestroyed);
     }
 
@@ -89,23 +96,28 @@ HyperbahnWorker.prototype.start = function start() {
         clearTimeout(self.refreshServicePeersTimer);
         self.refreshServicePeersTimer = null;
     }
+};
 
-    function refreshServicePeers() {
-        clearTimeout(self.refreshServicePeersTimer);
-        self.refreshServicePeersTimer = null;
+HyperbahnWorker.prototype.refreshServicePeers =
+function refreshServicePeers() {
+    var self = this;
 
-        var basePort = self.serverPort;
-        var serviceProxy = self.app.clients.serviceProxy;
-        for (var i = 0; i < self.instances; i++) {
-            var targetHostPort = '127.0.0.1:' + (basePort + i);
-            serviceProxy.refreshServicePeer(
-                self.serverServiceName, targetHostPort
-            );
-        }
+    clearTimeout(self.refreshServicePeersTimer);
+    self.refreshServicePeersTimer = null;
 
-        if (self.refreshServicePeersPeriod) {
-            self.refreshServicePeersTimer = setTimeout(refreshServicePeers, self.refreshServicePeersPeriod);
-        }
+    var basePort = self.serverPort;
+    var serviceProxy = self.app.clients.serviceProxy;
+    for (var i = 0; i < self.instances; i++) {
+        var targetHostPort = '127.0.0.1:' + (basePort + i);
+        serviceProxy.refreshServicePeer(
+            self.serverServiceName, targetHostPort
+        );
+    }
+
+    if (self.refreshServicePeersPeriod) {
+        self.refreshServicePeersTimer = setTimeout(
+            self.boundRefreshServicePeers, self.refreshServicePeersPeriod
+        );
     }
 };
 
