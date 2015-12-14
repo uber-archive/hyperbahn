@@ -34,7 +34,7 @@ var HyperbahnApplication = require('../app.js');
 module.exports = HyperbahnWorker;
 
 function HyperbahnWorker(opts) {
-    /*eslint max-statements: [2, 25]*/
+    /*eslint max-statements: [2, 40]*/
     if (!(this instanceof HyperbahnWorker)) {
         return new HyperbahnWorker(opts);
     }
@@ -63,6 +63,9 @@ function HyperbahnWorker(opts) {
     self.refreshServicePeersPeriod = opts.refreshServicePeersPeriod || 0;
     self.refreshServicePeersTimer = null;
 
+    self.remoteConfigPeriod = opts.remoteConfigPeriod || 0;
+    self.remoteConfigTimer = null;
+
     self.config = self.createConfig();
     self.app = HyperbahnApplication(self.config, {
         processTitle: process.title,
@@ -72,9 +75,14 @@ function HyperbahnWorker(opts) {
     });
 
     self.boundRefreshServicePeers = boundRefreshServicePeers;
+    self.boundTouchRemoteConfig = boundTouchRemoteConfig;
 
     function boundRefreshServicePeers() {
         self.refreshServicePeers();
+    }
+
+    function boundTouchRemoteConfig() {
+        self.touchRemoteConfig();
     }
 }
 
@@ -89,12 +97,19 @@ HyperbahnWorker.prototype.start = function start() {
         }
 
         self.refreshServicePeers();
+
+        if (self.remoteConfigPeriod) {
+            self.touchRemoteConfig();
+        }
         self.app.on('destroy', onAppDestroyed);
     }
 
     function onAppDestroyed() {
         clearTimeout(self.refreshServicePeersTimer);
         self.refreshServicePeersTimer = null;
+
+        clearTimeout(self.remoteConfigTimer);
+        self.remoteConfigTimer = null;
     }
 };
 
@@ -117,6 +132,22 @@ function refreshServicePeers() {
     if (self.refreshServicePeersPeriod) {
         self.refreshServicePeersTimer = setTimeout(
             self.boundRefreshServicePeers, self.refreshServicePeersPeriod
+        );
+    }
+};
+
+HyperbahnWorker.prototype.touchRemoteConfig =
+function touchRemoteConfig() {
+    var self = this;
+
+    clearTimeout(self.remoteConfigTimer);
+    self.remoteConfigTimer = null;
+
+    self.app.clients.onRemoteConfigUpdate();
+
+    if (self.remoteConfigPeriod) {
+        self.remoteConfigTimer = setTimeout(
+            self.boundTouchRemoteConfig, self.remoteConfigPeriod
         );
     }
 };
