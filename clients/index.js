@@ -225,8 +225,11 @@ function ApplicationClients(options) {
         logError: config.get('clients.remote-config.logError')
     });
     self.remoteConfig.on('update', onRemoteConfigUpdate);
+
     // initlialize to default
     self.remoteConfig.loadSync();
+    self.lazyHandling = self.remoteConfig.get('lazy.handling.enabled', true);
+
     self.onRemoteConfigUpdate();
     self.remoteConfig.startPolling();
 
@@ -422,12 +425,16 @@ function setMaximumRelayTTL() {
 ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
     var self = this;
     var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
+    if (enabled === self.lazyHandling) {
+        return;
+    }
+    self.lazyHandling = enabled;
+
     self.tchannel.setLazyRelaying(enabled);
 
     self.tchannel.timers.clearTimeout(self.lazyTimeout);
 
     if (enabled === false) {
-        self.tchannel.timers.clearTimeout(self.lazyTimeout);
         self.lazyTimeout = self.tchannel.timers.setTimeout(turnOffLazyHandling, 30000);
     } else {
         self.tchannel.setLazyHandling(enabled);
