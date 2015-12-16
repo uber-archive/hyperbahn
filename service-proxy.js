@@ -361,10 +361,11 @@ function handleLazily(conn, reqFrame) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 }))
             );
+            var limit = serviceLimit * self.egressNodes.kValueFor(nextService);
             if (routingDelegate) {
-                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'Routing delegate ' + routingDelegate + ' is rate-limited by the service rps of ' + serviceLimit);
+                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'Routing delegate ' + routingDelegate + ' is rate-limited by the service rps of ' + limit);
             } else {
-                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + limit);
             }
             return true;
         }
