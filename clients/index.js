@@ -69,7 +69,7 @@ function ApplicationClients(options) {
     // ways when moving around and changing wifi networks.
     // host & port are internal fields since they are just used
     // in bootstrap and are not actually client objects.
-    self._host = optiongs.argv.host || config.get('tchannel.host') || myLocalIp();
+    self._host = options.argv.host || config.get('tchannel.host') || myLocalIp();
     self._port = options.argv.port;
     self._controlPort = options.argv.controlPort;
     self._bootFile = options.argv.bootstrapFile !== undefined ?
