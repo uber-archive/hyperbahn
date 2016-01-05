@@ -422,11 +422,7 @@ function discover(handler, req, head, body, cb) {
             cb(null, resp);
         });
     } else {
-        svcchan = handler.channel.topChannel.subChannels[serviceName];
-        var hosts = [];
-        if (svcchan) {
-            hosts = convertHosts(svcchan.peers.keys());
-        }
+        var hosts = handler._getDiscoverHosts(serviceName);
         if (hosts.length === 0) {
             cb(null, {
                 ok: false,
@@ -435,13 +431,27 @@ function discover(handler, req, head, body, cb) {
                 }),
                 typeName: 'noPeersAvailable'
             });
-        } else {
-            cb(null, {
-                ok: true,
-                body: {
-                    peers: hosts
-                }
-            });
+            return;
         }
+
+        cb(null, {
+            ok: true,
+            body: {
+                peers: hosts
+            }
+        });
     }
+};
+
+HyperbahnHandler.prototype._getDiscoverHosts =
+function _getDiscoverHosts(serviceName) {
+    var self = this;
+
+    var hosts = [];
+    var svcchan = self.channel.topChannel.subChannels[serviceName];
+    if (svcchan) {
+        hosts = convertHosts(svcchan.peers.keys());
+    }
+
+    return hosts;
 };
