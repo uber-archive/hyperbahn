@@ -100,6 +100,8 @@ function HyperbahnHandler(options) {
 
     self.tchannelThrift.register(self, 'Hyperbahn::discover', self,
         self.discover);
+    self.tchannelThrift.register(self, 'Hyperbahn::discoverAffine', self,
+        self.discoverAffine);
 
     self.relayAdTimeout = options.relayAdTimeout ||
         RELAY_AD_TIMEOUT;
@@ -405,11 +407,29 @@ function discover(handler, req, head, body, cb) {
     handler._getDiscoverHosts(serviceName, cb);
 };
 
+HyperbahnHandler.prototype.discoverAffine =
+function discoverAffine(handler, req, head, body, cb) {
+    var serviceName = body.query.serviceName;
+    if (serviceName.length === 0) {
+        cb(null, {
+            ok: false,
+            body: InvalidServiceName({
+                serviceName: serviceName
+            }),
+            typeName: 'invalidServiceName'
+        });
+        return;
+    }
+
+    handler._getDiscoverHosts(serviceName, cb);
+};
+
 HyperbahnHandler.prototype._forwardToRemoteDiscover =
 function _forwardToRemoteDiscover(parent, svcchan, body, cb) {
     var self = this;
     var serviceName = svcchan.serviceName;
 
+    var endpoint = 'Hyperbahn::discoverAffine';
     // Since Hyperbahn is fully connected to service hosts,
     // any exit node suffices.
     self.tchannelThrift.send(svcchan.request({
@@ -421,7 +441,7 @@ function _forwardToRemoteDiscover(parent, svcchan, body, cb) {
         timeout: 5000,
         timeoutPerAttempt: 500,
         trace: false
-    }), 'Hyperbahn::discover', null, body, handleForward);
+    }), endpoint, null, body, handleForward);
 
     function handleForward(err, resp) {
         if (err) {
