@@ -211,7 +211,9 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
         self.forEachHostPort(function each(name, i, hp) {
             name = name.toUpperCase() + i;
-            console.error('TEST SETUP: ' + name + ' ' + hp);
+            if (process.env.DEBUG_TEST) {
+                console.error('TEST SETUP: ' + name + ' ' + hp);
+            }
         });
 
         cb();
