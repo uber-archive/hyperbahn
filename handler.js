@@ -402,24 +402,7 @@ function discover(handler, req, head, body, cb) {
         return;
     }
 
-    var hosts = handler._getDiscoverHosts(serviceName);
-    if (hosts.length === 0) {
-        cb(null, {
-            ok: false,
-            body: NoPeersAvailable({
-                serviceName: serviceName
-            }),
-            typeName: 'noPeersAvailable'
-        });
-        return;
-    }
-
-    cb(null, {
-        ok: true,
-        body: {
-            peers: hosts
-        }
-    });
+    handler._getDiscoverHosts(serviceName, cb);
 };
 
 HyperbahnHandler.prototype._forwardToRemoteDiscover =
@@ -454,7 +437,7 @@ function _forwardToRemoteDiscover(parent, svcchan, body, cb) {
 };
 
 HyperbahnHandler.prototype._getDiscoverHosts =
-function _getDiscoverHosts(serviceName) {
+function _getDiscoverHosts(serviceName, cb) {
     var self = this;
 
     var hosts = [];
@@ -463,5 +446,21 @@ function _getDiscoverHosts(serviceName) {
         hosts = convertHosts(svcchan.peers.keys());
     }
 
-    return hosts;
+    if (hosts.length === 0) {
+        cb(null, {
+            ok: false,
+            body: NoPeersAvailable({
+                serviceName: serviceName
+            }),
+            typeName: 'noPeersAvailable'
+        });
+        return;
+    }
+
+    cb(null, {
+        ok: true,
+        body: {
+            peers: hosts
+        }
+    });
 };
