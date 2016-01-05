@@ -130,6 +130,39 @@ function runTests(HyperbahnCluster) {
         }
     });
 
+    HyperbahnCluster.test('get host port for steve', {
+        size: 5
+    }, function t(cluster, assert) {
+        var steve = cluster.remotes.steve;
+
+        var steveSub = steve.channel.subChannels.hyperbahn;
+        var request = steveSub.request({
+            headers: {
+                cn: 'test'
+            },
+            serviceName: 'hyperbahn',
+            hasNoParent: true
+        });
+
+        thrift.send(request, 'Hyperbahn::discover', null, {
+            query: {
+                serviceName: 'steve'
+            }
+        }, check);
+
+        function check(err, res) {
+            if (err) {
+                assert.end(err);
+            }
+
+            assert.ok(res, 'should be a result');
+            assert.ok(res.ok, 'result should be ok');
+            assert.equals(covertHost(res.body.peers[0]), steve.channel.hostPort,
+                'should get the expected hostPort');
+            assert.end();
+        }
+    });
+
     HyperbahnCluster.test('malformed thrift IDL: empty serviceName', {
         size: 5
     }, function t(cluster, assert) {
