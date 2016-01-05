@@ -438,8 +438,10 @@ function _forwardToRemoteDiscover(parent, svcchan, body, cb) {
             cn: 'hyperbahn'
         },
         parent: parent,
-        timeout: 5000,
-        timeoutPerAttempt: 500,
+        retryFlags: {
+            never: true
+        },
+        timeout: 1000,
         trace: false
     }), endpoint, null, body, handleForward);
 
