@@ -32,4 +32,11 @@ service Hyperbahn {
         1: NoPeersAvailable noPeersAvailable
         2: InvalidServiceName invalidServiceName
     )
+
+    DiscoveryResult discoverAffine(
+        1: required DiscoveryQuery query
+    ) throws (
+        1: NoPeersAvailable noPeersAvailable
+        2: InvalidServiceName invalidServiceName
+    )
 }

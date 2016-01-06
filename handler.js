@@ -100,6 +100,8 @@ function HyperbahnHandler(options) {
 
     self.tchannelThrift.register(self, 'Hyperbahn::discover', self,
         self.discover);
+    self.tchannelThrift.register(self, 'Hyperbahn::discoverAffine', self,
+        self.discoverAffine);
 
     self.relayAdTimeout = options.relayAdTimeout ||
         RELAY_AD_TIMEOUT;
@@ -392,56 +394,98 @@ function discover(handler, req, head, body, cb) {
         return;
     }
 
-    var exitNodes = handler.egressNodes.exitsFor(serviceName);
-    var exitHosts = Object.keys(exitNodes);
+    var topChannel = handler.channel.topChannel;
+    var svcchan = topChannel.handler.getOrCreateServiceChannel(serviceName);
 
-    var svcchan = null;
-    var myHost = handler.channel.hostPort;
-    if (exitHosts.indexOf(myHost) < 0 && req.headers.cn !== 'hyperbahn') {
-        // Since Hyperbahn is fully connected to service hosts,
-        // any exit node suffices.
-        svcchan = handler.channel.topChannel.handler.getOrCreateServiceChannel(serviceName);
-        handler.tchannelThrift.send(svcchan.request({
-            serviceName: 'hyperbahn',
-            headers: {
-                cn: 'hyperbahn'
-            },
-            parent: req,
-            timeout: 5000,
-            timeoutPerAttempt: 500,
-            trace: false
-        }), 'Hyperbahn::discover', null, body, function handleForward(err, resp) {
-            if (err) {
-                handler.channel.logger.error('Failed to call discover API on exit node', {
+    if (svcchan.serviceProxyMode === 'forward' &&
+        req.headers.cn !== 'hyperbahn'
+    ) {
+        handler._forwardToRemoteDiscover(req, svcchan, body, cb);
+        return;
+    }
+
+    handler._getDiscoverHosts(serviceName, cb);
+};
+
+HyperbahnHandler.prototype.discoverAffine =
+function discoverAffine(handler, req, head, body, cb) {
+    var serviceName = body.query.serviceName;
+    if (serviceName.length === 0) {
+        cb(null, {
+            ok: false,
+            body: InvalidServiceName({
+                serviceName: serviceName
+            }),
+            typeName: 'invalidServiceName'
+        });
+        return;
+    }
+
+    handler._getDiscoverHosts(serviceName, cb);
+};
+
+HyperbahnHandler.prototype._forwardToRemoteDiscover =
+function _forwardToRemoteDiscover(parent, svcchan, body, cb) {
+    var self = this;
+    var serviceName = svcchan.serviceName;
+
+    var endpoint = 'Hyperbahn::discoverAffine';
+    // Since Hyperbahn is fully connected to service hosts,
+    // any exit node suffices.
+    self.tchannelThrift.send(svcchan.request({
+        serviceName: 'hyperbahn',
+        headers: {
+            cn: 'hyperbahn'
+        },
+        parent: parent,
+        retryFlags: {
+            never: true
+        },
+        timeout: 1000,
+        trace: false
+    }), endpoint, null, body, handleForward);
+
+    function handleForward(err, resp) {
+        if (err) {
+            self.channel.logger.error(
+                'Failed to call discover API on exit node',
+                parent.extendLogInfo({
                     error: err,
                     serviceName: serviceName
-                });
-                return cb(err, null);
-            }
+                })
+            );
+            return cb(err, null);
+        }
 
-            cb(null, resp);
-        });
-    } else {
-        svcchan = handler.channel.topChannel.subChannels[serviceName];
-        var hosts = [];
-        if (svcchan) {
-            hosts = convertHosts(svcchan.peers.keys());
-        }
-        if (hosts.length === 0) {
-            cb(null, {
-                ok: false,
-                body: NoPeersAvailable({
-                    serviceName: serviceName
-                }),
-                typeName: 'noPeersAvailable'
-            });
-        } else {
-            cb(null, {
-                ok: true,
-                body: {
-                    peers: hosts
-                }
-            });
-        }
+        cb(null, resp);
     }
+};
+
+HyperbahnHandler.prototype._getDiscoverHosts =
+function _getDiscoverHosts(serviceName, cb) {
+    var self = this;
+
+    var hosts = [];
+    var svcchan = self.channel.topChannel.subChannels[serviceName];
+    if (svcchan) {
+        hosts = convertHosts(svcchan.peers.keys());
+    }
+
+    if (hosts.length === 0) {
+        cb(null, {
+            ok: false,
+            body: NoPeersAvailable({
+                serviceName: serviceName
+            }),
+            typeName: 'noPeersAvailable'
+        });
+        return;
+    }
+
+    cb(null, {
+        ok: true,
+        body: {
+            peers: hosts
+        }
+    });
 };
