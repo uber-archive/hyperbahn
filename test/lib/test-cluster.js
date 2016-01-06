@@ -211,7 +211,9 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
         self.forEachHostPort(function each(name, i, hp) {
             name = name.toUpperCase() + i;
-            console.error('TEST SETUP: ' + name + ' ' + hp);
+            if (process.env.DEBUG_TEST) {
+                console.error('TEST SETUP: ' + name + ' ' + hp);
+            }
         });
 
         cb();
@@ -231,7 +233,7 @@ function grow(n, callback) {
         var i = self.apps.length;
         var j = 0;
         for (; j < n; i++, j++) {
-            var app = self.createApplication('127.0.0.1:0');
+            var app = self.createApplication('127.0.0.1:0', null);
             app.clusterAppsIndex = i;
             self.apps[i] = app;
             apps.push(app);
@@ -473,8 +475,13 @@ TestCluster.prototype.close = function close(cb) {
 };
 
 TestCluster.prototype.createApplication =
-function createApplication(hostPort) {
+function createApplication(hostPort, bootFile) {
     var self = this;
+
+    if (bootFile === undefined) {
+        bootFile = self.ringpopHosts;
+    }
+
     var parts = hostPort.split(':');
     var host = parts[0];
     var port = Number(parts[1]);
@@ -482,7 +489,7 @@ function createApplication(hostPort) {
     var localOpts = shallowExtend(self.opts);
     localOpts.seedConfig = deepExtend(localOpts.seedConfig || {}, {
         'tchannel.host': host,
-        'hyperbahn.ringpop.bootstrapFile': self.ringpopHosts
+        'hyperbahn.ringpop.bootstrapFile': bootFile
     });
     localOpts.argv = {
         port: port
