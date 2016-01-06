@@ -2,7 +2,7 @@
 set -e
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PUBLIC_IP="$(ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}')"
+PUBLIC_IP="$(node scripts/public-ip.js)"
 
 H0="$PUBLIC_IP:21300"
 H1="$PUBLIC_IP:21301"

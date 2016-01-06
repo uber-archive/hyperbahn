@@ -1,4 +1,4 @@
-PUBLIC_IP=$(shell ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $$1}')
+PUBLIC_IP=$(shell node scripts/public-ip.js)
 
 # Helper for running autobahn servers locally.
 run-local-%:
