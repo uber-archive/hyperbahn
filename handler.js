@@ -447,10 +447,13 @@ function _forwardToRemoteDiscover(parent, svcchan, body, cb) {
 
     function handleForward(err, resp) {
         if (err) {
-            self.channel.logger.error('Failed to call discover API on exit node', {
-                error: err,
-                serviceName: serviceName
-            });
+            self.channel.logger.error(
+                'Failed to call discover API on exit node',
+                parent.extendLogInfo({
+                    error: err,
+                    serviceName: serviceName
+                })
+            );
             return cb(err, null);
         }
 
