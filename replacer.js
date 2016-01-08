@@ -22,6 +22,8 @@
 
 var fs = require('fs');
 
+var levels = ['debug', 'info', 'warn', 'error', 'trace'];
+
 // Inserts an if (logger.willSample('level')) before a logsite for a particular
 // level
 function replace(level, line) {
@@ -43,17 +45,45 @@ function replace(level, line) {
     }
 }
 
-var input = process.argv[2];
-var contents = fs.readFileSync(input, 'utf8').split('\n');
-var i;
-var levels = ['debug', 'info', 'warn', 'error', 'trace'];
-for (i = 0; i < contents.length; i++) {
-    if (contents[i].indexOf('logger.') !== -1) {
-        levels.forEach(function eachLevel(level) {
-            contents[i] = replace(level, contents[i]);
-        });
+function fixFile(path, done) {
+    fs.readFile(path, 'utf8', readDone);
+
+    function readDone(err, data) {
+        if (err) {
+            return done(err);
+        }
+
+        var lines = data.split('\n');
+        var i, j;
+        for (i = 0; i < lines.length; i++) {
+            if (lines[i].indexOf('logger.') !== -1) {
+                for (j = 0; j < levels.length; j++) {
+                    lines[i] = replace(levels[j], lines[i]);
+                }
+            }
+        }
+
+        fs.writeFile(path, lines.join('\n'), done);
     }
 }
 
-// Modify file in-place
-fs.writeFileSync(input, contents.join('\n'));
+function main(argv) {
+    var inputFiles = argv.slice(2);
+    var i;
+    var todo = inputFiles.length;
+    for (i = 0; i < todo; i++) {
+        fixFile(inputFiles[i], fileDone);
+    }
+
+    function fileDone(err) {
+        if (err) {
+            throw err;
+        }
+
+        todo -= 1;
+
+        if (todo <= 0) {
+            console.log('preprocessing done');
+        }
+    }
+}
