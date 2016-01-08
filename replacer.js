@@ -24,19 +24,49 @@ var fs = require('fs');
 
 var levels = ['debug', 'info', 'warn', 'error', 'trace'];
 
+// Finds the msg of a log call in the line or the following line. Note that it
+// preserves the quotes, so the returned string will already have ' around it
+function findMsg(restOfLine, nextLine) {
+    // try to get message
+    if (restOfLine.length > 2) {
+        var msgMatches = restOfLine.match(/\((['"][^{]*['"])/);
+        if (msgMatches) {
+            return msgMatches[1];
+        }
+
+        msgMatches = restOfLine.match(/\(([^,]*)/);
+        if (msgMatches) {
+            return msgMatches[1];
+        }
+    }
+
+    // Not on first line, must be on next line
+    msgMatches = nextLine.match(/ *(['"][^{]*['"])/);
+
+    if (!msgMatches) {
+        return null;
+    }
+
+    return msgMatches[1];
+}
+
 // Inserts an if (logger.willSample('level')) before a logsite for a particular
 // level
-function replace(level, line) {
+function replace(filename, lineno, level, line, nextLine) {
     if (line.indexOf('logger.' + level) !== -1) {
-        var matches = line.match(/( *)([a-z\.]*logger).[a-z]*(.*)/);
+        var matches = line.match(/( *)([_a-z\.]*logger).[a-z]*(.*)/);
         if (!matches) {
             throw new Error('couldn\'t match log line in replacer.js');
         }
         var whitespace = matches[1];
         var logger = matches[2];
         var restOfLine = matches[3];
+        var logMsg = findMsg(restOfLine, nextLine);
+        if (!logMsg) {
+            throw new Error('couldn\'t find log message for ' + filename + ':' + lineno);
+        }
 
-        var ifStatement = whitespace + 'if (' + logger + '.willSample(\'' + level + '\')) ';
+        var ifStatement = whitespace + 'if (' + logger + '.willSample(\'' + level + '\', ' + logMsg + ')) ';
         var logCall = logger + '.s' + level + restOfLine;
 
         return ifStatement + logCall;
@@ -58,7 +88,7 @@ function fixFile(path, done) {
         for (i = 0; i < lines.length; i++) {
             if (lines[i].indexOf('logger.') !== -1) {
                 for (j = 0; j < levels.length; j++) {
-                    lines[i] = replace(levels[j], lines[i]);
+                    lines[i] = replace(path, i, levels[j], lines[i], lines[i+1]);
                 }
             }
         }
