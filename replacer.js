@@ -2,7 +2,7 @@ var fs = require('fs');
 
 function replace(level, line) {
     if (line.indexOf('logger.' + level) !== -1) {
-        var matches = line.match(/( *)([a-z\.]*logger).[a-z]*\((.*)/);
+        var matches = line.match(/( *)([a-z\.]*logger).[a-z]*(.*)/);
         if (!matches) {
             throw new Error('couldn\'t match log line in replacer.js');
         }
@@ -11,7 +11,7 @@ function replace(level, line) {
         var restOfLine = matches[3];
 
         var ifStatement = whitespace + 'if (' + logger + '.willSample(\'' + level + '\')) ';
-        var logCall = logger + '.s' + level + '(' + restOfLine;
+        var logCall = logger + '.s' + level + restOfLine;
 
         return ifStatement + logCall;
     } else {
