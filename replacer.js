@@ -66,10 +66,10 @@ function replace(filename, lineno, level, line, nextLine) {
             throw new Error('couldn\'t find log message for ' + filename + ':' + lineno);
         }
 
-        var ifStatement = whitespace + 'if (' + logger + '.willSample(\'' + level + '\', ' + logMsg + ')) ';
+        var ifStatement = 'if (' + logger + '.willSample(\'' + level + '\', ' + logMsg + ')) ';
         var logCall = logger + '.s' + level + restOfLine;
 
-        return ifStatement + logCall;
+        return whitespace + ifStatement + logCall;
     } else {
         return line;
     }
