@@ -28,6 +28,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+# npm version will ensure the git working directory is clean
 npm version "$1"
 
 if head_ref=$(git symbolic-ref HEAD 2>/dev/null); then
@@ -37,7 +38,13 @@ else
     git push origin --tags
 fi
 
+# run the replacer script to make all logsites check for sampling
+git ls-files | grep '.js$' | grep -v 'bin/' | grep -v test | grep -v replacer.js | xargs node replacer.js
+
 git archive --prefix=package/ --format tgz HEAD >package.tgz
-${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
+#${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
 rm package.tgz
 npm cache clean hyperbahn
+
+# un-replacer.js all of the files we touched
+git ls-files | grep '.js$' | grep -v 'bin/' | grep -v test | grep -v replacer.js | xargs git checkout
