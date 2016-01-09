@@ -41,10 +41,13 @@ fi
 # run the replacer script to make all logsites check for sampling
 git ls-files | grep '.js$' | grep -v 'bin/' | grep -v test | grep -v replacer.js | xargs node replacer.js
 
+# need a temp commit because git archive uses HEAD
+git commit -a -m 'temp commit'
+
 git archive --prefix=package/ --format tgz HEAD >package.tgz
-#${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
+${NPM:-npm} publish --registry=https://registry.npmjs.org/ package.tgz --tag "${NPM_TAG:-alpha}"
 rm package.tgz
 npm cache clean hyperbahn
 
 # un-replacer.js all of the files we touched
-git ls-files | grep '.js$' | grep -v 'bin/' | grep -v test | grep -v replacer.js | xargs git checkout
+git reset --hard HEAD~
