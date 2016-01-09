@@ -22,6 +22,8 @@
 
 var fs = require('fs');
 var path = require('path');
+var console = require('console');
+var process = require('process');
 
 var levels = ['debug', 'info', 'warn', 'error', 'trace'];
 var DESTDIR = 'build';
@@ -88,11 +90,12 @@ function fixFile(filepath, done) {
         }
 
         lines = data.split('\n');
-        var i, j;
+        var i;
+        var j;
         for (i = 0; i < lines.length; i++) {
             if (lines[i].indexOf('logger.') !== -1) {
                 for (j = 0; j < levels.length; j++) {
-                    lines[i] = replace(filepath, i, levels[j], lines[i], lines[i+1]);
+                    lines[i] = replace(filepath, i, levels[j], lines[i], lines[i + 1]);
                 }
             }
         }
@@ -122,11 +125,12 @@ function main(argv) {
         todo -= 1;
 
         if (todo <= 0) {
+            /* eslint no-console:0 */
             console.log('preprocessing done');
         }
     }
 }
 
-if (require.main === module) {
+if (module === require.main) {
     main(process.argv);
 }
