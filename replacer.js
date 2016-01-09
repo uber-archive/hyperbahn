@@ -21,8 +21,10 @@
 'use strict';
 
 var fs = require('fs');
+var path = require('path');
 
 var levels = ['debug', 'info', 'warn', 'error', 'trace'];
+var DESTDIR = 'build';
 
 // Finds the msg of a log call in the line or the following line. Note that it
 // preserves the quotes, so the returned string will already have ' around it
@@ -75,25 +77,32 @@ function replace(filename, lineno, level, line, nextLine) {
     }
 }
 
-function fixFile(path, done) {
-    fs.readFile(path, 'utf8', readDone);
+function fixFile(filepath, done) {
+    fs.readFile(filepath, 'utf8', readDone);
+    var fullDestPath;
+    var lines;
 
     function readDone(err, data) {
         if (err) {
             return done(err);
         }
 
-        var lines = data.split('\n');
+        lines = data.split('\n');
         var i, j;
         for (i = 0; i < lines.length; i++) {
             if (lines[i].indexOf('logger.') !== -1) {
                 for (j = 0; j < levels.length; j++) {
-                    lines[i] = replace(path, i, levels[j], lines[i], lines[i+1]);
+                    lines[i] = replace(filepath, i, levels[j], lines[i], lines[i+1]);
                 }
             }
         }
 
-        fs.writeFile(path, lines.join('\n'), done);
+        fullDestPath = path.join(DESTDIR, filepath);
+        fs.mkdir(path.dirname(fullDestPath), mkdirDone);
+    }
+
+    function mkdirDone() {
+        fs.writeFile(fullDestPath, lines.join('\n'), done);
     }
 }
 
