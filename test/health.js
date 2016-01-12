@@ -20,6 +20,9 @@
 
 'use strict';
 
+var UDPServer = require('uber-statsd-client/test/lib/udp-server.js');
+var setTimeout = require('timers').setTimeout;
+
 var allocCluster = require('./lib/test-cluster.js');
 
 allocCluster.test('tchannel health', {
@@ -36,6 +39,68 @@ allocCluster.test('tchannel health', {
 
         assert.end();
     });
+});
+
+allocCluster.test('tchannel health (stats)', {
+    size: 1,
+    dummySize: 0,
+    namedRemotes: [],
+    noStats: true,
+    seedConfig: {
+        'clients.uber-statsd-client': {
+            'host': '127.0.0.1',
+            'port': 4744
+        }
+    }
+}, function t(cluster, assert) {
+    var app = cluster.apps[0];
+
+    var messages = [];
+    var server = UDPServer({
+        host: '127.0.0.1',
+        port: 4744
+    }, onBound);
+
+    function onBound() {
+        server.on('message', onMessage);
+
+        app.client.sendHealth(onResponse);
+    }
+
+    function onResponse(err, resp) {
+        assert.ifError(err);
+
+        assert.equal(resp.body, 'hello from autobahn\n');
+
+        setTimeout(function flush() {
+            app.clients.batchStats.flushStats();
+            setTimeout(finish, 500);
+        }, 500);
+    }
+
+    function finish() {
+        var latencyMsgs = messages.filter(function x(m) {
+            return m.indexOf('inbound.calls.latency.test-client') > -1;
+        });
+
+        var perWorker = latencyMsgs[0];
+        var allWorker = latencyMsgs[1];
+
+        assert.ok(perWorker.indexOf('autobahn.per-worker') === 0,
+            'expected per-worker stat');
+        assert.ok(allWorker.indexOf('autobahn.all-workers') === 0,
+            'expected all-workers stat');
+
+        server.close();
+        assert.end();
+    }
+
+    function onMessage(msg) {
+        var msgs = msg.toString().split('\n');
+        for (var i = 0; i < msgs.length; i++) {
+            messages.push(msgs[i]);
+        }
+    }
 });
 
 allocCluster.test('tchannel thrift health', {

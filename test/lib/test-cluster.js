@@ -86,7 +86,7 @@ TestCluster.test = tapeCluster(tape, TestCluster);
 
 module.exports = TestCluster;
 
-/*eslint complexity: [2, 15] */
+/*eslint complexity: [2, 25] */
 function TestCluster(opts) {
     if (!(this instanceof TestCluster)) {
         return new TestCluster(opts);
@@ -133,7 +133,7 @@ function TestCluster(opts) {
 
     self.tchannelJSON = TChannelJSON();
     self.logger = DebugLogtron('autobahn');
-    self.statsd = NullStatsd(opts.statsdSize || 5);
+    self.statsd = opts.noStats ? null : NullStatsd(opts.statsdSize || 5);
 
     if (self.opts.whitelist) {
         for (var i = 0; i < self.opts.whitelist.length; i++) {
