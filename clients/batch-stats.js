@@ -60,13 +60,16 @@ function handleStat(stat) {
     }
 
     if (
+        stat.name === 'tchannel.inbound.calls.latency'
+    ) {
+        self.writeToStatsd(self.statsd.globalClient, stat);
+        self.writeToStatsd(self.statsd.perWorkerClient, stat);
+    } else if (
         stat.name === 'tchannel.inbound.calls.recvd' ||
         stat.name === 'tchannel.inbound.request.size' ||
         stat.name === 'tchannel.inbound.request.size' ||
-        stat.name === 'tchannel.inbound.calls.latency' ||
         stat.name === 'tchannel.inbound.calls.system-errors' ||
         stat.name === 'tchannel.inbound.response.size' ||
-        stat.name === 'tchannel.inbound.calls.latency' ||
         stat.name === 'tchannel.inbound.calls.success' ||
         stat.name === 'tchannel.inbound.calls.app-errors' ||
         stat.name === 'tchannel.inbound.response.size'
