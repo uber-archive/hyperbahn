@@ -260,7 +260,7 @@ function handleLazily(conn, reqFrame) {
     var self = this;
 
     /*eslint max-statements: [2, 45]*/
-    /*eslint complexity: [2, 17]*/
+    /*eslint complexity: [2, 20]*/
 
     var serviceName = reqFrame.bodyRW.lazy
         .readServiceStr(reqFrame);
@@ -341,6 +341,34 @@ function handleLazily(conn, reqFrame) {
     var serviceChannel = self.channel.subChannels[nextService];
     if (!serviceChannel) {
         serviceChannel = self.createServiceChannel(nextService);
+    }
+
+    if (serviceChannel.handler.circuits) {
+        var endpoint = reqFrame.bodyRW.lazy.readArg1Str(reqFrame);
+        if (endpoint === null) {
+            // TODO: stat?
+            self.channel.logger.warn(
+                'failed to lazy read arg1',
+                conn.extendLogInfo({
+                    lastError: reqFrame.cache.lastError
+                })
+            );
+            // TODO: protocol error instead?
+            conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read arg1');
+            return false;
+        }
+
+        var circuit = serviceChannel.handler.circuits.getCircuit(
+            callerName, serviceName, endpoint
+        );
+        if (!circuit.state.shouldRequest()) {
+            conn.sendLazyErrorFrameForReq(reqFrame,
+                'Declined', 'Service is not healthy');
+            return true;
+        }
+
+        reqFrame.circuit = circuit;
+        circuit.state.onRequest();
     }
 
     if (serviceChannel.handler.handleLazily) {
@@ -425,8 +453,19 @@ function handleRequest(req, buildRes) {
         serviceChannel = self.createServiceChannel(nextService);
     }
 
-    // Temporary hack. Need to set json by default because
-    // we want to upgrade without breaking ncar
+    if (serviceChannel.handler.circuits) {
+        var circuit = serviceChannel.handler.circuits.getCircuit(
+            req.headers.cn || 'no-cn', req.serviceName, req.endpoint
+        );
+        if (!circuit.state.shouldRequest()) {
+            buildRes().sendError('Declined', 'Service is not healthy');
+            return;
+        }
+
+        req.circuit = circuit;
+        circuit.state.onRequest(req);
+    }
+
     serviceChannel.handler.handleRequest(req, buildRes);
 };
 
@@ -1493,6 +1532,11 @@ function enableCircuits() {
             subChannel.handler.circuits = self.circuits;
         }
     }
+
+    var hyperChan = self.channel.subChannels.hyperbahn;
+    if (hyperChan) {
+        hyperChan.handler.circuits = self.circuits;
+    }
 };
 
 ServiceDispatchHandler.prototype.disableCircuits =
@@ -1513,6 +1557,11 @@ function disableCircuits() {
         ) {
             subChannel.handler.circuits = null;
         }
+    }
+
+    var hyperChan = self.channel.subChannels.hyperbahn;
+    if (hyperChan) {
+        hyperChan.handler.circuits = null;
     }
 };
 
