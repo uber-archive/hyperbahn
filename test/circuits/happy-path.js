@@ -128,8 +128,17 @@ allocCluster.test('request circuit state from endpoint', {
 
         assert.equals(res.ok, true);
         var circuits = res.body;
-        assert.equals(circuits.length, 1);
-        var circuit = circuits[0];
+
+        assert.ok(circuits.length >= 1, 'expected at least one circuit');
+
+        var circuit;
+        for (var i = 0; i < circuits.length; i++) {
+            if (circuits[i].sn === 'bob') {
+                circuit = circuits[i];
+                break;
+            }
+        }
+
         assert.equals(circuit.cn, 'steve', 'caller name');
         assert.equals(circuit.sn, 'bob', 'service name');
         assert.equals(circuit.en, 'ifyousayso', 'endpoint name');
