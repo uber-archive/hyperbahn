@@ -29,6 +29,7 @@ var process = require('process');
 var uncaught = require('uncaught-exception');
 var TChannel = require('tchannel');
 var TChannelAsJSON = require('tchannel/as/json');
+var validateHost = require('tchannel/host-port.js').validateHost;
 var CountedReadySignal = require('ready-signal/counted');
 var fs = require('fs');
 var ProcessReporter = require('process-reporter');
@@ -45,6 +46,14 @@ var HyperbahnEgressNodes = require('../egress-nodes.js');
 var HyperbahnHandler = require('../handler.js');
 var SocketInspector = require('./socket-inspector.js');
 var HyperbahnBatchStats = require('./batch-stats.js');
+var TypedError = require('error/typed');
+
+var TChannelGetListenHostError = TypedError({
+    type: 'tchannel.get-listen-host',
+    message: 'unable to get a valid host, problem was "{reason}" for {value}',
+    reason: null,
+    value: null
+});
 
 module.exports = ApplicationClients;
 
@@ -301,6 +310,18 @@ function setupChannel(cb) {
 
     function getHostForTChannel() {
         var host = localIp();
+        var reason = validateHost(host);
+        if (reason !== null) {
+            var val = JSON.stringify(host);
+            if (val === undefined) {
+                val = 'undefined';
+            }
+            cb(TChannelGetListenHostError({
+                reason: reason,
+                value: val
+            }));
+            return;
+        }
         self.tchannel.listen(self._port, host);
     }
 };
