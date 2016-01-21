@@ -22,9 +22,7 @@
 
 var assert = require('assert');
 var http = require('http');
-// TODO use better module. This sometimes fails when you
-// move around and change wifi networks.
-var myLocalIp = require('my-local-ip');
+var localIp = require('../lib/local_ip.js');
 var os = require('os');
 var RingPop = require('ringpop');
 var process = require('process');
@@ -65,11 +63,7 @@ function ApplicationClients(options) {
     self.ringpopTimeouts = config.get('hyperbahn.ringpop.timeouts');
     self.projectName = config.get('info.project');
 
-    // We need to move away from myLocalIp(); this fails in weird
-    // ways when moving around and changing wifi networks.
-    // host & port are internal fields since they are just used
-    // in bootstrap and are not actually client objects.
-    self._host = options.argv.host || config.get('tchannel.host') || myLocalIp();
+    self._host = options.argv.host || config.get('tchannel.host') || localIp();
     self._port = options.argv.port;
     self._controlPort = options.argv.controlPort;
     self._bootFile = options.argv.bootstrapFile !== undefined ?
