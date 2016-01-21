@@ -331,6 +331,7 @@ function bootstrap(cb) {
     function setupDone(err) {
         if (err) {
             cb(err);
+            return;
         }
 
         self.setupRingpop(cb);
