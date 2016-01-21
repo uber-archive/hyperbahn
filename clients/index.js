@@ -344,7 +344,9 @@ ApplicationClients.prototype.destroy = function destroy() {
     self.socketInspector.disable();
     self.serviceProxy.destroy();
     self.remoteConfig.destroy();
-    self.ringpop.destroy();
+    if (self.ringpop) {
+        self.ringpop.destroy();
+    }
     if (!self.tchannel.destroyed) {
         self.tchannel.close();
     }
