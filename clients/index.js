@@ -63,7 +63,7 @@ function ApplicationClients(options) {
     self.ringpopTimeouts = config.get('hyperbahn.ringpop.timeouts');
     self.projectName = config.get('info.project');
 
-    self._host = options.argv.host || config.get('tchannel.host') || localIp();
+    self._host = options.argv.host || config.get('tchannel.host');
     self._port = options.argv.port;
     self._controlPort = options.argv.controlPort;
     self._bootFile = options.argv.bootstrapFile !== undefined ?
@@ -282,7 +282,11 @@ function setupChannel(cb) {
     self.processReporter.bootstrap();
 
     self.tchannel.on('listening', listenReady.signal);
-    self.tchannel.listen(self._port, self._host);
+    if (self._host !== null) {
+        self.tchannel.listen(self._port, self._host);
+    } else {
+        getHostForTChannel();
+    }
 
     self.repl.once('listening', listenReady.signal);
     self.repl.start();
@@ -294,6 +298,11 @@ function setupChannel(cb) {
     }
 
     self._controlServer.listen(self._controlPort, listenReady.signal);
+
+    function getHostForTChannel() {
+        var host = localIp();
+        self.tchannel.listen(self._port, host);
+    }
 };
 
 ApplicationClients.prototype.setupRingpop =
