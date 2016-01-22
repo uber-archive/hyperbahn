@@ -42,6 +42,7 @@ require('./clients/process-reporter.js');
 require('./clients/statsd.js');
 require('./clients/repl.js');
 require('./clients/heap-dumps.js');
+require('./clients/channel.js');
 
 require('./connections/happy-path.js');
 require('./connections/no-body.js');
