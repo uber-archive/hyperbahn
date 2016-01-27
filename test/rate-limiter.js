@@ -154,46 +154,16 @@ allocCluster.test('rps counter works in 1.5 seconds', {
             time: 5
         }, {
             type: 'ms',
-            name: 'tchannel.rate-limiting.kill-switch.total-rps',
-            value: null,
-            delta: null,
-            time: 5
-        }, {
-            type: 'ms',
-            name: 'tchannel.rate-limiting.service-rps.steve',
-            value: null,
-            delta: null,
-            time: 3
-        }, {
-            type: 'ms',
-            name: 'tchannel.rate-limiting.service-rps.bob',
-            value: null,
-            delta: null,
-            time: 2
-        }, {
-            type: 'ms',
-            name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
-            value: null,
-            delta: null,
-            time: 3
-        }, {
-            type: 'ms',
-            name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
-            value: null,
-            delta: null,
-            time: 2
-        }, {
-            type: 'ms',
             name: 'tchannel.rate-limiting.total-rps',
             value: null,
             delta: null,
             time: 2
         }, {
             type: 'ms',
-            name: 'tchannel.rate-limiting.kill-switch.total-rps',
+            name: 'tchannel.rate-limiting.service-rps.steve',
             value: null,
             delta: null,
-            time: 2
+            time: 3
         }, {
             type: 'ms',
             name: 'tchannel.rate-limiting.service-rps.steve',
@@ -205,13 +175,43 @@ allocCluster.test('rps counter works in 1.5 seconds', {
             name: 'tchannel.rate-limiting.service-rps.bob',
             value: null,
             delta: null,
+            time: 2
+        }, {
+            type: 'ms',
+            name: 'tchannel.rate-limiting.service-rps.bob',
+            value: null,
+            delta: null,
             time: 1
+        }, {
+            type: 'ms',
+            name: 'tchannel.rate-limiting.kill-switch.total-rps',
+            value: null,
+            delta: null,
+            time: 5
+        }, {
+            type: 'ms',
+            name: 'tchannel.rate-limiting.kill-switch.total-rps',
+            value: null,
+            delta: null,
+            time: 2
+        }, {
+            type: 'ms',
+            name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
+            value: null,
+            delta: null,
+            time: 3
         }, {
             type: 'ms',
             name: 'tchannel.rate-limiting.kill-switch.service-rps.steve',
             value: null,
             delta: null,
             time: 1
+        }, {
+            type: 'ms',
+            name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
+            value: null,
+            delta: null,
+            time: 2
         }, {
             type: 'ms',
             name: 'tchannel.rate-limiting.kill-switch.service-rps.bob',
@@ -220,7 +220,13 @@ allocCluster.test('rps counter works in 1.5 seconds', {
             time: 1
         }];
 
-        assert.deepEqual(rateLimitStats, expected,
+        var sortedStats = rateLimitStats.sort(function s(a, b) {
+            return a.name < b.name ? 1 :
+                a.name > b.name ? -1 :
+                a.time < b.time ? 1 : -1;
+        });
+
+        assert.deepEqual(sortedStats, expected,
             'stats keys/values as expected');
 
         assert.end();
