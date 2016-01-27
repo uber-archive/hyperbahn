@@ -3,7 +3,7 @@
     "skipPing": true,
 
     "sizes": [4096,16384],
-    "pipeline": [10],
+    "pipeline": [5000, 10000],
 
     "remoteConfig": [
         {
