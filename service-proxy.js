@@ -23,7 +23,6 @@
 /* eslint-disable max-statements */
 
 var assert = require('assert');
-var Buffer = require('buffer').Buffer;
 var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
