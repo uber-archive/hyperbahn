@@ -3,7 +3,9 @@
     "skipPing": true,
 
     "sizes": [4096,16384],
-    "pipeline": [5000, 10000],
+    "pipeline": [1000],
+    "cheatClient": true,
+    "cheatServer": true,
 
     "remoteConfig": [
         {
