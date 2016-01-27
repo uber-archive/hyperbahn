@@ -50,9 +50,6 @@ var RATE_LIMIT_TOTAL = 'total';
 var RATE_LIMIT_SERVICE = 'service';
 var RATE_LIMIT_KILLSWITCH = 'killswitch';
 
-var CN_HEADER_BUFFER = new Buffer('cn');
-var RD_HEADER_BUFFER = new Buffer('rd');
-
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
         return new ServiceDispatchHandler(options);

@@ -41,7 +41,7 @@
     "safe-json-parse": "4.0.0",
     "static-config": "2.1.0",
     "tape-cluster": "2.0.1",
-    "tchannel": "3.6.6",
+    "tchannel": "3.6.7",
     "uber-statsd-client": "1.4.0",
     "uncaught-exception": "6.0.2",
     "xtend": "4.0.0"
