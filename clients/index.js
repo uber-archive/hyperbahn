@@ -123,7 +123,6 @@ function ApplicationClients(options) {
     self.socketInspector = SocketInspector({
         logger: self.logger
     });
-    self.socketInspector.enable();
 
     /*eslint no-process-env: 0*/
     var uncaughtTimeouts = config.get('clients.uncaught-exception.timeouts');

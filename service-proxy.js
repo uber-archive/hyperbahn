@@ -23,7 +23,6 @@
 /* eslint-disable max-statements */
 
 var assert = require('assert');
-var Buffer = require('buffer').Buffer;
 var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
@@ -49,9 +48,6 @@ var DEFAULT_DRAIN_TIMEOUT = 30 * 1000;
 var RATE_LIMIT_TOTAL = 'total';
 var RATE_LIMIT_SERVICE = 'service';
 var RATE_LIMIT_KILLSWITCH = 'killswitch';
-
-var CN_HEADER_BUFFER = new Buffer('cn');
-var RD_HEADER_BUFFER = new Buffer('rd');
 
 function ServiceDispatchHandler(options) {
     if (!(this instanceof ServiceDispatchHandler)) {
@@ -266,58 +262,29 @@ function handleLazily(conn, reqFrame) {
     /*eslint max-statements: [2, 45]*/
     /*eslint complexity: [2, 17]*/
 
-    var res = reqFrame.bodyRW.lazy.readService(reqFrame);
-    if (res.err) {
+    var serviceName = reqFrame.bodyRW.lazy
+        .readServiceStr(reqFrame);
+    if (!serviceName) {
         // TODO: stat?
+        // TODO: reqFrame.extendLogInfo would be nice, especially if it added
+        // things like callerName and arg1
         self.channel.logger.error(
             'failed to lazy read frame serviceName',
-            conn.extendLogInfo({
-                error: res.err
-            })
+            conn.extendLogInfo()
         );
         // TODO: protocol error instead?
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read serviceName');
         return false;
     }
 
-    var serviceName = res.value;
-    if (!serviceName) {
-        // TODO: reqFrame.extendLogInfo would be nice, especially if it added
-        // things like callerName and arg1
-        self.channel.logger.error(
-            'missing service name in lazy frame',
-            conn.extendLogInfo({})
-        );
-        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing serviceName');
-        return false;
-    }
-
-    // TODO: feature support
-    // - blocking
-    // - rate limiting
-
-    res = reqFrame.bodyRW.lazy.readHeaders(reqFrame);
-    if (res.err) {
-        // TODO: stat?
-        self.channel.logger.warn(
-            'failed to lazy read frame headers',
-            conn.extendLogInfo({
-                error: res.err
-            })
-        );
-        // TODO: protocol error instead?
-        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read headers');
-        return false;
-    }
-
-    var rdBuf = res.value && res.value.getValue(RD_HEADER_BUFFER);
-    var routingDelegate = rdBuf && rdBuf.toString();
+    var routingDelegate = reqFrame.bodyRW.lazy
+        .readRoutingDelegateStr(reqFrame);
 
     var nextService = routingDelegate || serviceName;
 
-    var cnBuf = res.value && res.value.getValue(CN_HEADER_BUFFER);
-    var cn = cnBuf && cnBuf.toString();
-    if (!cn) {
+    var callerName = reqFrame.bodyRW.lazy.readCallerNameStr(reqFrame);
+
+    if (!callerName) {
         self.channel.logger.warn(
             'request missing cn header',
             conn.extendLogInfo({
@@ -328,13 +295,13 @@ function handleLazily(conn, reqFrame) {
         return false;
     }
 
-    if (self.isBlocked(cn, serviceName)) {
+    if (self.isBlocked(callerName, serviceName)) {
         conn.ops.popInReq(reqFrame.id);
         return null;
     }
 
     if (self.rateLimiterEnabled) {
-        var rateLimitReason = self.rateLimit(cn, nextService);
+        var rateLimitReason = self.rateLimit(callerName, nextService);
 
         if (rateLimitReason === RATE_LIMIT_KILLSWITCH) {
             conn.ops.popInReq(reqFrame.id);
