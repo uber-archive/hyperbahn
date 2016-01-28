@@ -22,16 +22,16 @@
 
 var assert = require('assert');
 var http = require('http');
-// TODO use better module. This sometimes fails when you
-// move around and change wifi networks.
-var myLocalIp = require('my-local-ip');
+var localIp = require('../lib/local_ip.js');
 var os = require('os');
 var RingPop = require('ringpop');
 var process = require('process');
 var uncaught = require('uncaught-exception');
 var TChannel = require('tchannel');
 var TChannelAsJSON = require('tchannel/as/json');
+var validateHost = require('tchannel/host-port.js').validateHost;
 var CountedReadySignal = require('ready-signal/counted');
+var timers = require('timers');
 var fs = require('fs');
 var ProcessReporter = require('process-reporter');
 var NullStatsd = require('uber-statsd-client/null');
@@ -47,11 +47,23 @@ var HyperbahnEgressNodes = require('../egress-nodes.js');
 var HyperbahnHandler = require('../handler.js');
 var SocketInspector = require('./socket-inspector.js');
 var HyperbahnBatchStats = require('./batch-stats.js');
+var TypedError = require('error/typed');
+
+var GET_HOST_FOR_TCHANNEL_ATTEMPT_LIMIT = 8;
+var GET_HOST_FOR_TCHANNEL_ATTEMPT_BACKOFF = 1000;
+
+var TChannelGetListenHostError = TypedError({
+    type: 'tchannel.get-listen-host',
+    message: 'unable to get a valid host after {numAttempts} attempts, last problem was "{reason}" for {value}',
+    numAttempts: null,
+    reason: null,
+    value: null
+});
 
 module.exports = ApplicationClients;
 
 function ApplicationClients(options) {
-    /*eslint max-statements: [2, 50] */
+    /*eslint max-statements: [2, 52] */
     if (!(this instanceof ApplicationClients)) {
         return new ApplicationClients(options);
     }
@@ -65,11 +77,13 @@ function ApplicationClients(options) {
     self.ringpopTimeouts = config.get('hyperbahn.ringpop.timeouts');
     self.projectName = config.get('info.project');
 
-    // We need to move away from myLocalIp(); this fails in weird
-    // ways when moving around and changing wifi networks.
-    // host & port are internal fields since they are just used
-    // in bootstrap and are not actually client objects.
-    self._host = options.argv.host || config.get('tchannel.host') || myLocalIp();
+    self._getHostForTchannelAttemptLimit =
+        options.getHostForTchannelAttemptLimit ||
+        GET_HOST_FOR_TCHANNEL_ATTEMPT_LIMIT;
+    self._getHostForTchannelAttemptBackoff =
+        options.getHostForTchannelAttemptBackoff ||
+        GET_HOST_FOR_TCHANNEL_ATTEMPT_BACKOFF;
+    self._host = options.argv.host || config.get('tchannel.host');
     self._port = options.argv.port;
     self._controlPort = options.argv.controlPort;
     self._bootFile = options.argv.bootstrapFile !== undefined ?
@@ -276,6 +290,20 @@ function loadHostListFile(bootFile) {
     return null;
 };
 
+/* On the runtime of the localIp validation loop below:
+ * - the first attempt is done immediately
+ * - when an attempt fails, and the attempt limit has not been exceeded, a
+ *   timer is set for the next attempt
+ * - the timer delay is `BACKOFF * 2^NUM_ATTEMPTS` +/- 5%
+ * - so this means that the total worst case time that we'll wait before
+ *   crashing due to no interface address available is:
+ *   - at least (backoff * 2^limit - 1) * 0.95
+ *   - at most (backoff * 2^limit - 1) * 1.05
+ *
+ * Therefore the defaults result in a worst case total time between 4:02 and
+ * 4:28.
+ */
+
 ApplicationClients.prototype.setupChannel =
 function setupChannel(cb) {
     var self = this;
@@ -288,7 +316,12 @@ function setupChannel(cb) {
     self.processReporter.bootstrap();
 
     self.tchannel.on('listening', listenReady.signal);
-    self.tchannel.listen(self._port, self._host);
+    var getHostAttemptCount = 0;
+    if (self._host !== null) {
+        self.tchannel.listen(self._port, self._host);
+    } else {
+        getHostForTChannel();
+    }
 
     self.repl.once('listening', listenReady.signal);
     self.repl.start();
@@ -300,6 +333,34 @@ function setupChannel(cb) {
     }
 
     self._controlServer.listen(self._controlPort, listenReady.signal);
+
+    function getHostForTChannel() {
+        var host = localIp();
+        var reason = validateHost(host);
+        if (reason !== null) {
+            nextAttempt(host, reason);
+            return;
+        }
+        self.tchannel.listen(self._port, host);
+    }
+
+    function nextAttempt(host, reason) {
+        var delay = self._getHostForTchannelAttemptBackoff * Math.pow(2, getHostAttemptCount);
+        delay *= 1.05 - 0.1 * Math.random();
+        if (++getHostAttemptCount >= self._getHostForTchannelAttemptLimit) {
+            var val = JSON.stringify(host);
+            if (val === undefined) {
+                val = 'undefined';
+            }
+            cb(TChannelGetListenHostError({
+                numAttempts: getHostAttemptCount,
+                reason: reason,
+                value: val
+            }));
+            return;
+        }
+        timers.setTimeout(getHostForTChannel, delay);
+    }
 };
 
 ApplicationClients.prototype.setupRingpop =
@@ -337,6 +398,7 @@ function bootstrap(cb) {
     function setupDone(err) {
         if (err) {
             cb(err);
+            return;
         }
 
         self.setupRingpop(cb);
@@ -349,7 +411,9 @@ ApplicationClients.prototype.destroy = function destroy() {
     self.socketInspector.disable();
     self.serviceProxy.destroy();
     self.remoteConfig.destroy();
-    self.ringpop.destroy();
+    if (self.ringpop) {
+        self.ringpop.destroy();
+    }
     if (!self.tchannel.destroyed) {
         self.tchannel.close();
     }
