@@ -21,7 +21,6 @@
 'use strict';
 
 var setTimeout = require('timers').setTimeout;
-var setImmediate = require('timers').setImmediate;
 
 var CollapsedAssert = require('../lib/collapsed-assert.js');
 var allocCluster = require('../lib/test-cluster.js');
@@ -31,6 +30,11 @@ allocCluster.test('register with slow affine', {
     dummies: 1,
     remoteConfig: {
         'circuits.enabled': true
+    },
+    seedConfig: {
+        'hyperbahn.circuits': {
+            period: 500
+        }
     }
 }, function t(cluster, assert) {
     cluster.logger.whitelist(
@@ -56,7 +60,7 @@ allocCluster.test('register with slow affine', {
 
     forceTimeout(exitNodes[1]);
 
-    sendNRegisters(cluster, 100, inspectLogs)
+    sendNRegisters(cluster, 100, inspectLogs);
 
     function inspectLogs(err, errors) {
         assert.ifError(err);
@@ -64,6 +68,36 @@ allocCluster.test('register with slow affine', {
         checkAdvertiseMessages();
         checkCircuitUnhealthy();
         checkClientErrors(errors);
+
+        unforceTimeout(exitNodes[1]);
+
+        sendNRegisters(cluster, 100, inspectHealthy);
+    }
+
+    function inspectHealthy(err, errors) {
+        assert.ifError(err);
+
+        var buckets = {};
+
+        for (var j = 0; j < errors.length; j++) {
+            var e = errors[j];
+
+            if (!buckets[e.type]) {
+                buckets[e.type] = 0;
+            }
+
+            buckets[e.type]++;
+        }
+
+        console.log('b?:', buckets);
+
+        sendNRegisters(cluster, 20, inspectNoErrors);
+    }
+
+    function inspectNoErrors(err, errors) {
+        assert.ifError(err);
+
+        assert.equal(errors.length, 0);
 
         assert.end();
     }
@@ -158,8 +192,8 @@ allocCluster.test('register with slow affine', {
             'expected between 10 & 30 timeouts but got: ' + timeouts
         );
         assert.ok(
-            declined >= 60 && declined <= 85,
-            'expected between 60 & 85 declined but got: ' + declined
+            declined >= 55 && declined <= 85,
+            'expected between 55 & 85 declined but got: ' + declined
         );
     }
 });
@@ -201,7 +235,7 @@ function forceTimeout(app) {
     var channel = app.clients.tchannel;
     var handler = channel.subChannels.hyperbahn.handler;
 
-    var oldHandle = handler.handleRelay;
+    var oldHandle = handler._oldHandle = handler.handleRelay;
     handler.handleRelay = handleRelayProxy;
 
     function handleRelayProxy() {
@@ -211,4 +245,11 @@ function forceTimeout(app) {
             return oldHandle.apply(this, arguments);
         }
     }
+}
+
+function unforceTimeout(app) {
+    var channel = app.clients.tchannel;
+    var handler = channel.subChannels.hyperbahn.handler;
+
+    handler.handleRelay = handler._oldHandle;
 }
