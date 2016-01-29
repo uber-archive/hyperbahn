@@ -300,6 +300,16 @@ function handleLazily(conn, reqFrame) {
         return null;
     }
 
+    // use the rd (routing delegate) or the serviceName if there was no rd set
+    var serviceChannel = self.channel.subChannels[nextService];
+    if (!serviceChannel) {
+        serviceChannel = self.createServiceChannel(nextService);
+    }
+
+    if (!serviceChannel.handler.handleLazily) {
+        return false;
+    }
+
     if (self.rateLimiterEnabled) {
         var rateLimitReason = self.rateLimit(callerName, nextService);
 
@@ -337,12 +347,6 @@ function handleLazily(conn, reqFrame) {
         }
     }
 
-    // use the rd (routing delegate) or the serviceName if there was no rd set
-    var serviceChannel = self.channel.subChannels[nextService];
-    if (!serviceChannel) {
-        serviceChannel = self.createServiceChannel(nextService);
-    }
-
     if (serviceChannel.handler.circuits) {
         var endpoint = reqFrame.bodyRW.lazy.readArg1Str(reqFrame);
         if (endpoint === null) {
@@ -371,11 +375,7 @@ function handleLazily(conn, reqFrame) {
         circuit.state.onRequest();
     }
 
-    if (serviceChannel.handler.handleLazily) {
-        return serviceChannel.handler.handleLazily(conn, reqFrame);
-    } else {
-        return false;
-    }
+    serviceChannel.handler.handleLazily(conn, reqFrame);
 };
 
 ServiceDispatchHandler.prototype.handleRequest =
