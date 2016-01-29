@@ -46,9 +46,8 @@ allocCluster.test('register with slow affine', {
     cluster.logger.whitelist(
         'warn', 'Relay advertise failed with expected err'
     );
-    cluster.logger.whitelist(
-        'info', 'circuit became unhealthy'
-    );
+    cluster.logger.whitelist('info', 'circuit became unhealthy');
+    cluster.logger.whitelist('info', 'circuit returned to good health');
     cluster.logger.whitelist('warn', 'stale tombstone');
 
     var i;
@@ -91,11 +90,45 @@ allocCluster.test('register with slow affine', {
         }
 
         var declined = buckets['tchannel.declined'];
-        assert.ok(declined >= 30 && declined <= 50,
-            'expected declined to be between 30 & 50 but is: ' + declined
+        assert.ok(declined >= 30 && declined <= 60,
+            'expected declined to be between 30 & 60 but is: ' + declined
         );
 
+        checkCircuitHealthy();
+
         sendNRegisters(cluster, 20, inspectNoErrors);
+    }
+
+    function checkCircuitHealthy() {
+        var logs = cluster.logger.items();
+
+        var circuitHealthy = [];
+        for (var j = 0; j < logs.length; j++) {
+            if (logs[j].msg === 'circuit returned to good health') {
+                circuitHealthy.push(logs[j]);
+            }
+        }
+
+        assert.ok(circuitHealthy.length >= 2,
+            'expected some circuitHealthy messages');
+
+        for (var k = 0; k < circuitHealthy.length; k++) {
+            var line = circuitHealthy[k];
+
+            assert.equal(line.meta.serviceName, 'hyperbahn',
+                'expected hyperbahn to be not circuit broken');
+
+            if (line.meta.hostPort === exitNodes[1].hostPort) {
+                assert.ok(
+                    line.meta.endpointName === 'relay-ad' ||
+                    line.meta.endpointName === 'ad',
+                    'expected endpointName to be ad or relay-ad'
+                );
+            } else {
+                assert.equal(line.meta.endpointName, 'ad',
+                    'expected endpointName to be ad');
+            }
+        }
     }
 
     function inspectNoErrors(err, errors) {
@@ -146,7 +179,7 @@ allocCluster.test('register with slow affine', {
             }
         }
 
-        assert.ok(circuitUnhealthy.length > 1,
+        assert.ok(circuitUnhealthy.length >= 2,
             'expected some circuitUnhealthy messages');
 
         for (var k = 0; k < circuitUnhealthy.length; k++) {
