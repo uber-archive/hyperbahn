@@ -90,7 +90,10 @@ allocCluster.test('register with slow affine', {
             buckets[e.type]++;
         }
 
-        console.log('b?:', buckets);
+        var declined = buckets['tchannel.declined'];
+        assert.ok(declined >= 30 && declined <= 50,
+            'expected declined to be between 30 & 50 but is: ' + declined
+        );
 
         sendNRegisters(cluster, 20, inspectNoErrors);
     }
