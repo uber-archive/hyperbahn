@@ -49,6 +49,7 @@ allocCluster.test('register with slow affine', {
     cluster.logger.whitelist(
         'info', 'circuit became unhealthy'
     );
+    cluster.logger.whitelist('warn', 'stale tombstone');
 
     var i;
     var exitNodes = cluster.getExitNodes('hello-bob');
