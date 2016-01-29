@@ -659,7 +659,7 @@ function sendRegister(channel, opts, cb) {
             host: opts.host,
             hasNoParent: true,
             trace: false,
-            timeout: 5000,
+            timeout: opts.timeout || 5000,
             headers: {
                 'cn': opts.serviceName
             }
