@@ -47,7 +47,6 @@ allocCluster.test('register with slow affine', {
     );
 
     var i;
-    var dummy = cluster.dummies[0];
     var exitNodes = cluster.getExitNodes('hello-bob');
     for (i = 0; i < cluster.apps.length; i++) {
         var channel = cluster.apps[i].clients.tchannel;
@@ -57,56 +56,53 @@ allocCluster.test('register with slow affine', {
 
     forceTimeout(exitNodes[1]);
 
-    var counter = 100;
+    sendNRegisters(cluster, 100, inspectLogs)
 
-    setTimeout(inspectLogs, 3000);
-    sendNext();
+    function inspectLogs(err, errors) {
+        assert.ifError(err);
 
-    function sendNext() {
-        if (--counter === 0) {
-            return;
-        }
+        checkAdvertiseMessages();
+        checkCircuitUnhealthy();
+        checkClientErrors(errors);
 
-        cluster.sendRegister(dummy, {
-            serviceName: 'hello-bob',
-            timeout: 500
-        }, noop);
-
-        setImmediate(sendNext);
+        assert.end();
     }
 
-    function inspectLogs() {
+    function checkAdvertiseMessages() {
         var logs = cluster.logger.items();
-        var j;
-        var k;
 
         var advertiseFails = [];
-        for (j = 0; j < logs.length; j++) {
+        for (var j = 0; j < logs.length; j++) {
             if (logs[j].msg === 'Relay advertise failed with expected err') {
                 advertiseFails.push(logs[j]);
             }
         }
 
         assert.ok(
-            advertiseFails.length >= 40 &&
-            advertiseFails.length <= 70,
+            advertiseFails.length <= 30,
             'expected ' + advertiseFails.length +
-                ' to be between 40 & 70 logs'
+                ' to be between 0 & 30 logs'
         );
 
         var cassert = CollapsedAssert();
-        for (k = 0; k < advertiseFails.length; k++) {
+        for (var k = 0; k < advertiseFails.length; k++) {
             var line = advertiseFails[k];
 
             var err = line.meta.error;
-            cassert.ok(err.type === 'tchannel.declined',
+            cassert.ok(err.type === 'tchannel.declined' ||
+                err.type === 'tchannel.timeout' ||
+                err.type === 'tchannel.request.timeout',
                 'expected err: ' + err.type + ' to be a declined'
             );
         }
         cassert.report(assert, 'all logLines are fine');
+    }
+
+    function checkCircuitUnhealthy() {
+        var logs = cluster.logger.items();
 
         var circuitUnhealthy = [];
-        for (j = 0; j < logs.length; j++) {
+        for (var j = 0; j < logs.length; j++) {
             if (logs[j].msg === 'circuit became unhealthy') {
                 circuitUnhealthy.push(logs[j]);
             }
@@ -115,16 +111,91 @@ allocCluster.test('register with slow affine', {
         assert.ok(circuitUnhealthy.length > 1,
             'expected some circuitUnhealthy messages');
 
-        for (k = 0; k < circuitUnhealthy.length; k++) {
-            line = circuitUnhealthy[k];
+        for (var k = 0; k < circuitUnhealthy.length; k++) {
+            var line = circuitUnhealthy[k];
 
             assert.equal(line.meta.serviceName, 'hyperbahn',
                 'expected hyperbahn to be circuit broken');
+
+            if (line.meta.hostPort === exitNodes[1].hostPort) {
+                assert.ok(
+                    line.meta.endpointName === 'relay-ad' ||
+                    line.meta.endpointName === 'ad',
+                    'expected endpointName to be ad or relay-ad'
+                );
+            } else {
+                assert.equal(line.meta.endpointName, 'ad',
+                    'expected endpointName to be ad');
+            }
+        }
+    }
+
+    function checkClientErrors(errors) {
+        assert.ok(
+            errors.length >= 80 &&
+            errors.length <= 100,
+            'expected ' + errors.length + ' to be between 80 & 100'
+        );
+
+        var buckets = {};
+
+        for (var j = 0; j < errors.length; j++) {
+            var e = errors[j];
+
+            if (!buckets[e.type]) {
+                buckets[e.type] = 0;
+            }
+
+            buckets[e.type]++;
         }
 
-        assert.end();
+        var declined = buckets['tchannel.declined'];
+        var timeouts = buckets['tchannel.request.timeout'] +
+            buckets['tchannel.timeout'];
+
+        assert.ok(
+            timeouts >= 10 && timeouts <= 30,
+            'expected between 10 & 30 timeouts but got: ' + timeouts
+        );
+        assert.ok(
+            declined >= 60 && declined <= 85,
+            'expected between 60 & 85 declined but got: ' + declined
+        );
     }
 });
+
+function sendNRegisters(cluster, n, cb) {
+    var dummy = cluster.dummies[0];
+    var exitNodes = cluster.getExitNodes('hello-bob');
+    var counter = n;
+    var errors = [];
+
+    sendNext();
+
+    function sendNext() {
+        if (--counter === 0) {
+            return setTimeout(invokeCb, 500);
+        }
+
+        cluster.sendRegister(dummy, {
+            serviceName: 'hello-bob',
+            host: exitNodes[0].hostPort,
+            timeout: 500
+        }, onError);
+
+        setTimeout(sendNext, 50);
+    }
+
+    function onError(err) {
+        if (err) {
+            errors.push(err);
+        }
+    }
+
+    function invokeCb() {
+        cb(null, errors);
+    }
+}
 
 function forceTimeout(app) {
     var channel = app.clients.tchannel;
@@ -141,5 +212,3 @@ function forceTimeout(app) {
         }
     }
 }
-
-function noop() {}

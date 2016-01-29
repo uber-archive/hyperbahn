@@ -660,6 +660,9 @@ function sendRegister(channel, opts, cb) {
             hasNoParent: true,
             trace: false,
             timeout: opts.timeout || 5000,
+            retryFlags: {
+                never: true
+            },
             headers: {
                 'cn': opts.serviceName
             }
