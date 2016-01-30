@@ -240,11 +240,11 @@ function ApplicationClients(options) {
     self.remoteConfig.on('update', onRemoteConfigUpdate);
     // initlialize to default
     self.remoteConfig.loadSync();
-    self.onRemoteConfigUpdate();
+    self.onRemoteConfigUpdate([], true);
     self.remoteConfig.startPolling();
 
-    function onRemoteConfigUpdate() {
-        self.onRemoteConfigUpdate();
+    function onRemoteConfigUpdate(affectedKeys, updateAll) {
+        self.onRemoteConfigUpdate(affectedKeys, updateAll || false);
     }
 }
 
@@ -437,24 +437,83 @@ function updateMaxTombstoneTTL() {
     self.tchannel.setMaxTombstoneTTL(ttl);
 };
 
-ApplicationClients.prototype.onRemoteConfigUpdate = function onRemoteConfigUpdate() {
+/*eslint complexity: [2, 40]*/
+ApplicationClients.prototype.onRemoteConfigUpdate =
+function onRemoteConfigUpdate(changedKeys, all) {
     var self = this;
-    self.setSocketInspector();
-    self.updateMaxTombstoneTTL();
-    self.updateLazyHandling();
-    self.updateCircuitsEnabled();
-    self.updateRateLimitingEnabled();
-    self.updateTotalRpsLimit();
-    self.updateExemptServices();
-    self.updateRpsLimitForServiceName();
-    self.updateKValues();
-    self.updateKillSwitches();
-    self.updateReservoir();
-    self.updateReapPeersPeriod();
-    self.updatePrunePeersPeriod();
-    self.updatePartialAffinityEnabled();
-    self.setMaximumRelayTTL();
-    self.updatePeerHeapEnabled();
+
+    var dict = {};
+    for (var i = 0; i < changedKeys.length; i++) {
+        dict[changedKeys[i]] = true;
+    }
+
+    if (all || dict['clients.socket-inspector.enabled']) {
+        self.setSocketInspector();
+    }
+
+    if (all || dict['tchannel.max-tombstone-ttl']) {
+        self.updateMaxTombstoneTTL();
+    }
+
+    if (all || dict['lazy.handling.enabled']) {
+        self.updateLazyHandling();
+    }
+
+    if (all || dict['circuits.enabled']) {
+        self.updateCircuitsEnabled();
+    }
+
+    if (all || dict['rateLimiting.enabled']) {
+        self.updateRateLimitingEnabled();
+    }
+
+    if (all || dict['rateLimiting.totalRpsLimit']) {
+        self.updateTotalRpsLimit();
+    }
+
+    if (all || dict['rateLimiting.exemptServices']) {
+        self.updateExemptServices();
+    }
+
+    if (all || dict['rateLimiting.rpsLimitForServiceName']) {
+        self.updateRpsLimitForServiceName();
+    }
+
+    if (all || dict['kValue.default'] || dict['kValue.services']) {
+        self.updateKValues();
+    }
+
+    if (all || dict.killSwitch) {
+        self.updateKillSwitches();
+    }
+
+    if (all || dict['log.reservoir.size'] ||
+        dict['log.reservoir.flushInterval']
+    ) {
+        self.updateReservoir();
+    }
+
+    if (all || dict['peerReaper.period']) {
+        self.updateReapPeersPeriod();
+    }
+
+    if (all || dict['peerPruner.period']) {
+        self.updatePrunePeersPeriod();
+    }
+
+    if (all || dict['partialAffinity.enabled']) {
+        self.updatePartialAffinityEnabled();
+    }
+
+    if (all || dict['relay.maximum-ttl']) {
+        self.setMaximumRelayTTL();
+    }
+
+    if (all || dict['peer-heap.enabled.services'] ||
+        dict['peer-heap.enabled.global']
+    ) {
+        self.updatePeerHeapEnabled();
+    }
 };
 
 ApplicationClients.prototype.setSocketInspector =
