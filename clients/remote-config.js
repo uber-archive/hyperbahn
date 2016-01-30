@@ -161,9 +161,9 @@ ConfigValues.prototype._updateConfigValues = function _updateConfigValues(newCon
     var oldConfigValues = self._configValues;
 
     self._configValues = newConfig;
-    self.remoteConfig.emit('update');
 
-    var changedKeys = [];
+    var deltaKeys = [];
+    var affectedKeys = [];
 
     // check for values in current newConfig that are different in oldConfig
     var keys = Object.keys(newConfig);
@@ -175,7 +175,8 @@ ConfigValues.prototype._updateConfigValues = function _updateConfigValues(newCon
 
         if (newJSON !== oldJSON) {
             self.remoteConfig.emit('change:' + key);
-            changedKeys.push('update:' + key);
+            deltaKeys.push('update:' + key);
+            affectedKeys.push(key);
         }
     }
 
@@ -186,13 +187,16 @@ ConfigValues.prototype._updateConfigValues = function _updateConfigValues(newCon
 
         if (!(oldKey in newConfig)) {
             self.remoteConfig.emit('change:' + oldKey);
-            changedKeys.push('remove:' + key);
+            deltaKeys.push('remove:' + oldKey);
+            affectedKeys.push(oldKey);
         }
     }
 
+    self.remoteConfig.emit('update', affectedKeys);
+
     if (!self.remoteConfig._inLoadSync) {
         self.logger.info('[remote-config] config file changed', {
-            changedKeys: changedKeys,
+            deltaKeys: deltaKeys,
             newConfig: newConfig
         });
     }
