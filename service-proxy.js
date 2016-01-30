@@ -274,7 +274,7 @@ function handleLazily(conn, reqFrame) {
         );
         // TODO: protocol error instead?
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read serviceName');
-        return false;
+        return true;
     }
 
     var routingDelegate = reqFrame.bodyRW.lazy
@@ -292,12 +292,22 @@ function handleLazily(conn, reqFrame) {
             })
         );
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing cn header');
-        return false;
+        return true;
     }
 
     if (self.isBlocked(callerName, serviceName)) {
         conn.ops.popInReq(reqFrame.id);
         return null;
+    }
+
+    // use the rd (routing delegate) or the serviceName if there was no rd set
+    var serviceChannel = self.channel.subChannels[nextService];
+    if (!serviceChannel) {
+        serviceChannel = self.createServiceChannel(nextService);
+    }
+
+    if (!serviceChannel.handler.handleLazily) {
+        return false;
     }
 
     if (self.rateLimiterEnabled) {
@@ -337,12 +347,6 @@ function handleLazily(conn, reqFrame) {
         }
     }
 
-    // use the rd (routing delegate) or the serviceName if there was no rd set
-    var serviceChannel = self.channel.subChannels[nextService];
-    if (!serviceChannel) {
-        serviceChannel = self.createServiceChannel(nextService);
-    }
-
     if (serviceChannel.handler.circuits) {
         var endpoint = reqFrame.bodyRW.lazy.readArg1Str(reqFrame);
         if (endpoint === null) {
@@ -355,7 +359,7 @@ function handleLazily(conn, reqFrame) {
             );
             // TODO: protocol error instead?
             conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read arg1');
-            return false;
+            return true;
         }
 
         var circuit = serviceChannel.handler.circuits.getCircuit(
@@ -371,11 +375,7 @@ function handleLazily(conn, reqFrame) {
         circuit.state.onRequest();
     }
 
-    if (serviceChannel.handler.handleLazily) {
-        return serviceChannel.handler.handleLazily(conn, reqFrame);
-    } else {
-        return false;
-    }
+    return serviceChannel.handler.handleLazily(conn, reqFrame);
 };
 
 ServiceDispatchHandler.prototype.handleRequest =
