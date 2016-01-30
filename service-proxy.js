@@ -274,7 +274,7 @@ function handleLazily(conn, reqFrame) {
         );
         // TODO: protocol error instead?
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read serviceName');
-        return false;
+        return true;
     }
 
     var routingDelegate = reqFrame.bodyRW.lazy
@@ -292,7 +292,7 @@ function handleLazily(conn, reqFrame) {
             })
         );
         conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing cn header');
-        return false;
+        return true;
     }
 
     if (self.isBlocked(callerName, serviceName)) {
@@ -359,7 +359,7 @@ function handleLazily(conn, reqFrame) {
             );
             // TODO: protocol error instead?
             conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read arg1');
-            return false;
+            return true;
         }
 
         var circuit = serviceChannel.handler.circuits.getCircuit(
@@ -375,7 +375,7 @@ function handleLazily(conn, reqFrame) {
         circuit.state.onRequest();
     }
 
-    serviceChannel.handler.handleLazily(conn, reqFrame);
+    return serviceChannel.handler.handleLazily(conn, reqFrame);
 };
 
 ServiceDispatchHandler.prototype.handleRequest =
