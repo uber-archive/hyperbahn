@@ -453,7 +453,11 @@ function handleRequest(req, buildRes) {
         serviceChannel = self.createServiceChannel(nextService);
     }
 
-    if (serviceChannel.handler.circuits) {
+    if (serviceChannel.handler.circuits &&
+        (req.serviceName !== 'hyperbahn' && (
+            req.endpoint !== 'ad' || req.endpoint !== 'relay-ad'
+        ))
+    ) {
         var circuit = serviceChannel.handler.circuits.getCircuit(
             req.headers.cn || 'no-cn', req.serviceName, req.endpoint
         );
