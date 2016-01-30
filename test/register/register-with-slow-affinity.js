@@ -25,7 +25,7 @@ var setTimeout = require('timers').setTimeout;
 var CollapsedAssert = require('../lib/collapsed-assert.js');
 var allocCluster = require('../lib/test-cluster.js');
 
-allocCluster.test('register with slow affine', {
+allocCluster.test.skip('register with slow affine', {
     size: 10,
     dummies: 1,
     remoteConfig: {

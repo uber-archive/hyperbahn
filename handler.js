@@ -296,7 +296,7 @@ function sendRelay(opts, callback) {
                 trace: false,
                 timeout: self.relayAdTimeout,
                 headers: {
-                    cn: self.callerName
+                    cn: opts.inreq.callerName || self.callerName
                 },
                 parent: opts.inreq,
                 retryFlags: {
