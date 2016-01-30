@@ -90,8 +90,8 @@ allocCluster.test('register with slow affine', {
         }
 
         var declined = buckets['tchannel.declined'];
-        assert.ok(declined >= 30 && declined <= 60,
-            'expected declined to be between 30 & 60 but is: ' + declined
+        assert.ok(declined >= 25 && declined <= 60,
+            'expected declined to be between 25 & 60 but is: ' + declined
         );
 
         checkCircuitHealthy();
