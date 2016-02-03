@@ -41,7 +41,7 @@ allocCluster.test('requesting rate limited to cluster', {
     );
     cluster.logger.whitelist(
         'warn', 'forwarding error frame'
-    )
+    );
 
     var steve = cluster.remotes.steve;
     var bob = cluster.remotes.bob;
@@ -165,11 +165,39 @@ allocCluster.test.only('requesting rate limited to one host', {
         }
         cassert.report(assert, 'expected all errors to be busy');
 
-        console.log('stats?', stats.length);
+        var allStats = statsByType(stats);
+        var latencies = allStats['tchannel.inbound.calls.latency'];
+
+        var echoLatencies = [];
+        for (i = 0; i < latencies.length; i++) {
+            if (latencies[i].tags.endpoint === 'echo') {
+                echoLatencies.push(latencies[i]);
+            }
+        }
+
+        assert.equal(echoLatencies.length, 100);
+        for (i = 0; i < echoLatencies.length; i++) {
+            assert.equal(echoLatencies[i].tags.endpoint, 'echo');
+        }
 
         assert.end();
     }
 });
+
+function statsByType(stats) {
+    var byType = {};
+
+    for (var i = 0; i < stats.length; i++) {
+        var stat = stats[i];
+        if (!byType[stat.name]) {
+            byType[stat.name] = [];
+        }
+
+        byType[stat.name].push(stat);
+    }
+
+    return byType;
+}
 
 function Result(err, value) {
     this.err = err;
