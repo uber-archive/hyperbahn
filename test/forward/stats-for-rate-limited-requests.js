@@ -46,6 +46,16 @@ allocCluster.test('requesting rate limited to cluster', {
     var steve = cluster.remotes.steve;
     var bob = cluster.remotes.bob;
 
+    var stats = [];
+
+    for (var i = 0; i < cluster.apps.length; i++) {
+        cluster.apps[i].tchannel.statEvent.on(onStat);
+    }
+
+    function onStat(stat) {
+        stats.push(stat);
+    }
+
     cluster.checkExitPeers(assert, {
         serviceName: steve.serviceName,
         hostPort: steve.hostPort
@@ -55,11 +65,14 @@ allocCluster.test('requesting rate limited to cluster', {
     var body = JSON.stringify('oh hi lol');
 
     var counter = 100;
-    for (var i = 0; i < counter; i++) {
+    for (i = 0; i < counter; i++) {
         bob.clientChannel.request({
             // host: cluster.apps[0].hostPort,
             timeout: 1000,
-            serviceName: steve.serviceName
+            serviceName: steve.serviceName,
+            retryFlags: {
+                never: true
+            }
         }).send('echo', null, body, onResponse);
     }
 
@@ -72,18 +85,51 @@ allocCluster.test('requesting rate limited to cluster', {
     }
 
     function onForwarded() {
-        // if (err) {
-        //     assert.ifError(err);
-        //     return assert.end();
-        // }
+        var logs = cluster.logger.items();
+        assert.ok(logs.length > 50,
+            'expected >50 logs about rate limiting'
+        );
 
-        // assert.equal(String(arg3), '"oh hi lol"');
+        var errors = [];
+        for (i = 0; i < results.length; i++) {
+            if (results[i].err) {
+                errors.push(results[i].err);
+            }
+        }
+
+        assert.ok(errors.length > 50,
+            'expected >50 errors');
+
+        var cassert = CollapsedAssert();
+        for (i = 0; i < errors.length; i++) {
+            cassert.equal(errors[i].codeName, 'Busy');
+            cassert.equal(errors[i].type, 'tchannel.busy');
+        }
+        cassert.report(assert, 'expected all errors to be busy');
+
+        var allStats = statsByType(stats);
+        var latencies = allStats['tchannel.inbound.calls.latency'];
+
+        var echoLatencies = [];
+        for (i = 0; i < latencies.length; i++) {
+            if (latencies[i].tags.endpoint === 'echo') {
+                echoLatencies.push(latencies[i]);
+            }
+        }
+
+        assert.ok(echoLatencies.length >= errors.length,
+            'expected more latencies then errors');
+        cassert = CollapsedAssert();
+        for (i = 0; i < echoLatencies.length; i++) {
+            cassert.equal(echoLatencies[i].tags.endpoint, 'echo');
+        }
+        cassert.report(assert, 'expected all latencies to be echo()');
 
         assert.end();
     }
 });
 
-allocCluster.test.only('requesting rate limited to one host', {
+allocCluster.test('requesting rate limited to one host', {
     size: 5,
     remoteConfig: {
         'rateLimiting.enabled': true,
@@ -176,9 +222,11 @@ allocCluster.test.only('requesting rate limited to one host', {
         }
 
         assert.equal(echoLatencies.length, 100);
+        cassert = CollapsedAssert();
         for (i = 0; i < echoLatencies.length; i++) {
-            assert.equal(echoLatencies[i].tags.endpoint, 'echo');
+            cassert.equal(echoLatencies[i].tags.endpoint, 'echo');
         }
+        cassert.report(assert, 'expected all latencies to be echo()');
 
         assert.end();
     }
