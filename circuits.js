@@ -198,7 +198,7 @@ Circuits.prototype.updateServices = function updateServices() {
 Circuits.prototype.emitCircuitStateChange = function emitCircuitStateChange(newStates, circuit) {
     var self = this;
     self.circuitStateChangeEvent.emit(
-        self.root,
+        self,
         new CircuitStateChange(circuit, newStates[0], newStates[1])
     );
 };
