@@ -68,7 +68,7 @@ RelayNetwork.test('should switch to unhealthy', aliceAndBob, function t(network,
         res.sendError('UnexpectedError', 'head splode');
     });
 
-    network.cluster.logger.whitelist('info', 'circuit became unhealthy');
+    network.cluster.logger.whitelist('info', 'circuit event: unhealthy');
 
     var declined = 0;
     var unexpected = 0;
@@ -99,7 +99,7 @@ RelayNetwork.test('should switch to unhealthy', aliceAndBob, function t(network,
         assert.equal(items.length, 1);
         var logRecord = items[0];
         assert.equal(logRecord.levelName, 'info');
-        assert.equal(logRecord.msg, 'circuit became unhealthy');
+        assert.equal(logRecord.msg, 'circuit event: unhealthy');
         assert.equal(logRecord.meta.serviceName, 'bob');
         assert.equal(logRecord.meta.callerName, 'alice');
 
@@ -353,7 +353,7 @@ RelayNetwork.test('circuit state machine behaves properly', aliceAndBob, functio
         }
 
         var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
-        assert.equals(circuit.state.type, 'tchannel.unhealthy', 'became unhealthy');
+        assert.equals(circuit.state.type, 'tchannel.unhealthy', 'circuit event: unhealthy');
 
         assert.end();
     }
