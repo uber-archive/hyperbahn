@@ -40,13 +40,6 @@ AlwaysShouldRequestHandler.prototype.shouldRequest = function shouldRequest() {
 
 var alwaysShouldRequestHandler = new AlwaysShouldRequestHandler();
 
-function CircuitStateChange(circuit, oldState, state) {
-    var self = this;
-    self.circuit = circuit;
-    self.oldState = oldState;
-    self.state = state;
-}
-
 //  circuit = circuits                        : Circuits
 //      .circuitsByServiceName[serviceName]   : ServiceCircuits
 //      .circuitsByCallerName[callerName]     : EndpointCircuits
@@ -127,8 +120,8 @@ function Circuits(options) {
     self.egressNodes = options.egressNodes;
     self.boundEmitCircuitStateChange = boundEmitCircuitStateChange;
 
-    function boundEmitCircuitStateChange(newStates, circuit) {
-        self.emitCircuitStateChange(newStates, circuit);
+    function boundEmitCircuitStateChange(change) {
+        self.circuitStateChangeEvent.emit(self, change);
     }
 }
 
@@ -193,14 +186,6 @@ Circuits.prototype.updateServices = function updateServices() {
             delete self.circuitsByServiceName[serviceName];
         }
     }
-};
-
-Circuits.prototype.emitCircuitStateChange = function emitCircuitStateChange(newStates, circuit) {
-    var self = this;
-    self.circuitStateChangeEvent.emit(
-        self,
-        new CircuitStateChange(circuit, newStates[0], newStates[1])
-    );
 };
 
 function Circuit(callerName, serviceName, endpointName) {
