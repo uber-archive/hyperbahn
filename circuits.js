@@ -35,19 +35,6 @@ function StateChange(target, oldState, state) {
     this.state = state;
 }
 
-// Each circuit uses the circuits collection as the "nextHandler" for
-// "shouldRequest" to consult.  Peers use this hook to weight peers both by
-// healthy and other factors, but the circuit only needs to know about health
-// before forwarding.
-
-function AlwaysShouldRequestHandler() { }
-
-AlwaysShouldRequestHandler.prototype.shouldRequest = function shouldRequest() {
-    return true;
-};
-
-var alwaysShouldRequestHandler = new AlwaysShouldRequestHandler();
-
 //  circuit = circuits                        : Circuits
 //      .circuitsByServiceName[serviceName]   : ServiceCircuits
 //      .circuitsByCallerName[callerName]     : EndpointCircuits
@@ -109,7 +96,6 @@ function Circuits(options) {
         timeHeap: options.timeHeap,
         timers: options.timers,
         random: options.random,
-        nextHandler: alwaysShouldRequestHandler,
         period: this.config.period,
         maxErrorRate: this.config.maxErrorRate,
         minRequests: this.config.minRequests,
@@ -246,8 +232,6 @@ function StateOptions(circuit, options) {
     options = options || {};
     // for setState changes
     this.circuit = circuit;
-    // for downstream shouldRequest, used differently in Peer and Circuit.
-    this.nextHandler = options.nextHandler;
     // for mocking tests
     this.timers = options.timers;
     this.timeHeap = options.timeHeap;
@@ -269,7 +253,6 @@ function StateOptions(circuit, options) {
 
 function PeriodicState(options) {
     this.circuit = options.circuit;
-    this.nextHandler = options.nextHandler;
     this.timers = options.timers;
     this.timeHeap = options.timeHeap;
     this.random = options.random;
@@ -314,7 +297,7 @@ PeriodicState.prototype.invalidate = function invalidate() {
 PeriodicState.prototype.shouldRequest = function shouldRequest() {
     var now = this.timers.now();
     if (this.willCallNextHandler(now)) {
-        return this.nextHandler.shouldRequest();
+        return true;
     } else if (this.circuit.state !== this) {
         return this.circuit.state.shouldRequest();
     } else {
