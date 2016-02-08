@@ -23,6 +23,7 @@
 var inherits = require('util').inherits;
 var EventEmitter = require('tchannel/lib/event_emitter');
 var Result = require('bufrw/result');
+var clean = require('tchannel/lib/statsd').clean;
 
 var states = require('./states.js');
 var StateMachine = require('./state_machine.js');
@@ -196,6 +197,16 @@ function Circuit(callerName, serviceName, endpointName) {
     self.callerName = callerName || 'no-cn';
     self.serviceName = serviceName;
     self.endpointName = endpointName;
+    self.byCallerStatSuffix =
+        '.by-caller.' +
+        clean(self.callerName) + '.' +
+        clean(self.serviceName) + '.' +
+        clean(self.endpointName);
+    self.byServiceStatSuffix =
+        '.by-service.' +
+        clean(self.callerName) + '.' +
+        clean(self.serviceName) + '.' +
+        clean(self.endpointName);
     self.stateOptions = null;
 }
 
@@ -209,6 +220,15 @@ Circuit.prototype.extendLogInfo = function extendLogInfo(info) {
     info.serviceName = self.serviceName;
     info.endpointName = self.endpointName;
     return info;
+};
+
+Circuit.prototype.observeTransition =
+function observeTransition(logger, statsd, eventName, logInfo) {
+    var self = this;
+    statsd.increment('circuits.' + eventName + '.total', 1);
+    statsd.increment('circuits.' + eventName + self.byCallerStatSuffix, 1);
+    statsd.increment('circuits.' + eventName + self.byServiceStatSuffix, 1);
+    logger.info('circuit event: ' + eventName, self.extendLogInfo(logInfo));
 };
 
 module.exports = Circuits;

@@ -1440,46 +1440,10 @@ function onCircuitStateChange(change) {
     if (oldState && oldState.healthy !== state.healthy) {
         // unhealthy -> healthy
         if (state.healthy) {
-            self.statsd.increment('circuits.healthy.total', 1);
-            self.statsd.increment(
-                'circuits.healthy.by-caller.' +
-                    clean(circuit.callerName) + '.' +
-                    clean(circuit.serviceName) + '.' +
-                    clean(circuit.endpointName),
-                1
-            );
-            self.statsd.increment(
-                'circuits.healthy.by-service.' +
-                    clean(circuit.serviceName) + '.' +
-                    clean(circuit.callerName) + '.' +
-                    clean(circuit.endpointName),
-                1
-            );
-            self.logger.info(
-                'circuit returned to good health',
-                self.extendLogInfo(circuit.extendLogInfo({}))
-            );
+            circuit.observeTransition(self.logger, self.statsd, 'healthy', self.extendLogInfo({}));
         // healthy -> unhealthy
         } else {
-            self.statsd.increment('circuits.unhealthy.total', 1);
-            self.statsd.increment(
-                'circuits.unhealthy.by-caller.' +
-                    clean(circuit.callerName) + '.' +
-                    clean(circuit.serviceName) + '.' +
-                    clean(circuit.endpointName),
-                1
-            );
-            self.statsd.increment(
-                'circuits.unhealthy.by-service.' +
-                    clean(circuit.serviceName) + '.' +
-                    clean(circuit.callerName) + '.' +
-                    clean(circuit.endpointName),
-                1
-            );
-            self.logger.info(
-                'circuit became unhealthy',
-                self.extendLogInfo(circuit.extendLogInfo({}))
-            );
+            circuit.observeTransition(self.logger, self.statsd, 'unhealthy', self.extendLogInfo({}));
         }
     }
 };

@@ -46,8 +46,8 @@ allocCluster.test.skip('register with slow affine', {
     cluster.logger.whitelist(
         'warn', 'Relay advertise failed with expected err'
     );
-    cluster.logger.whitelist('info', 'circuit became unhealthy');
-    cluster.logger.whitelist('info', 'circuit returned to good health');
+    cluster.logger.whitelist('info', 'circuit event: unhealthy');
+    cluster.logger.whitelist('info', 'circuit event: healthy');
     cluster.logger.whitelist('warn', 'stale tombstone');
 
     var i;
@@ -104,7 +104,7 @@ allocCluster.test.skip('register with slow affine', {
 
         var circuitHealthy = [];
         for (var j = 0; j < logs.length; j++) {
-            if (logs[j].msg === 'circuit returned to good health') {
+            if (logs[j].msg === 'circuit event: healthy') {
                 circuitHealthy.push(logs[j]);
             }
         }
@@ -174,7 +174,7 @@ allocCluster.test.skip('register with slow affine', {
 
         var circuitUnhealthy = [];
         for (var j = 0; j < logs.length; j++) {
-            if (logs[j].msg === 'circuit became unhealthy') {
+            if (logs[j].msg === 'circuit event: unhealthy') {
                 circuitUnhealthy.push(logs[j]);
             }
         }
