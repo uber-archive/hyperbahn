@@ -354,9 +354,6 @@ HealthyState.prototype.toString = function healthyToString() {
 
 HealthyState.prototype.shouldRequest = function shouldRequest() {
     var now = this.timers.now();
-    if (this.circuit.state !== this) {
-        return this.circuit.state.shouldRequest();
-    }
 
     this.checkPeriod(now);
 
@@ -464,9 +461,6 @@ UnhealthyState.prototype.toString = function healthyToString() {
 
 UnhealthyState.prototype.shouldRequest = function shouldRequest() {
     var now = this.timers.now();
-    if (this.circuit.state !== this) {
-        return this.circuit.state.shouldRequest();
-    }
 
     this.checkPeriod(now);
 
