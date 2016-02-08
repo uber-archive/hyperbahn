@@ -448,11 +448,7 @@ function handleRequest(req, buildRes) {
         serviceChannel = self.createServiceChannel(nextService);
     }
 
-    if (serviceChannel.handler.circuits &&
-        (req.serviceName !== 'hyperbahn' && (
-            req.endpoint !== 'ad' || req.endpoint !== 'relay-ad'
-        ))
-    ) {
+    if (serviceChannel.handler.circuits) {
         var circuit = serviceChannel.handler.circuits.getCircuit(
             req.headers.cn || 'no-cn', req.serviceName, req.endpoint
         );
@@ -1449,7 +1445,11 @@ function initCircuits() {
         statsd: self.statsd,
         random: self.random,
         egressNodes: self.egressNodes,
-        config: self.circuitsConfig
+        config: self.circuitsConfig,
+        shorts: { // TODO: remoteConfig hookup
+           '*~hyperbahn~ad': true,
+           '*~hyperbahn~relay-ad': true
+        }
     });
 };
 
