@@ -439,7 +439,6 @@ inherits(HealthyState, PeriodicState);
 
 HealthyState.prototype.type = 'tchannel.healthy';
 HealthyState.prototype.healthy = true;
-HealthyState.prototype.locked = false;
 
 HealthyState.prototype.toString = function healthyToString() {
     var self = this;
@@ -535,7 +534,6 @@ inherits(UnhealthyState, PeriodicState);
 
 UnhealthyState.prototype.type = 'tchannel.unhealthy';
 UnhealthyState.prototype.healthy = false;
-UnhealthyState.prototype.locked = false;
 
 UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
     var self = this;
@@ -614,54 +612,4 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     }
 
     self.healthyCount = 0;
-};
-
-function LockedHealthyState(options) {
-    var self = this;
-
-    State.call(self, options);
-}
-
-inherits(LockedHealthyState, State);
-
-LockedHealthyState.prototype.type = 'tchannel.healthy-locked';
-LockedHealthyState.prototype.healthy = true;
-LockedHealthyState.prototype.locked = true;
-
-LockedHealthyState.prototype.toString = function lockedHealthyToString() {
-    return '[Healthy state (locked)]';
-};
-
-LockedHealthyState.prototype.willCallNextHandler = function willCallNextHandler() {
-    return true;
-};
-
-LockedHealthyState.prototype.shouldRequest = function shouldRequest() {
-    var self = this;
-
-    return self.nextHandler.shouldRequest();
-};
-
-function LockedUnhealthyState(options) {
-    var self = this;
-
-    State.call(self, options);
-}
-
-inherits(LockedUnhealthyState, State);
-
-LockedUnhealthyState.prototype.type = 'tchannel.unhealthy-locked';
-LockedUnhealthyState.prototype.healthy = false;
-LockedUnhealthyState.prototype.locked = true;
-
-LockedUnhealthyState.prototype.toString = function lockedUnhealthyToString() {
-    return '[Unhealthy state (locked)]';
-};
-
-LockedUnhealthyState.prototype.willCallNextHandler = function willCallNextHandler() {
-    return false;
-};
-
-LockedUnhealthyState.prototype.shouldRequest = function shouldRequest() {
-    return 0;
 };
