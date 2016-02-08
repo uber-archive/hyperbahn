@@ -23,14 +23,7 @@
 var DebugLogtron = require('debug-logtron');
 var NullLogtron = require('null-logtron');
 
-var path = require('path');
-var fs = require('fs');
-var crypto = require('crypto');
-
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
-var TChannelThrift = require('tchannel/as/thrift.js');
-
-var thriftSource = fs.readFileSync(path.join(__dirname, '../../hyperbahn.thrift'), 'utf8');
 
 module.exports = runTests;
 

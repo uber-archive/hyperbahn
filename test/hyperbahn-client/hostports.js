@@ -307,15 +307,15 @@ function runTests(HyperbahnCluster) {
 
 test('convertHost decodes addresses correctly', function t(assert) {
     var ipConversionTests = [
-        [{ ip: { type: 'ipv4', ipv4: 0 }, port: 1234 }, '0.0.0.0:1234'],
-        [{ ip: { type: 'ipv4', ipv4: 16843009 }, port: 4321 }, '1.1.1.1:4321'],
-        [{ ip: { type: 'ipv4', ipv4: 16975111 }, port: 0 }, '1.3.5.7:0'],
-        [{ ip: { type: 'ipv4', ipv4: -1 }, port: 7654 }, '255.255.255.255:7654'],
+        [{ip: {type: 'ipv4', ipv4: 0}, port: 1234}, '0.0.0.0:1234'],
+        [{ip: {type: 'ipv4', ipv4: 16843009}, port: 4321}, '1.1.1.1:4321'],
+        [{ip: {type: 'ipv4', ipv4: 16975111}, port: 0}, '1.3.5.7:0'],
+        [{ip: {type: 'ipv4', ipv4: -1}, port: 7654}, '255.255.255.255:7654']
     ];
 
-    ipConversionTests.forEach(function(test) {
-        var expected = test[1];
-        var value = hyperbahnUtils.convertHost(test[0]);
+    ipConversionTests.forEach(function testRow(tt) {
+        var expected = tt[1];
+        var value = hyperbahnUtils.convertHost(tt[0]);
         assert.equal(value, expected);
     });
 
