@@ -64,7 +64,6 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
     var circuit = self.circuitsByEndpointName['$' + endpointName];
     if (!circuit) {
         circuit = new Circuit(self.root, callerName, serviceName, endpointName);
-        circuit.stateOptions = new StateOptions(circuit, self.root.stateOptions);
         circuit.stateChangedEvent.on(self.root.boundEmitCircuitStateChange);
         circuit.setState(HealthyState);
         self.circuitsByEndpointName['$' + endpointName] = circuit;
@@ -202,7 +201,7 @@ function Circuit(root, callerName, serviceName, endpointName) {
 
     self.root = root;
     self.state = null;
-    self.stateOptions = null;
+    self.stateOptions = new StateOptions(self, self.root.stateOptions);
 
     self.stateChangedEvent = self.defineEvent('stateChanged');
     self.callerName = callerName || 'no-cn';
