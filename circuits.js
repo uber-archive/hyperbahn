@@ -218,7 +218,6 @@ function Circuit(root, callerName, serviceName, endpointName) {
         clean(self.callerName) + '.' +
         clean(self.serviceName) + '.' +
         clean(self.endpointName);
-    self.stateOptions = null;
 }
 
 inherits(Circuit, EventEmitter);
