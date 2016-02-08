@@ -267,52 +267,51 @@ function StateOptions(circuit, options) {
     this.probation = options.probation;
 }
 
-/*
- * Collectively, the health states receive additional options through the peer
- * options:
- * - maxErrorRate (error rate to go from healthy to unhealthy)
- * - minResponseCount (response count to go from unhealthy to healthy)
- * - TODO
- *
- * They also inherit:
- * - channel.timers
- * - channel.random
- */
-
-function State(options) {
+function PeriodicState(options) {
     this.circuit = options.circuit;
     this.nextHandler = options.nextHandler;
     this.timers = options.timers;
     this.timeHeap = options.timeHeap;
     this.random = options.random;
+
+    this.period = options.period || 1000; // ms
+    this.start = 0;
+    this.timeout = 0;
+    this.periodTimer = null;
+
+    this.startNewPeriod(this.timers.now());
 }
 
-State.prototype.onDeactivate = function onDeactivate() {
+PeriodicState.prototype.onDeactivate = function onDeactivate() {
+    if (this.periodTimer) {
+        this.periodTimer.cancel();
+        this.periodTimer = null;
+    }
 };
 
-State.prototype.onRequest = function onRequest(/* req */) {
+PeriodicState.prototype.onRequest = function onRequest(/* req */) {
 };
 
-State.prototype.onRequestHealthy = function onRequestHealthy() {
+PeriodicState.prototype.onRequestHealthy = function onRequestHealthy() {
 };
 
-State.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+PeriodicState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
 };
 
-State.prototype.onRequestError = function onRequestError() {
+PeriodicState.prototype.onRequestError = function onRequestError() {
 };
 
-State.prototype.close = function close(callback) {
+PeriodicState.prototype.close = function close(callback) {
     callback(null);
 };
 
-State.prototype.invalidate = function invalidate() {
+PeriodicState.prototype.invalidate = function invalidate() {
     if (this.circuit.invalidateScore) {
         this.circuit.invalidateScore();
     }
 };
 
-State.prototype.shouldRequest = function shouldRequest() {
+PeriodicState.prototype.shouldRequest = function shouldRequest() {
     var now = this.timers.now();
     if (this.willCallNextHandler(now)) {
         return this.nextHandler.shouldRequest();
@@ -323,29 +322,10 @@ State.prototype.shouldRequest = function shouldRequest() {
     }
 };
 
-function PeriodicState(options) {
-    State.call(this, options);
-
-    this.period = options.period || 1000; // ms
-    this.start = 0;
-    this.timeout = 0;
-    this.periodTimer = null;
-
-    this.startNewPeriod(this.timers.now());
-}
-inherits(PeriodicState, State);
-
 PeriodicState.prototype.startNewPeriod = function startNewPeriod(now) {
     this.start = now;
     if (this.onNewPeriod()) {
         this.setPeriodTimer(this.period, now);
-    }
-};
-
-PeriodicState.prototype.onDeactivate = function onDeactivate() {
-    if (this.periodTimer) {
-        this.periodTimer.cancel();
-        this.periodTimer = null;
     }
 };
 
