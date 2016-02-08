@@ -376,10 +376,6 @@ PeriodicState.prototype.checkPeriod = function checkPeriod(inTimeout, now) {
     return false;
 };
 
-PeriodicState.prototype.willCallNextHandler = function willCallNextHandler(now) {
-    this.checkPeriod(false, now);
-};
-
 function HealthyState(options) {
     PeriodicState.call(this, options);
 
