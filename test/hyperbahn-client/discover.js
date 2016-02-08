@@ -71,7 +71,7 @@ function runTests(HyperbahnCluster) {
         }
 
         function onDiscovered(err, hosts) {
-            assert.error(err, "foo", err);  // Should not have error here
+            assert.ifError(err, 'successful discover should not return error');
 
             assert.deepLooseEqual(hosts, [bob.channel.hostPort]);
 
@@ -97,8 +97,9 @@ function runTests(HyperbahnCluster) {
         discoverClient.discover(null, onDiscovered);
 
         function onDiscovered(err, hosts) {
-            assert.error(!err, "NoPeersAvailable response", "expected NoPeersAvailable error");
-            assert.deepEqual(hosts, [], "expect empty host list");
+            assert.ok(err, 'expected error');
+            assert.equal(err.message, 'no peer available for hello-steve');
+            assert.deepEqual(hosts, [], 'expect empty host list');
 
             discoverClient.destroy();
             assert.end();
@@ -123,8 +124,9 @@ function runTests(HyperbahnCluster) {
         discoverClient.discover({timeout: 100}, onDiscovered);
 
         function onDiscovered(err, hosts) {
-            assert.error(!err, "expect TChannel error");
-            assert.deepEqual(hosts, null, "expect null host list");
+            assert.ok(err, 'expected TChannel error');
+            assert.equal(err.message, 'no such endpoint service="hyperbahn" endpoint="Hyperbahn::discover"');
+            assert.deepEqual(hosts, null, 'expect null host list');
 
             discoverClient.destroy();
             assert.end();
