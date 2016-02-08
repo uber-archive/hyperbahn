@@ -324,17 +324,21 @@ PeriodicState.prototype.setPeriodTimer = function setPeriodTimer(timeout, now) {
 
 PeriodicState.prototype.onTimeout = function onTimeout() {
     var now = this.timers.now();
-    this.checkPeriod(true, now);
+    var elapsed = now - this.start;
+    var remain = this.period - elapsed;
+    if (remain <= 0) {
+        this.startNewPeriod(now);
+    } else {
+        this.setPeriodTimer(remain, now);
+    }
 };
 
-PeriodicState.prototype.checkPeriod = function checkPeriod(inTimeout, now) {
+PeriodicState.prototype.checkPeriod = function checkPeriod(now) {
     var elapsed = now - this.start;
     var remain = this.period - elapsed;
     if (remain <= 0) {
         this.startNewPeriod(now);
         return true;
-    } else if (inTimeout) {
-        this.setPeriodTimer(remain, now);
     }
     return false;
 };
@@ -360,7 +364,7 @@ HealthyState.prototype.toString = function healthyToString() {
 };
 
 HealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
-    this.checkPeriod(false, now);
+    this.checkPeriod(now);
 
     // active unless .onNewPeriod transitioned
     return this.circuit.state === this;
@@ -399,7 +403,7 @@ HealthyState.prototype.onRequest = function onRequest(/* req */) {
 HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     ++this.healthyCount;
     ++this.totalRequests;
-    if (!this.checkPeriod(false, this.timers.now())) {
+    if (!this.checkPeriod(this.timers.now())) {
         this.invalidate();
     }
 };
@@ -407,7 +411,7 @@ HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
 HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
     ++this.totalRequests;
     ++this.unhealthyCount;
-    if (!this.checkPeriod(false, this.timers.now())) {
+    if (!this.checkPeriod(this.timers.now())) {
         this.invalidate();
     }
 };
@@ -420,7 +424,7 @@ HealthyState.prototype.onRequestError = function onRequestError(err) {
     } else {
         ++this.healthyCount;
     }
-    if (!this.checkPeriod(false, this.timers.now())) {
+    if (!this.checkPeriod(this.timers.now())) {
         this.invalidate();
     }
 };
@@ -461,7 +465,7 @@ UnhealthyState.prototype.toString = function healthyToString() {
 };
 
 UnhealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
-    this.checkPeriod(false, now);
+    this.checkPeriod(now);
 
     // if .checkPeriod transitioned us back to healthy, we're done
     if (this.circuit.state !== this) {
@@ -474,7 +478,7 @@ UnhealthyState.prototype.willCallNextHandler = function willCallNextHandler(now)
 
 UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
     this.triedThisPeriod = true;
-    if (!this.checkPeriod(false, this.timers.now())) {
+    if (!this.checkPeriod(this.timers.now())) {
         this.invalidate();
     }
 };
@@ -485,13 +489,13 @@ UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
         this.circuit.setState(HealthyState);
     } else {
         this.invalidate();
-        this.checkPeriod(false, this.timers.now());
+        this.checkPeriod(this.timers.now());
     }
 };
 
 UnhealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
     this.healthyCount = 0;
-    this.checkPeriod(false, this.timers.now());
+    this.checkPeriod(this.timers.now());
 };
 
 UnhealthyState.prototype.onRequestError = function onRequestError(err) {
