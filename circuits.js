@@ -483,8 +483,8 @@ HealthyState.prototype.onRequest = function onRequest(/* req */) {
 
 HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     var self = this;
-    self.healthyCount++;
-    self.totalRequests++;
+    ++self.healthyCount;
+    ++self.totalRequests;
     if (!self.checkPeriod(false, self.timers.now())) {
         self.invalidate();
     }
@@ -492,8 +492,8 @@ HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
 
 HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
     var self = this;
-    self.totalRequests++;
-    self.unhealthyCount++;
+    ++self.totalRequests;
+    ++self.unhealthyCount;
     if (!self.checkPeriod(false, self.timers.now())) {
         self.invalidate();
     }
@@ -502,12 +502,12 @@ HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
 HealthyState.prototype.onRequestError = function onRequestError(err) {
     var self = this;
 
-    self.totalRequests++;
+    ++self.totalRequests;
     var codeString = errors.classify(err);
     if (errors.isUnhealthy(codeString)) {
-        self.unhealthyCount++;
+        ++self.unhealthyCount;
     } else {
-        self.healthyCount++;
+        ++self.healthyCount;
     }
     if (!self.checkPeriod(false, self.timers.now())) {
         self.invalidate();
@@ -579,7 +579,7 @@ UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
 UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
     var self = this;
 
-    self.healthyCount++;
+    ++self.healthyCount;
     if (self.healthyCount > self.minResponseCount) {
         self.circuit.setState(HealthyState);
     } else {
