@@ -266,10 +266,10 @@ function observeTransition(logger, statsd, eventName, logInfo) {
 
 module.exports = Circuits;
 
-function StateOptions(stateMachine, options) {
+function StateOptions(circuit, options) {
     options = options || {};
     // for setState changes
-    this.stateMachine = stateMachine;
+    this.circuit = circuit;
     // for downstream shouldRequest, used differently in Peer and Circuit.
     this.nextHandler = options.nextHandler;
     // for mocking tests
@@ -306,7 +306,7 @@ function StateOptions(stateMachine, options) {
 function State(options) {
     var self = this;
 
-    self.stateMachine = options.stateMachine;
+    self.circuit = options.circuit;
     self.nextHandler = options.nextHandler;
     self.timers = options.timers;
     self.timeHeap = options.timeHeap;
@@ -335,8 +335,8 @@ State.prototype.close = function close(callback) {
 State.prototype.invalidate = function invalidate() {
     var self = this;
 
-    if (self.stateMachine.invalidateScore) {
-        self.stateMachine.invalidateScore();
+    if (self.circuit.invalidateScore) {
+        self.circuit.invalidateScore();
     }
 };
 
@@ -346,8 +346,8 @@ State.prototype.shouldRequest = function shouldRequest() {
     var now = self.timers.now();
     if (self.willCallNextHandler(now)) {
         return self.nextHandler.shouldRequest();
-    } else if (self.stateMachine.state !== self) {
-        return self.stateMachine.state.shouldRequest();
+    } else if (self.circuit.state !== self) {
+        return self.circuit.state.shouldRequest();
     } else {
         return 0;
     }
@@ -451,7 +451,7 @@ HealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
     self.checkPeriod(false, now);
 
     // active unless .onNewPeriod transitioned
-    return self.stateMachine.state === self;
+    return self.circuit.state === self;
 };
 
 HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
@@ -469,10 +469,10 @@ HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         self.totalRequests > self.minRequests) {
         // Transition to unhealthy state if the healthy request rate dips below
         // the acceptable threshold.
-        self.stateMachine.setState(UnhealthyState);
+        self.circuit.setState(UnhealthyState);
         // TODO: useful to mark self dead somehow? for now we're just using "am
         // I still the current state" logic coupled to the consuming
-        // stateMachine in .willCallNextHandler
+        // circuit in .willCallNextHandler
     } else {
         // okay last period, reset counts for the new period
         self.healthyCount = 0;
@@ -539,7 +539,7 @@ UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
     var self = this;
 
     if (self.healthyCount >= self.minResponseCount) {
-        self.stateMachine.setState(HealthyState);
+        self.circuit.setState(HealthyState);
         return false;
     }
 
@@ -566,7 +566,7 @@ UnhealthyState.prototype.willCallNextHandler = function willCallNextHandler(now)
     self.checkPeriod(false, now);
 
     // if .checkPeriod transitioned us back to healthy, we're done
-    if (self.stateMachine.state !== self) {
+    if (self.circuit.state !== self) {
         return false;
     }
 
@@ -588,7 +588,7 @@ UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
 
     self.healthyCount++;
     if (self.healthyCount > self.minResponseCount) {
-        self.stateMachine.setState(HealthyState);
+        self.circuit.setState(HealthyState);
     } else {
         self.invalidate();
         self.checkPeriod(false, self.timers.now());
