@@ -88,6 +88,8 @@ ServiceCircuits.prototype.collectCircuitTuples = function collectCircuitTuples(t
 
 function Circuits(options) {
     EventEmitter.call(this);
+    this.logger = options.logger;
+    this.statsd = options.statsd;
     this.circuitStateChangeEvent = this.defineEvent('circuitStateChange');
     this.circuitsByServiceName = {};
     this.config = options.config || {};

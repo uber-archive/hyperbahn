@@ -1469,6 +1469,8 @@ function initCircuits() {
     self.circuits = new Circuits({
         timeHeap: self.channel.timeHeap,
         timers: self.channel.timers,
+        logger: self.logger,
+        statsd: self.statsd,
         random: self.random,
         egressNodes: self.egressNodes,
         config: self.circuitsConfig
