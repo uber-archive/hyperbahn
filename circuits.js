@@ -409,7 +409,7 @@ HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         this.totalRequests > this.minRequests) {
         // Transition to unhealthy state if the healthy request rate dips below
         // the acceptable threshold.
-        this.circuit.setState(UnhealthyState);
+        this.circuit.setState(this.circuit.shorted ? ShortedState : UnhealthyState);
         // TODO: useful to mark this dead somehow? for now we're just using "am
         // I still the current state" logic coupled to the consuming
         // circuit in .shouldRequest
@@ -535,4 +535,32 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
     }
 
     this.healthyCount = 0;
+};
+
+function ShortedState(options) {
+    UnhealthyState.call(this, options);
+}
+
+inherits(ShortedState, UnhealthyState);
+
+ShortedState.prototype.type = 'tchannel.shorted';
+ShortedState.prototype.name = 'shorted';
+
+ShortedState.prototype.toString = function shortedHealthyToString() {
+    return '[Shorted state (unhealthy but passing traffic)]';
+};
+
+ShortedState.prototype.shouldRequest = function shouldRequest() {
+    var now = this.timers.now();
+
+    this.checkPeriod(now);
+
+    if (this.circuit.state !== this) {
+        return this.circuit.state.shouldRequest();
+    }
+
+    // TODO: do we want a separate stat for shorted requests?
+
+    // pass all traffic regardless
+    return true;
 };
