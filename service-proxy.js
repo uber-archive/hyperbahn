@@ -1433,7 +1433,7 @@ ServiceDispatchHandler.prototype.onCircuitStateChange =
 function onCircuitStateChange(change) {
     var self = this;
 
-    var circuit = change.circuit;
+    var circuit = change.target;
     var oldState = change.oldState;
     var state = change.state;
 

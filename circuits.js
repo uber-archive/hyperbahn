@@ -40,13 +40,6 @@ AlwaysShouldRequestHandler.prototype.shouldRequest = function shouldRequest() {
 
 var alwaysShouldRequestHandler = new AlwaysShouldRequestHandler();
 
-function CircuitStateChange(circuit, oldState, state) {
-    var self = this;
-    self.circuit = circuit;
-    self.oldState = oldState;
-    self.state = state;
-}
-
 //  circuit = circuits                        : Circuits
 //      .circuitsByServiceName[serviceName]   : ServiceCircuits
 //      .circuitsByCallerName[callerName]     : EndpointCircuits
@@ -64,9 +57,7 @@ EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceN
     if (!circuit) {
         circuit = new Circuit(callerName, serviceName, endpointName);
         circuit.stateOptions = new states.StateOptions(circuit, self.root.stateOptions);
-        circuit.stateChangedEvent.on(function circuitStateChanged(newStates) {
-            self.root.emitCircuitStateChange(circuit, newStates);
-        });
+        circuit.stateChangedEvent.on(self.root.boundEmitCircuitStateChange);
         circuit.setState(states.HealthyState);
         self.circuitsByEndpointName['$' + endpointName] = circuit;
     }
@@ -127,6 +118,11 @@ function Circuits(options) {
         probation: self.config.probation
     });
     self.egressNodes = options.egressNodes;
+    self.boundEmitCircuitStateChange = boundEmitCircuitStateChange;
+
+    function boundEmitCircuitStateChange(change) {
+        self.circuitStateChangeEvent.emit(self, change);
+    }
 }
 
 inherits(Circuits, EventEmitter);
@@ -190,14 +186,6 @@ Circuits.prototype.updateServices = function updateServices() {
             delete self.circuitsByServiceName[serviceName];
         }
     }
-};
-
-Circuits.prototype.emitCircuitStateChange = function emitCircuitStateChange(circuit, newStates) {
-    var self = this;
-    self.circuitStateChangeEvent.emit(
-        self.root,
-        new CircuitStateChange(circuit, newStates[0], newStates[1])
-    );
 };
 
 function Circuit(callerName, serviceName, endpointName) {

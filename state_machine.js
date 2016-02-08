@@ -53,6 +53,12 @@ StateMachine.prototype.setState = function setState(StateType) {
     if (oldState) {
         oldState.onDeactivate();
     }
-    self.stateChangedEvent.emit(self, [oldState, state]);
+    self.stateChangedEvent.emit(self, new StateChange(self, oldState, state));
     return state;
 };
+
+function StateChange(target, oldState, state) {
+    this.target = target;
+    this.oldState = oldState;
+    this.state = state;
+}
