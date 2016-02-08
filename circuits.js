@@ -294,17 +294,6 @@ PeriodicState.prototype.invalidate = function invalidate() {
     }
 };
 
-PeriodicState.prototype.shouldRequest = function shouldRequest() {
-    var now = this.timers.now();
-    if (this.willCallNextHandler(now)) {
-        return true;
-    } else if (this.circuit.state !== this) {
-        return this.circuit.state.shouldRequest();
-    } else {
-        return 0;
-    }
-};
-
 PeriodicState.prototype.startNewPeriod = function startNewPeriod(now) {
     this.start = now;
     if (this.onNewPeriod()) {
@@ -363,11 +352,20 @@ HealthyState.prototype.toString = function healthyToString() {
     return format('[Healthy %s healthy %s unhealthy]', this.healthyCount, this.unhealthyCount);
 };
 
-HealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
+HealthyState.prototype.shouldRequest = function shouldRequest() {
+    var now = this.timers.now();
+    if (this.circuit.state !== this) {
+        return this.circuit.state.shouldRequest();
+    }
+
     this.checkPeriod(now);
 
     // active unless .onNewPeriod transitioned
-    return this.circuit.state === this;
+    if (this.circuit.state !== this) {
+        return this.circuit.state.shouldRequest();
+    }
+
+    return true;
 };
 
 HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
@@ -386,7 +384,7 @@ HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         this.circuit.setState(UnhealthyState);
         // TODO: useful to mark this dead somehow? for now we're just using "am
         // I still the current state" logic coupled to the consuming
-        // circuit in .willCallNextHandler
+        // circuit in .shouldRequest
     } else {
         // okay last period, reset counts for the new period
         this.healthyCount = 0;
@@ -464,12 +462,17 @@ UnhealthyState.prototype.toString = function healthyToString() {
     return format('[Unhealthy %s consecutive healthy requests]', this.healthyCount);
 };
 
-UnhealthyState.prototype.willCallNextHandler = function willCallNextHandler(now) {
+UnhealthyState.prototype.shouldRequest = function shouldRequest() {
+    var now = this.timers.now();
+    if (this.circuit.state !== this) {
+        return this.circuit.state.shouldRequest();
+    }
+
     this.checkPeriod(now);
 
     // if .checkPeriod transitioned us back to healthy, we're done
     if (this.circuit.state !== this) {
-        return false;
+        return this.circuit.state.shouldRequest();
     }
 
     // Allow one trial per period
