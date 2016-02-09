@@ -163,8 +163,6 @@ Circuits.prototype.updateServices = function updateServices() {
 };
 
 function Circuit(root, callerName, serviceName, endpointName) {
-    EventEmitter.call(this);
-
     this.root = root;
     this.state = null;
     this.stateOptions = new StateOptions(this, this.root.stateOptions);
@@ -185,8 +183,6 @@ function Circuit(root, callerName, serviceName, endpointName) {
 
     this.setState(HealthyState);
 }
-
-inherits(Circuit, EventEmitter);
 
 Circuit.prototype.setState = function setState(StateType) {
     var currentType = this.state && this.state.type;
