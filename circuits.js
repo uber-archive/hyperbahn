@@ -20,26 +20,20 @@
 
 'use strict';
 
-var inherits = require('util').inherits;
-var EventEmitter = require('tchannel/lib/event_emitter');
 var Result = require('bufrw/result');
+var assert = require('assert');
+var format = require('util').format;
+var inherits = require('util').inherits;
+
+var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
+var errors = require('tchannel/errors');
 
-var states = require('./states.js');
-var StateMachine = require('./state_machine.js');
-
-// Each circuit uses the circuits collection as the "nextHandler" for
-// "shouldRequest" to consult.  Peers use this hook to weight peers both by
-// healthy and other factors, but the circuit only needs to know about health
-// before forwarding.
-
-function AlwaysShouldRequestHandler() { }
-
-AlwaysShouldRequestHandler.prototype.shouldRequest = function shouldRequest() {
-    return true;
-};
-
-var alwaysShouldRequestHandler = new AlwaysShouldRequestHandler();
+function StateChange(target, oldState, state) {
+    this.target = target;
+    this.oldState = oldState;
+    this.state = state;
+}
 
 //  circuit = circuits                        : Circuits
 //      .circuitsByServiceName[serviceName]   : ServiceCircuits
@@ -47,111 +41,91 @@ var alwaysShouldRequestHandler = new AlwaysShouldRequestHandler();
 //      .circuitsByEndpointName[endpointName]
 
 function EndpointCircuits(root) {
-    var self = this;
-    self.root = root;
-    self.circuitsByEndpointName = {};
+    this.root = root;
+    this.circuitsByEndpointName = {};
 }
 
 EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
-    var self = this;
-    var circuit = self.circuitsByEndpointName['$' + endpointName];
+    var circuit = this.circuitsByEndpointName['$' + endpointName];
     if (!circuit) {
-        circuit = new Circuit(callerName, serviceName, endpointName);
-        circuit.stateOptions = new states.StateOptions(circuit, self.root.stateOptions);
-        circuit.stateChangedEvent.on(self.root.boundEmitCircuitStateChange);
-        circuit.setState(states.HealthyState);
-        self.circuitsByEndpointName['$' + endpointName] = circuit;
+        circuit = new Circuit(this.root, callerName, serviceName, endpointName);
+        this.circuitsByEndpointName['$' + endpointName] = circuit;
     }
     return circuit;
 };
 
 EndpointCircuits.prototype.collectCircuitTuples = function collectCircuitTuples(tuples) {
-    var self = this;
-    var endpointNames = Object.keys(self.circuitsByEndpointName);
+    var endpointNames = Object.keys(this.circuitsByEndpointName);
     for (var index = 0; index < endpointNames.length; index++) {
         var endpointName = endpointNames[index];
-        var circuit = self.circuitsByEndpointName[endpointName];
+        var circuit = this.circuitsByEndpointName[endpointName];
         tuples.push([circuit.callerName, circuit.serviceName, circuit.endpointName]);
     }
 };
 
 function ServiceCircuits(root) {
-    var self = this;
-    self.root = root;
-    self.circuitsByCallerName = {};
+    this.root = root;
+    this.circuitsByCallerName = {};
 }
 
 ServiceCircuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
-    var self = this;
-    var circuits = self.circuitsByCallerName['$' + callerName];
+    var circuits = this.circuitsByCallerName['$' + callerName];
     if (!circuits) {
-        circuits = new EndpointCircuits(self.root);
-        self.circuitsByCallerName['$' + callerName] = circuits;
+        circuits = new EndpointCircuits(this.root);
+        this.circuitsByCallerName['$' + callerName] = circuits;
     }
     return circuits.getCircuit(callerName, serviceName, endpointName);
 };
 
 ServiceCircuits.prototype.collectCircuitTuples = function collectCircuitTuples(tuples) {
-    var self = this;
-    var callerNames = Object.keys(self.circuitsByCallerName);
+    var callerNames = Object.keys(this.circuitsByCallerName);
     for (var index = 0; index < callerNames.length; index++) {
         var callerName = callerNames[index];
-        var circuit = self.circuitsByCallerName[callerName];
+        var circuit = this.circuitsByCallerName[callerName];
         circuit.collectCircuitTuples(tuples);
     }
 };
 
 function Circuits(options) {
-    var self = this;
-    EventEmitter.call(self);
-    self.circuitStateChangeEvent = self.defineEvent('circuitStateChange');
-    self.circuitsByServiceName = {};
-    self.config = options.config || {};
+    EventEmitter.call(this);
+    this.circuitStateChangeEvent = this.defineEvent('circuitStateChange');
+    this.circuitsByServiceName = {};
+    this.config = options.config || {};
 
-    self.stateOptions = new states.StateOptions(null, {
+    this.stateOptions = new StateOptions(null, {
         timeHeap: options.timeHeap,
         timers: options.timers,
         random: options.random,
-        nextHandler: alwaysShouldRequestHandler,
-        period: self.config.period,
-        maxErrorRate: self.config.maxErrorRate,
-        minRequests: self.config.minRequests,
-        probation: self.config.probation
+        period: this.config.period,
+        maxErrorRate: this.config.maxErrorRate,
+        minRequests: this.config.minRequests,
+        probation: this.config.probation
     });
-    self.egressNodes = options.egressNodes;
-    self.boundEmitCircuitStateChange = boundEmitCircuitStateChange;
-
-    function boundEmitCircuitStateChange(change) {
-        self.circuitStateChangeEvent.emit(self, change);
-    }
+    this.egressNodes = options.egressNodes;
 }
 
 inherits(Circuits, EventEmitter);
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
-    var self = this;
-    var circuits = self.circuitsByServiceName['$' + serviceName];
+    var circuits = this.circuitsByServiceName['$' + serviceName];
     if (!circuits) {
-        circuits = new ServiceCircuits(self);
-        self.circuitsByServiceName['$' + serviceName] = circuits;
+        circuits = new ServiceCircuits(this);
+        this.circuitsByServiceName['$' + serviceName] = circuits;
     }
     return circuits.getCircuit(callerName, serviceName, endpointName);
 };
 
 Circuits.prototype.getCircuitTuples = function getCircuitTuples() {
-    var self = this;
     var tuples = [];
-    var serviceNames = Object.keys(self.circuitsByServiceName);
+    var serviceNames = Object.keys(this.circuitsByServiceName);
     for (var index = 0; index < serviceNames.length; index++) {
         var serviceName = serviceNames[index];
-        self.circuitsByServiceName[serviceName].collectCircuitTuples(tuples);
+        this.circuitsByServiceName[serviceName].collectCircuitTuples(tuples);
     }
     return tuples;
 };
 
 Circuits.prototype.getCircuitForRequest = function getCircuitForRequest(req) {
-    var self = this;
-
     // Default the caller name.
     // All callers that fail to specifiy a cn share a circuit for each sn:en
     // and fail together.
@@ -162,7 +136,7 @@ Circuits.prototype.getCircuitForRequest = function getCircuitForRequest(req) {
     }
 
     var arg1 = String(req.arg1);
-    var circuit = self.getCircuit(callerName, serviceName, arg1);
+    var circuit = this.getCircuit(callerName, serviceName, arg1);
 
     if (!circuit.state.shouldRequest()) {
         return new Result(new ErrorFrame('Declined', 'Service is not healthy'));
@@ -179,56 +153,350 @@ function ErrorFrame(codeName, message) {
 // Called upon membership change to collect services that the corresponding
 // exit node is no longer responsible for.
 Circuits.prototype.updateServices = function updateServices() {
-    var self = this;
-    var serviceNames = Object.keys(self.circuitsByServiceName);
+    var serviceNames = Object.keys(this.circuitsByServiceName);
     for (var index = 0; index < serviceNames.length; index++) {
         var serviceName = serviceNames[index];
-        if (!self.egressNodes.isExitFor(serviceName)) {
-            delete self.circuitsByServiceName[serviceName];
+        if (!this.egressNodes.isExitFor(serviceName)) {
+            delete this.circuitsByServiceName[serviceName];
         }
     }
 };
 
-function Circuit(callerName, serviceName, endpointName) {
-    var self = this;
-    EventEmitter.call(self);
-    StateMachine.call(self);
-    self.stateChangedEvent = self.defineEvent('stateChanged');
-    self.callerName = callerName || 'no-cn';
-    self.serviceName = serviceName;
-    self.endpointName = endpointName;
-    self.byCallerStatSuffix =
+function Circuit(root, callerName, serviceName, endpointName) {
+    this.root = root;
+    this.state = null;
+    this.stateOptions = new StateOptions(this, this.root.stateOptions);
+
+    this.callerName = callerName || 'no-cn';
+    this.serviceName = serviceName;
+    this.endpointName = endpointName;
+    this.byCallerStatSuffix =
         '.by-caller.' +
-        clean(self.callerName) + '.' +
-        clean(self.serviceName) + '.' +
-        clean(self.endpointName);
-    self.byServiceStatSuffix =
+        clean(this.callerName) + '.' +
+        clean(this.serviceName) + '.' +
+        clean(this.endpointName);
+    this.byServiceStatSuffix =
         '.by-service.' +
-        clean(self.callerName) + '.' +
-        clean(self.serviceName) + '.' +
-        clean(self.endpointName);
-    self.stateOptions = null;
+        clean(this.callerName) + '.' +
+        clean(this.serviceName) + '.' +
+        clean(this.endpointName);
+
+    this.setState(HealthyState);
 }
 
-inherits(Circuit, EventEmitter);
+Circuit.prototype.setState = function setState(StateType) {
+    var currentType = this.state && this.state.type;
+    if (currentType &&
+        StateType.prototype.type &&
+        StateType.prototype.type === currentType) {
+        return null;
+    }
 
-Circuit.prototype.setState = StateMachine.prototype.setState;
+    assert(this.stateOptions, 'state machine must have stateOptions');
+    var state = new StateType(this.stateOptions);
+    if (state && state.type === currentType) {
+        return null;
+    }
+
+    var oldState = this.state;
+    this.state = state;
+    if (oldState) {
+        oldState.onDeactivate();
+    }
+    this.root.circuitStateChangeEvent.emit(this.root, new StateChange(this, oldState, state));
+    return state;
+};
 
 Circuit.prototype.extendLogInfo = function extendLogInfo(info) {
-    var self = this;
-    info.callerName = self.callerName;
-    info.serviceName = self.serviceName;
-    info.endpointName = self.endpointName;
+    info.callerName = this.callerName;
+    info.serviceName = this.serviceName;
+    info.endpointName = this.endpointName;
     return info;
 };
 
 Circuit.prototype.observeTransition =
 function observeTransition(logger, statsd, eventName, logInfo) {
-    var self = this;
     statsd.increment('circuits.' + eventName + '.total', 1);
-    statsd.increment('circuits.' + eventName + self.byCallerStatSuffix, 1);
-    statsd.increment('circuits.' + eventName + self.byServiceStatSuffix, 1);
-    logger.info('circuit event: ' + eventName, self.extendLogInfo(logInfo));
+    statsd.increment('circuits.' + eventName + this.byCallerStatSuffix, 1);
+    statsd.increment('circuits.' + eventName + this.byServiceStatSuffix, 1);
+    logger.info('circuit event: ' + eventName, this.extendLogInfo(logInfo));
 };
 
 module.exports = Circuits;
+
+function StateOptions(circuit, options) {
+    options = options || {};
+    // for setState changes
+    this.circuit = circuit;
+    // for mocking tests
+    this.timers = options.timers;
+    this.timeHeap = options.timeHeap;
+    this.random = options.random;
+    // the number of miliseconds that healthy and unhealthy requests are
+    // tracked between state reevaluation.
+    this.period = options.period;
+    // when healthy, the minimum number of requests during a period to trigger
+    // state reevaluation.
+    this.minimumRequests = options.minimumRequests;
+    // when healthy, the failure rate for a period that will trigger a
+    // transition to unhealthy.
+    this.maxErrorRate = options.maxErrorRate;
+    // when unhealthy, allow one request per period. this is the number of
+    // consecutive periods that must have 100% healthy responses to trigger a
+    // switch back to healthy.
+    this.probation = options.probation;
+}
+
+function PeriodicState(options) {
+    this.circuit = options.circuit;
+    this.timers = options.timers;
+    this.timeHeap = options.timeHeap;
+    this.random = options.random;
+
+    this.period = options.period || 1000; // ms
+    this.start = 0;
+    this.timeout = 0;
+    this.periodTimer = null;
+
+    this.startNewPeriod(this.timers.now());
+}
+
+PeriodicState.prototype.onDeactivate = function onDeactivate() {
+    if (this.periodTimer) {
+        this.periodTimer.cancel();
+        this.periodTimer = null;
+    }
+};
+
+PeriodicState.prototype.onRequest = function onRequest(/* req */) {
+};
+
+PeriodicState.prototype.onRequestHealthy = function onRequestHealthy() {
+};
+
+PeriodicState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+};
+
+PeriodicState.prototype.onRequestError = function onRequestError() {
+};
+
+PeriodicState.prototype.close = function close(callback) {
+    callback(null);
+};
+
+PeriodicState.prototype.invalidate = function invalidate() {
+    if (this.circuit.invalidateScore) {
+        this.circuit.invalidateScore();
+    }
+};
+
+PeriodicState.prototype.startNewPeriod = function startNewPeriod(now) {
+    this.start = now;
+    if (this.onNewPeriod()) {
+        this.setPeriodTimer(this.period, now);
+    }
+};
+
+PeriodicState.prototype.setPeriodTimer = function setPeriodTimer(timeout, now) {
+    if (this.periodTimer) {
+        this.periodTimer.cancel();
+        this.periodTimer = null;
+    }
+
+    this.timeout = timeout;
+    this.periodTimer = this.timeHeap.update(this, now);
+};
+
+PeriodicState.prototype.onTimeout = function onTimeout() {
+    var now = this.timers.now();
+    var elapsed = now - this.start;
+    var remain = this.period - elapsed;
+    if (remain <= 0) {
+        this.startNewPeriod(now);
+    } else {
+        this.setPeriodTimer(remain, now);
+    }
+};
+
+PeriodicState.prototype.checkPeriod = function checkPeriod(now) {
+    var elapsed = now - this.start;
+    var remain = this.period - elapsed;
+    if (remain <= 0) {
+        this.startNewPeriod(now);
+        return true;
+    }
+    return false;
+};
+
+function HealthyState(options) {
+    PeriodicState.call(this, options);
+
+    this.maxErrorRate = options.maxErrorRate || 0.5;
+    this.healthyCount = 0;
+    this.unhealthyCount = 0;
+    this.totalRequests = 0;
+    this.minRequests = typeof options.minRequests === 'number' ?
+        options.minRequests : 5;
+}
+
+inherits(HealthyState, PeriodicState);
+
+HealthyState.prototype.type = 'tchannel.healthy';
+HealthyState.prototype.healthy = true;
+
+HealthyState.prototype.toString = function healthyToString() {
+    return format('[Healthy %s healthy %s unhealthy]', this.healthyCount, this.unhealthyCount);
+};
+
+HealthyState.prototype.shouldRequest = function shouldRequest() {
+    var now = this.timers.now();
+
+    this.checkPeriod(now);
+
+    // active unless .onNewPeriod transitioned
+    if (this.circuit.state !== this) {
+        return this.circuit.state.shouldRequest();
+    }
+
+    return true;
+};
+
+HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
+    var totalCount = this.healthyCount + this.unhealthyCount;
+
+    // TODO: could store on this for introspection, maybe call it
+    // "lastPeriodErrorRate"?; we could even keep a fixed size sample of error
+    // rates from periods and choose based on their differences (discrete
+    // derivative)...
+    var errorRate = this.unhealthyCount / totalCount;
+
+    if (errorRate > this.maxErrorRate &&
+        this.totalRequests > this.minRequests) {
+        // Transition to unhealthy state if the healthy request rate dips below
+        // the acceptable threshold.
+        this.circuit.setState(UnhealthyState);
+        // TODO: useful to mark this dead somehow? for now we're just using "am
+        // I still the current state" logic coupled to the consuming
+        // circuit in .shouldRequest
+    } else {
+        // okay last period, reset counts for the new period
+        this.healthyCount = 0;
+        this.unhealthyCount = 0;
+    }
+
+    return false;
+};
+
+HealthyState.prototype.onRequest = function onRequest(/* req */) {
+    this.invalidate();
+};
+
+HealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
+    ++this.healthyCount;
+    ++this.totalRequests;
+    if (!this.checkPeriod(this.timers.now())) {
+        this.invalidate();
+    }
+};
+
+HealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+    ++this.totalRequests;
+    ++this.unhealthyCount;
+    if (!this.checkPeriod(this.timers.now())) {
+        this.invalidate();
+    }
+};
+
+HealthyState.prototype.onRequestError = function onRequestError(err) {
+    ++this.totalRequests;
+    var codeString = errors.classify(err);
+    if (errors.isUnhealthy(codeString)) {
+        ++this.unhealthyCount;
+    } else {
+        ++this.healthyCount;
+    }
+    if (!this.checkPeriod(this.timers.now())) {
+        this.invalidate();
+    }
+};
+
+function UnhealthyState(options) {
+    PeriodicState.call(this, options);
+
+    this.minResponseCount = options.probation || 5;
+    this.healthyCount = 0;
+    this.triedThisPeriod = true;
+}
+
+inherits(UnhealthyState, PeriodicState);
+
+UnhealthyState.prototype.type = 'tchannel.unhealthy';
+UnhealthyState.prototype.healthy = false;
+
+UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
+    if (this.healthyCount >= this.minResponseCount) {
+        this.circuit.setState(HealthyState);
+        return false;
+    }
+
+    var triedLastPeriod = this.triedThisPeriod;
+    this.triedThisPeriod = false;
+
+    if (triedLastPeriod) {
+        // score only changes if we had gone back to "closed" state, otherwise
+        // we simply are remaining "open" for a single probe
+        this.invalidate();
+    }
+
+    return false;
+};
+
+UnhealthyState.prototype.toString = function healthyToString() {
+    return format('[Unhealthy %s consecutive healthy requests]', this.healthyCount);
+};
+
+UnhealthyState.prototype.shouldRequest = function shouldRequest() {
+    var now = this.timers.now();
+
+    this.checkPeriod(now);
+
+    // if .checkPeriod transitioned us back to healthy, we're done
+    if (this.circuit.state !== this) {
+        return this.circuit.state.shouldRequest();
+    }
+
+    // Allow one trial per period
+    return !this.triedThisPeriod;
+};
+
+UnhealthyState.prototype.onRequest = function onRequest(/* req */) {
+    this.triedThisPeriod = true;
+    if (!this.checkPeriod(this.timers.now())) {
+        this.invalidate();
+    }
+};
+
+UnhealthyState.prototype.onRequestHealthy = function onRequestHealthy() {
+    ++this.healthyCount;
+    if (this.healthyCount > this.minResponseCount) {
+        this.circuit.setState(HealthyState);
+    } else {
+        this.invalidate();
+        this.checkPeriod(this.timers.now());
+    }
+};
+
+UnhealthyState.prototype.onRequestUnhealthy = function onRequestUnhealthy() {
+    this.healthyCount = 0;
+    this.checkPeriod(this.timers.now());
+};
+
+UnhealthyState.prototype.onRequestError = function onRequestError(err) {
+    var codeString = errors.classify(err);
+    if (!errors.isUnhealthy(codeString)) {
+        this.onRequestHealthy();
+        return;
+    }
+
+    this.healthyCount = 0;
+};

@@ -36,8 +36,7 @@ function circuitsEndpoint(opts, req, head, body, cb) {
             cn: circuit.callerName,
             sn: circuit.serviceName,
             en: circuit.endpointName,
-            healthy: state === 'tchannel.healthy' || state === 'tchannel.healthy-locked',
-            locked: state === 'tchannel.healthy-locked' || state === 'tchannel.unhealthy-locked'
+            healthy: state === 'tchannel.healthy'
         });
     }
 
