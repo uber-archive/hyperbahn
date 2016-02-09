@@ -1440,10 +1440,10 @@ function onCircuitStateChange(change) {
     if (oldState && oldState.healthy !== state.healthy) {
         // unhealthy -> healthy
         if (state.healthy) {
-            circuit.observeTransition(self.logger, self.statsd, 'healthy', self.extendLogInfo({}));
+            circuit.observeTransition('healthy', self.extendLogInfo({}));
         // healthy -> unhealthy
         } else {
-            circuit.observeTransition(self.logger, self.statsd, 'unhealthy', self.extendLogInfo({}));
+            circuit.observeTransition('unhealthy', self.extendLogInfo({}));
         }
     }
 };

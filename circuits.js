@@ -217,11 +217,11 @@ Circuit.prototype.extendLogInfo = function extendLogInfo(info) {
 };
 
 Circuit.prototype.observeTransition =
-function observeTransition(logger, statsd, eventName, logInfo) {
-    statsd.increment('circuits.' + eventName + '.total', 1);
-    statsd.increment('circuits.' + eventName + this.byCallerStatSuffix, 1);
-    statsd.increment('circuits.' + eventName + this.byServiceStatSuffix, 1);
-    logger.info('circuit event: ' + eventName, this.extendLogInfo(logInfo));
+function observeTransition(eventName, logInfo) {
+    this.root.statsd.increment('circuits.' + eventName + '.total', 1);
+    this.root.statsd.increment('circuits.' + eventName + this.byCallerStatSuffix, 1);
+    this.root.statsd.increment('circuits.' + eventName + this.byServiceStatSuffix, 1);
+    this.root.logger.info('circuit event: ' + eventName, this.extendLogInfo(logInfo));
 };
 
 module.exports = Circuits;
