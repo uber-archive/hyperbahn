@@ -72,6 +72,10 @@ function ServiceDispatchHandler(options) {
 
     self.circuitsEnabled = false;
     self.circuitsConfig = options.circuitsConfig;
+    self.circuitShorts = {
+        '*~hyperbahn~ad': true,
+        '*~hyperbahn~relay-ad': true
+    };
     self.circuits = null;
 
     self.rateLimiter = new RateLimiter({
@@ -1446,11 +1450,28 @@ function initCircuits() {
         random: self.random,
         egressNodes: self.egressNodes,
         config: self.circuitsConfig,
-        shorts: { // TODO: remoteConfig hookup
-           '*~hyperbahn~ad': true,
-           '*~hyperbahn~relay-ad': true
-        }
+        shorts: self.circuitShorts
     });
+};
+
+ServiceDispatchHandler.prototype.updateCircuitShorts =
+function updateCircuitShorts(shorts) {
+    var self = this;
+
+    self.circuitShorts = {
+        '*~hyperbahn~ad': true,
+        '*~hyperbahn~relay-ad': true
+    };
+    if (typeof shorts === 'object' && shorts !== null) {
+        var keys = Object.keys(shorts);
+        for (var i = 0; i < keys.length; ++i) {
+            self.circuitShorts[keys[i]] = shorts[keys[i]];
+        }
+    }
+
+    if (self.circuits) {
+        self.circuits.updateShorts(self.circuitShorts);
+    }
 };
 
 ServiceDispatchHandler.prototype.enableCircuits =
