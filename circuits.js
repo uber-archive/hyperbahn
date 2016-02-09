@@ -195,7 +195,14 @@ Circuit.prototype.setState = function setState(StateType) {
         oldState.onDeactivate();
     }
 
-    this.observeTransition(state.name, oldState, state);
+    var statsPrefix = 'circuits.' + state.name;
+    this.root.statsd.increment(statsPrefix + '.total', 1);
+    this.root.statsd.increment(statsPrefix + this.byCallerStatSuffix, 1);
+    this.root.statsd.increment(statsPrefix + this.byServiceStatSuffix, 1);
+    this.root.logger.info('circuit event: ' + state.name, this.extendLogInfo({
+        oldState: oldState ? oldState.type : 'none',
+        state: state ? state.type : 'none'
+    }));
 
     return state;
 };
@@ -205,17 +212,6 @@ Circuit.prototype.extendLogInfo = function extendLogInfo(info) {
     info.serviceName = this.serviceName;
     info.endpointName = this.endpointName;
     return info;
-};
-
-Circuit.prototype.observeTransition =
-function observeTransition(eventName, oldState, state) {
-    this.root.statsd.increment('circuits.' + eventName + '.total', 1);
-    this.root.statsd.increment('circuits.' + eventName + this.byCallerStatSuffix, 1);
-    this.root.statsd.increment('circuits.' + eventName + this.byServiceStatSuffix, 1);
-    this.root.logger.info('circuit event: ' + eventName, this.extendLogInfo({
-        oldState: oldState ? oldState.type : 'none',
-        state: state ? state.type : 'none'
-    }));
 };
 
 module.exports = Circuits;
