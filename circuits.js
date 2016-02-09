@@ -38,6 +38,13 @@ function EndpointCircuits(root) {
     this.circuitsByEndpointName = {};
 }
 
+EndpointCircuits.prototype.updateShorts = function updateShorts(shorts) {
+    var keys = Object.keys(this.circuitsByEndpointName);
+    for (var i = 0; i < keys.length; ++i) {
+        this.circuitsByEndpointName[keys[i]].updateShorted();
+    }
+};
+
 EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var circuit = this.circuitsByEndpointName['$' + endpointName];
     if (!circuit) {
@@ -60,6 +67,13 @@ function ServiceCircuits(root) {
     this.root = root;
     this.circuitsByCallerName = {};
 }
+
+ServiceCircuits.prototype.updateShorts = function updateShorts(shorts) {
+    var keys = Object.keys(this.circuitsByCallerName);
+    for (var i = 0; i < keys.length; ++i) {
+        this.circuitsByCallerName[keys[i]].updateShorts(shorts);
+    }
+};
 
 ServiceCircuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var circuits = this.circuitsByCallerName['$' + callerName];
@@ -84,6 +98,7 @@ function Circuits(options) {
     this.statsd = options.statsd;
     this.circuitsByServiceName = {};
     this.config = options.config || {};
+    this.shorts = null;
 
     this.stateOptions = new StateOptions(null, {
         timeHeap: options.timeHeap,
@@ -96,6 +111,27 @@ function Circuits(options) {
     });
     this.egressNodes = options.egressNodes;
 }
+
+Circuits.prototype.updateShorts = function updateShorts(shorts) {
+    this.shorts = shorts;
+    var keys = Object.keys(this.circuitsByServiceName);
+    for (var i = 0; i < keys.length; ++i) {
+        this.circuitsByServiceName[keys[i]].updateShorts(shorts);
+    }
+};
+
+Circuits.prototype.isShorted = function isShorted(callerName, serviceName, endpointName) {
+    if (!this.shorts) {
+        return false;
+    }
+    return this.shorts[callerName + '~' + serviceName + '~' + endpointName]
+        || this.shorts['*~' + serviceName + '~' + endpointName]
+        || this.shorts[callerName + '~*~' + endpointName]
+        || this.shorts[callerName + '~' + serviceName + '~*']
+        || this.shorts['*~*~' + endpointName]
+        || this.shorts['*~' + serviceName + '~*']
+        || this.shorts[callerName + '~*~*'];
+};
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var circuits = this.circuitsByServiceName['$' + serviceName];
@@ -157,6 +193,7 @@ function Circuit(root, callerName, serviceName, endpointName) {
     this.root = root;
     this.state = null;
     this.stateOptions = new StateOptions(this, this.root.stateOptions);
+    this.shorted = false;
 
     this.callerName = callerName || 'no-cn';
     this.serviceName = serviceName;
@@ -173,7 +210,12 @@ function Circuit(root, callerName, serviceName, endpointName) {
         clean(this.endpointName);
 
     this.setState(HealthyState);
+    this.updateShorted();
 }
+
+Circuit.prototype.updateShorted = function updateShorted() {
+    this.shorted = this.root.isShorted(this.callerName, this.serviceName, this.endpointName);
+};
 
 Circuit.prototype.setState = function setState(StateType) {
     var currentType = this.state && this.state.type;
