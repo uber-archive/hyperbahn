@@ -25,15 +25,8 @@ var assert = require('assert');
 var format = require('util').format;
 var inherits = require('util').inherits;
 
-var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var errors = require('tchannel/errors');
-
-function StateChange(target, oldState, state) {
-    this.target = target;
-    this.oldState = oldState;
-    this.state = state;
-}
 
 //  circuit = circuits                        : Circuits
 //      .circuitsByServiceName[serviceName]   : ServiceCircuits
@@ -87,8 +80,8 @@ ServiceCircuits.prototype.collectCircuitTuples = function collectCircuitTuples(t
 };
 
 function Circuits(options) {
-    EventEmitter.call(this);
-    this.circuitStateChangeEvent = this.defineEvent('circuitStateChange');
+    this.logger = options.logger;
+    this.statsd = options.statsd;
     this.circuitsByServiceName = {};
     this.config = options.config || {};
 
@@ -103,8 +96,6 @@ function Circuits(options) {
     });
     this.egressNodes = options.egressNodes;
 }
-
-inherits(Circuits, EventEmitter);
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var circuits = this.circuitsByServiceName['$' + serviceName];
@@ -203,7 +194,16 @@ Circuit.prototype.setState = function setState(StateType) {
     if (oldState) {
         oldState.onDeactivate();
     }
-    this.root.circuitStateChangeEvent.emit(this.root, new StateChange(this, oldState, state));
+
+    var statsPrefix = 'circuits.' + state.name;
+    this.root.statsd.increment(statsPrefix + '.total', 1);
+    this.root.statsd.increment(statsPrefix + this.byCallerStatSuffix, 1);
+    this.root.statsd.increment(statsPrefix + this.byServiceStatSuffix, 1);
+    this.root.logger.info('circuit event: ' + state.name, this.extendLogInfo({
+        oldState: oldState ? oldState.type : 'none',
+        state: state ? state.type : 'none'
+    }));
+
     return state;
 };
 
@@ -212,14 +212,6 @@ Circuit.prototype.extendLogInfo = function extendLogInfo(info) {
     info.serviceName = this.serviceName;
     info.endpointName = this.endpointName;
     return info;
-};
-
-Circuit.prototype.observeTransition =
-function observeTransition(logger, statsd, eventName, logInfo) {
-    statsd.increment('circuits.' + eventName + '.total', 1);
-    statsd.increment('circuits.' + eventName + this.byCallerStatSuffix, 1);
-    statsd.increment('circuits.' + eventName + this.byServiceStatSuffix, 1);
-    logger.info('circuit event: ' + eventName, this.extendLogInfo(logInfo));
 };
 
 module.exports = Circuits;
@@ -342,6 +334,7 @@ function HealthyState(options) {
 inherits(HealthyState, PeriodicState);
 
 HealthyState.prototype.type = 'tchannel.healthy';
+HealthyState.prototype.name = 'healthy';
 HealthyState.prototype.healthy = true;
 
 HealthyState.prototype.toString = function healthyToString() {
@@ -431,6 +424,7 @@ function UnhealthyState(options) {
 inherits(UnhealthyState, PeriodicState);
 
 UnhealthyState.prototype.type = 'tchannel.unhealthy';
+UnhealthyState.prototype.name = 'unhealthy';
 UnhealthyState.prototype.healthy = false;
 
 UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {

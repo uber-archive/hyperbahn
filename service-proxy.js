@@ -73,7 +73,6 @@ function ServiceDispatchHandler(options) {
     self.circuitsEnabled = false;
     self.circuitsConfig = options.circuitsConfig;
     self.circuits = null;
-    self.boundOnCircuitStateChange = onCircuitStateChange;
 
     self.rateLimiter = new RateLimiter({
         channel: self.channel,
@@ -236,10 +235,6 @@ function ServiceDispatchHandler(options) {
 
     if (self.circuitsConfig && self.circuitsConfig.enabled) {
         self.enableCircuits();
-    }
-
-    function onCircuitStateChange(stateChange) {
-        self.onCircuitStateChange(stateChange);
     }
 
     function onEgressNodesChanged() {
@@ -1429,25 +1424,6 @@ function emitPeriodicServiceStats(serviceChannel, serviceName) {
     self.statsd.gauge(prefix + 'connections.any', anyway);
 };
 
-ServiceDispatchHandler.prototype.onCircuitStateChange =
-function onCircuitStateChange(change) {
-    var self = this;
-
-    var circuit = change.target;
-    var oldState = change.oldState;
-    var state = change.state;
-
-    if (oldState && oldState.healthy !== state.healthy) {
-        // unhealthy -> healthy
-        if (state.healthy) {
-            circuit.observeTransition(self.logger, self.statsd, 'healthy', self.extendLogInfo({}));
-        // healthy -> unhealthy
-        } else {
-            circuit.observeTransition(self.logger, self.statsd, 'unhealthy', self.extendLogInfo({}));
-        }
-    }
-};
-
 ServiceDispatchHandler.prototype.destroy =
 function destroy() {
     var self = this;
@@ -1469,12 +1445,12 @@ function initCircuits() {
     self.circuits = new Circuits({
         timeHeap: self.channel.timeHeap,
         timers: self.channel.timers,
+        logger: self.logger,
+        statsd: self.statsd,
         random: self.random,
         egressNodes: self.egressNodes,
         config: self.circuitsConfig
     });
-
-    self.circuits.circuitStateChangeEvent.on(self.boundOnCircuitStateChange);
 };
 
 ServiceDispatchHandler.prototype.enableCircuits =
