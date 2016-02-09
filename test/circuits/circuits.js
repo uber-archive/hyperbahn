@@ -577,3 +577,63 @@ RelayNetwork.test('unhealthy callee does not interfere', aliceBobCharlie, functi
 RelayNetwork.test('unhealthy callee and callee do not interfere', aliceBobCharlie, function t(network, assert) {
     runInterferenceScenario(network, 'charlie', 'bob', 'respond', assert);
 });
+
+RelayNetwork.test('should be able to short circuits', aliceAndBob, function t(network, assert) {
+    network.register('call', function onCall(req, res) {
+        res.sendError('UnexpectedError', 'head splode');
+    });
+
+    network.relayChannels.forEach(function each(relayChannel, index) {
+        var serviceProxy = relayChannel.handler;
+        serviceProxy.updateCircuitShorts({
+            'alice~bob~call': true
+        });
+    });
+
+    network.cluster.logger.whitelist('info', 'circuit event: healthy');
+    network.cluster.logger.whitelist('info', 'circuit event: shorted');
+
+    var declined = 0;
+    var unexpected = 0;
+
+    network.exercise(100, 100, eachRequest, eachResponse, onCompletion);
+
+    function eachRequest(callback) {
+        network.send({
+            callerName: 'alice',
+            serviceName: 'bob'
+        }, 'call', 'tiny head', 'HUGE BODY', callback);
+    }
+
+    function eachResponse(err, res) {
+        if (err.codeName === 'UnexpectedError') {
+            unexpected++;
+        } else if (err.codeName === 'Declined') {
+            declined++;
+        }
+    }
+
+    function onCompletion(err) {
+        if (err) {
+            return assert.end(err);
+        }
+
+        var items = network.cluster.logger.items();
+        assert.equal(items.length, 2);
+
+        assert.equal(items[0].levelName, 'info');
+        assert.equal(items[0].msg, 'circuit event: healthy');
+        assert.equal(items[0].meta.serviceName, 'bob');
+        assert.equal(items[0].meta.callerName, 'alice');
+
+        assert.equal(items[1].levelName, 'info');
+        assert.equal(items[1].msg, 'circuit event: shorted');
+        assert.equal(items[1].meta.serviceName, 'bob');
+        assert.equal(items[1].meta.callerName, 'alice');
+
+        assert.equal(declined, 0, 'should not decline when shorted');
+        assert.equal(unexpected, 101, 'should slam the underlying problem');
+
+        assert.end();
+    }
+});
