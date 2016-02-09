@@ -25,15 +25,8 @@ var assert = require('assert');
 var format = require('util').format;
 var inherits = require('util').inherits;
 
-var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var errors = require('tchannel/errors');
-
-function StateChange(target, oldState, state) {
-    this.target = target;
-    this.oldState = oldState;
-    this.state = state;
-}
 
 //  circuit = circuits                        : Circuits
 //      .circuitsByServiceName[serviceName]   : ServiceCircuits
@@ -87,10 +80,8 @@ ServiceCircuits.prototype.collectCircuitTuples = function collectCircuitTuples(t
 };
 
 function Circuits(options) {
-    EventEmitter.call(this);
     this.logger = options.logger;
     this.statsd = options.statsd;
-    this.circuitStateChangeEvent = this.defineEvent('circuitStateChange');
     this.circuitsByServiceName = {};
     this.config = options.config || {};
 
@@ -105,8 +96,6 @@ function Circuits(options) {
     });
     this.egressNodes = options.egressNodes;
 }
-
-inherits(Circuits, EventEmitter);
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var circuits = this.circuitsByServiceName['$' + serviceName];
@@ -205,7 +194,17 @@ Circuit.prototype.setState = function setState(StateType) {
     if (oldState) {
         oldState.onDeactivate();
     }
-    this.root.circuitStateChangeEvent.emit(this.root, new StateChange(this, oldState, state));
+
+    if (oldState && oldState.healthy !== state.healthy) {
+        // unhealthy -> healthy
+        if (state.healthy) {
+            this.observeTransition('healthy', oldState, state);
+        // healthy -> unhealthy
+        } else {
+            this.observeTransition('unhealthy', oldState, state);
+        }
+    }
+
     return state;
 };
 
@@ -217,11 +216,12 @@ Circuit.prototype.extendLogInfo = function extendLogInfo(info) {
 };
 
 Circuit.prototype.observeTransition =
-function observeTransition(eventName, logInfo) {
+function observeTransition(eventName, oldState, state) {
     this.root.statsd.increment('circuits.' + eventName + '.total', 1);
     this.root.statsd.increment('circuits.' + eventName + this.byCallerStatSuffix, 1);
     this.root.statsd.increment('circuits.' + eventName + this.byServiceStatSuffix, 1);
-    this.root.logger.info('circuit event: ' + eventName, this.extendLogInfo(logInfo));
+    this.root.logger.info('circuit event: ' + eventName, this.extendLogInfo({
+    }));
 };
 
 module.exports = Circuits;
