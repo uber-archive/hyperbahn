@@ -31,12 +31,13 @@ function circuitsEndpoint(opts, req, head, body, cb) {
     for (var index = 0; index < circuitTuples.length; index++) {
         var circuitTuple = circuitTuples[index];
         var circuit = circuits.getCircuit.apply(circuits, circuitTuple);
-        var state = circuit.state.type;
+        var state = circuit.state;
         response.push({
             cn: circuit.callerName,
             sn: circuit.serviceName,
             en: circuit.endpointName,
-            healthy: state === 'tchannel.healthy'
+            healthy: state.healthy,
+            shorted: state.type === 'tchannel.shorted'
         });
     }
 

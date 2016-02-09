@@ -143,6 +143,7 @@ allocCluster.test('request circuit state from endpoint', {
         assert.equals(circuit.sn, 'bob', 'service name');
         assert.equals(circuit.en, 'ifyousayso', 'endpoint name');
         assert.equals(circuit.healthy, false, 'unhealthy');
+        assert.equals(circuit.shorted, false, 'not shorted');
 
         assert.end();
     }
