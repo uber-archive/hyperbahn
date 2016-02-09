@@ -195,15 +195,7 @@ Circuit.prototype.setState = function setState(StateType) {
         oldState.onDeactivate();
     }
 
-    if (oldState && oldState.healthy !== state.healthy) {
-        // unhealthy -> healthy
-        if (state.healthy) {
-            this.observeTransition('healthy', oldState, state);
-        // healthy -> unhealthy
-        } else {
-            this.observeTransition('unhealthy', oldState, state);
-        }
-    }
+    this.observeTransition(state.name, oldState, state);
 
     return state;
 };
@@ -221,6 +213,8 @@ function observeTransition(eventName, oldState, state) {
     this.root.statsd.increment('circuits.' + eventName + this.byCallerStatSuffix, 1);
     this.root.statsd.increment('circuits.' + eventName + this.byServiceStatSuffix, 1);
     this.root.logger.info('circuit event: ' + eventName, this.extendLogInfo({
+        oldState: oldState ? oldState.type : 'none',
+        state: state ? state.type : 'none'
     }));
 };
 
@@ -344,6 +338,7 @@ function HealthyState(options) {
 inherits(HealthyState, PeriodicState);
 
 HealthyState.prototype.type = 'tchannel.healthy';
+HealthyState.prototype.name = 'healthy';
 HealthyState.prototype.healthy = true;
 
 HealthyState.prototype.toString = function healthyToString() {
@@ -433,6 +428,7 @@ function UnhealthyState(options) {
 inherits(UnhealthyState, PeriodicState);
 
 UnhealthyState.prototype.type = 'tchannel.unhealthy';
+UnhealthyState.prototype.name = 'unhealthy';
 UnhealthyState.prototype.healthy = false;
 
 UnhealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
