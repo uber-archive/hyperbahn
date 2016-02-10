@@ -439,82 +439,82 @@ function updateMaxTombstoneTTL() {
 
 /*eslint complexity: [2, 40]*/
 ApplicationClients.prototype.onRemoteConfigUpdate =
-function onRemoteConfigUpdate(changedKeys, all) {
+function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     var self = this;
 
-    var dict = {};
+    var hasChanged = {};
     for (var i = 0; i < changedKeys.length; i++) {
-        dict[changedKeys[i]] = true;
+        hasChanged[changedKeys[i]] = true;
     }
 
-    if (all || dict['clients.socket-inspector.enabled']) {
+    if (forceUpdate || hasChanged['clients.socket-inspector.enabled']) {
         self.setSocketInspector();
     }
 
-    if (all || dict['tchannel.max-tombstone-ttl']) {
+    if (forceUpdate || hasChanged['tchannel.max-tombstone-ttl']) {
         self.updateMaxTombstoneTTL();
     }
 
-    if (all || dict['lazy.handling.enabled']) {
+    if (forceUpdate || hasChanged['lazy.handling.enabled']) {
         self.updateLazyHandling();
     }
 
-    if (all || dict['circuits.enabled']) {
+    if (forceUpdate || hasChanged['circuits.enabled']) {
         self.updateCircuitsEnabled();
     }
 
-    if (all || dict['circuits.shorts']) {
+    if (forceUpdate || hasChanged['circuits.shorts']) {
         self.updateCircuitShorts();
     }
 
-    if (all || dict['rateLimiting.enabled']) {
+    if (forceUpdate || hasChanged['rateLimiting.enabled']) {
         self.updateRateLimitingEnabled();
     }
 
-    if (all || dict['rateLimiting.totalRpsLimit']) {
+    if (forceUpdate || hasChanged['rateLimiting.totalRpsLimit']) {
         self.updateTotalRpsLimit();
     }
 
-    if (all || dict['rateLimiting.exemptServices']) {
+    if (forceUpdate || hasChanged['rateLimiting.exemptServices']) {
         self.updateExemptServices();
     }
 
-    if (all || dict['rateLimiting.rpsLimitForServiceName']) {
+    if (forceUpdate || hasChanged['rateLimiting.rpsLimitForServiceName']) {
         self.updateRpsLimitForServiceName();
     }
 
-    if (all || dict['kValue.default'] || dict['kValue.services']) {
+    if (forceUpdate || hasChanged['kValue.default'] || hasChanged['kValue.services']) {
         self.updateKValues();
     }
 
-    if (all || dict.killSwitch) {
+    if (forceUpdate || hasChanged.killSwitch) {
         self.updateKillSwitches();
     }
 
-    if (all || dict['log.reservoir.size'] ||
-        dict['log.reservoir.flushInterval']
+    if (forceUpdate || hasChanged['log.reservoir.size'] ||
+        hasChanged['log.reservoir.flushInterval']
     ) {
         self.updateReservoir();
     }
 
-    if (all || dict['peerReaper.period']) {
+    if (forceUpdate || hasChanged['peerReaper.period']) {
         self.updateReapPeersPeriod();
     }
 
-    if (all || dict['peerPruner.period']) {
+    if (forceUpdate || hasChanged['peerPruner.period']) {
         self.updatePrunePeersPeriod();
     }
 
-    if (all || dict['partialAffinity.enabled']) {
+    if (forceUpdate || hasChanged['partialAffinity.enabled']) {
         self.updatePartialAffinityEnabled();
     }
 
-    if (all || dict['relay.maximum-ttl']) {
+    if (forceUpdate || hasChanged['relay.maximum-ttl']) {
         self.setMaximumRelayTTL();
     }
 
-    if (all || dict['peer-heap.enabled.services'] ||
-        dict['peer-heap.enabled.global']
+    if (forceUpdate || hasChanged['peer-heap.enabled.services'] ||
+        hasChanged['peer-heap.enabled.global']
     ) {
         self.updatePeerHeapEnabled();
     }
