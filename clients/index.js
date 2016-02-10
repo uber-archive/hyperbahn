@@ -454,10 +454,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateCircuitShorts(hasChanged, forceUpdate);
     self.updateRateLimitingEnabled(hasChanged, forceUpdate);
     self.updateTotalRpsLimit(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['rateLimiting.exemptServices']) {
-        self.updateExemptServices();
-    }
+    self.updateExemptServices(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['rateLimiting.rpsLimitForServiceName']) {
         self.updateRpsLimitForServiceName();
@@ -617,10 +614,12 @@ ApplicationClients.prototype.updateTotalRpsLimit = function updateTotalRpsLimit(
     }
 };
 
-ApplicationClients.prototype.updateExemptServices = function updateExemptServices() {
+ApplicationClients.prototype.updateExemptServices = function updateExemptServices(hasChanged, forceUpdate) {
     var self = this;
-    var exemptServices = self.remoteConfig.get('rateLimiting.exemptServices', ['autobahn', 'ringpop']);
-    self.serviceProxy.rateLimiter.updateExemptServices(exemptServices);
+    if (forceUpdate || hasChanged['rateLimiting.exemptServices']) {
+        var exemptServices = self.remoteConfig.get('rateLimiting.exemptServices', ['autobahn', 'ringpop']);
+        self.serviceProxy.rateLimiter.updateExemptServices(exemptServices);
+    }
 };
 
 ApplicationClients.prototype.updateRpsLimitForServiceName = function updateRpsLimitForServiceName() {
