@@ -450,10 +450,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.setSocketInspector(hasChanged, forceUpdate);
     self.updateMaxTombstoneTTL(hasChanged, forceUpdate);
     self.updateLazyHandling(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['circuits.enabled']) {
-        self.updateCircuitsEnabled();
-    }
+    self.updateCircuitsEnabled(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['circuits.shorts']) {
         self.updateCircuitShorts();
@@ -572,13 +569,14 @@ ApplicationClients.prototype.updateReservoir = function updateReservoir() {
     }
 };
 
-ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnabled() {
+ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnabled(hasChanged, forceUpdate) {
     var self = this;
-    var enabled = self.remoteConfig.get('circuits.enabled', false);
-    if (enabled) {
-        self.serviceProxy.enableCircuits();
-    } else {
-        self.serviceProxy.disableCircuits();
+    if (forceUpdate || hasChanged['circuits.enabled']) {
+        if (self.remoteConfig.get('circuits.enabled', false)) {
+            self.serviceProxy.enableCircuits();
+        } else {
+            self.serviceProxy.disableCircuits();
+        }
     }
 };
 
