@@ -429,12 +429,12 @@ ApplicationClients.prototype.destroy = function destroy() {
 };
 
 ApplicationClients.prototype.updateMaxTombstoneTTL =
-function updateMaxTombstoneTTL() {
+function updateMaxTombstoneTTL(hasChanged, forceUpdate) {
     var self = this;
-
-    var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
-
-    self.tchannel.setMaxTombstoneTTL(ttl);
+    if (forceUpdate || hasChanged['tchannel.max-tombstone-ttl']) {
+        var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
+        self.tchannel.setMaxTombstoneTTL(ttl);
+    }
 };
 
 /*eslint complexity: [2, 40]*/
@@ -448,10 +448,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     }
 
     self.setSocketInspector(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['tchannel.max-tombstone-ttl']) {
-        self.updateMaxTombstoneTTL();
-    }
+    self.updateMaxTombstoneTTL(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['lazy.handling.enabled']) {
         self.updateLazyHandling();
