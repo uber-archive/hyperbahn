@@ -526,11 +526,7 @@ function setSocketInspector(hasChanged, forceUpdate) {
         return;
     }
 
-    var socketInspectorEnabled = self.remoteConfig.get(
-        'clients.socket-inspector.enabled', false
-    );
-
-    if (socketInspectorEnabled) {
+    if (self.remoteConfig.get('clients.socket-inspector.enabled', false)) {
         self.socketInspector.enable();
     } else {
         self.socketInspector.disable();
