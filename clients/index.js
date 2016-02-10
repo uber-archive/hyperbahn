@@ -449,10 +449,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
 
     self.setSocketInspector(hasChanged, forceUpdate);
     self.updateMaxTombstoneTTL(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['lazy.handling.enabled']) {
-        self.updateLazyHandling();
-    }
+    self.updateLazyHandling(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['circuits.enabled']) {
         self.updateCircuitsEnabled();
@@ -540,8 +537,13 @@ function setMaximumRelayTTL() {
     self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
 };
 
-ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
+ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling(hasChanged, forceUpdate) {
     var self = this;
+
+    if (!forceUpdate && !hasChanged['lazy.handling.enabled']) {
+        return;
+    }
+
     var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
     self.tchannel.setLazyRelaying(enabled);
 
