@@ -453,10 +453,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateCircuitsEnabled(hasChanged, forceUpdate);
     self.updateCircuitShorts(hasChanged, forceUpdate);
     self.updateRateLimitingEnabled(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['rateLimiting.totalRpsLimit']) {
-        self.updateTotalRpsLimit();
-    }
+    self.updateTotalRpsLimit(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['rateLimiting.exemptServices']) {
         self.updateExemptServices();
@@ -612,10 +609,12 @@ ApplicationClients.prototype.updatePartialAffinityEnabled = function updateParti
     self.serviceProxy.setPartialAffinityEnabled(enabled);
 };
 
-ApplicationClients.prototype.updateTotalRpsLimit = function updateTotalRpsLimit() {
+ApplicationClients.prototype.updateTotalRpsLimit = function updateTotalRpsLimit(hasChanged, forceUpdate) {
     var self = this;
-    var limit = self.remoteConfig.get('rateLimiting.totalRpsLimit', 1200);
-    self.serviceProxy.rateLimiter.updateTotalLimit(limit);
+    if (forceUpdate || hasChanged['rateLimiting.totalRpsLimit']) {
+        var limit = self.remoteConfig.get('rateLimiting.totalRpsLimit', 1200);
+        self.serviceProxy.rateLimiter.updateTotalLimit(limit);
+    }
 };
 
 ApplicationClients.prototype.updateExemptServices = function updateExemptServices() {
