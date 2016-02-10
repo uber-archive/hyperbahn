@@ -113,10 +113,10 @@ function Circuits(options) {
 }
 
 Circuits.prototype.updateShorts = function updateShorts(shorts) {
-    this.shorts = shorts;
+    this.shorts = parseShorts(shorts);
     var keys = Object.keys(this.circuitsByServiceName);
     for (var i = 0; i < keys.length; ++i) {
-        this.circuitsByServiceName[keys[i]].updateShorts(shorts);
+        this.circuitsByServiceName[keys[i]].updateShorts();
     }
 };
 
@@ -124,13 +124,18 @@ Circuits.prototype.isShorted = function isShorted(callerName, serviceName, endpo
     if (!this.shorts) {
         return false;
     }
-    return this.shorts[callerName + '~' + serviceName + '~' + endpointName]
-        || this.shorts['*~' + serviceName + '~' + endpointName]
-        || this.shorts[callerName + '~*~' + endpointName]
-        || this.shorts[callerName + '~' + serviceName + '~*']
-        || this.shorts['*~*~' + endpointName]
-        || this.shorts['*~' + serviceName + '~*']
-        || this.shorts[callerName + '~*~*'];
+
+    var byService = this.shorts[callerName] || this.shorts['*'];
+    if (!byService) {
+        return false;
+    }
+
+    var byEndpoint = byService[serviceName] || byService['*'];
+    if (!byEndpoint) {
+        return false;
+    }
+
+    return byEndpoint[endpointName] ? true : false;
 };
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
@@ -564,3 +569,28 @@ ShortedState.prototype.shouldRequest = function shouldRequest() {
     // pass all traffic regardless
     return true;
 };
+
+function parseShorts(shorts) {
+    var byCaller = {};
+    var keys = Object.keys(shorts);
+    for (var i = 0; i < keys.length; ++i) {
+        var key = keys[i];
+        var match = /^([^~]+)~([^~]+)~(.+)$/.exec(key);
+        if (!match) {
+            continue;
+        }
+        var callerName = match[1];
+        var serviceName = match[2];
+        var endpointName = match[3];
+        var byService = byCaller[callerName];
+        if (!byService) {
+            byService = byCaller[callerName] = {};
+        }
+        var byEndpoint = byService[serviceName];
+        if (!byEndpoint) {
+            byEndpoint = byService[serviceName] = {};
+        }
+        byEndpoint[endpointName] = shorts[key];
+    }
+    return byCaller;
+}
