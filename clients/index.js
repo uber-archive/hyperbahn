@@ -452,10 +452,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateLazyHandling(hasChanged, forceUpdate);
     self.updateCircuitsEnabled(hasChanged, forceUpdate);
     self.updateCircuitShorts(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['rateLimiting.enabled']) {
-        self.updateRateLimitingEnabled();
-    }
+    self.updateRateLimitingEnabled(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['rateLimiting.totalRpsLimit']) {
         self.updateTotalRpsLimit();
@@ -584,13 +581,14 @@ ApplicationClients.prototype.updateCircuitShorts = function updateCircuitShorts(
     }
 };
 
-ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled() {
+ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled(hasChanged, forceUpdate) {
     var self = this;
-    var enabled = self.remoteConfig.get('rateLimiting.enabled', false);
-    if (enabled) {
-        self.serviceProxy.enableRateLimiter();
-    } else {
-        self.serviceProxy.disableRateLimiter();
+    if (forceUpdate || hasChanged['rateLimiting.enabled']) {
+        if (self.remoteConfig.get('rateLimiting.enabled', false)) {
+            self.serviceProxy.enableRateLimiter();
+        } else {
+            self.serviceProxy.disableRateLimiter();
+        }
     }
 };
 
