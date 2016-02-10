@@ -455,10 +455,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateRateLimitingEnabled(hasChanged, forceUpdate);
     self.updateTotalRpsLimit(hasChanged, forceUpdate);
     self.updateExemptServices(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['rateLimiting.rpsLimitForServiceName']) {
-        self.updateRpsLimitForServiceName();
-    }
+    self.updateRpsLimitForServiceName(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['kValue.default'] || hasChanged['kValue.services']) {
         self.updateKValues();
@@ -622,10 +619,12 @@ ApplicationClients.prototype.updateExemptServices = function updateExemptService
     }
 };
 
-ApplicationClients.prototype.updateRpsLimitForServiceName = function updateRpsLimitForServiceName() {
+ApplicationClients.prototype.updateRpsLimitForServiceName = function updateRpsLimitForServiceName(hasChanged, forceUpdate) {
     var self = this;
-    var rpsLimitForServiceName = self.remoteConfig.get('rateLimiting.rpsLimitForServiceName', {});
-    self.serviceProxy.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
+    if (forceUpdate || hasChanged['rateLimiting.rpsLimitForServiceName']) {
+        var rpsLimitForServiceName = self.remoteConfig.get('rateLimiting.rpsLimitForServiceName', {});
+        self.serviceProxy.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
+    }
 };
 
 ApplicationClients.prototype.updateKValues = function updateKValues() {
