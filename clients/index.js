@@ -447,9 +447,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
         hasChanged[changedKeys[i]] = true;
     }
 
-    if (forceUpdate || hasChanged['clients.socket-inspector.enabled']) {
-        self.setSocketInspector();
-    }
+    self.setSocketInspector(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['tchannel.max-tombstone-ttl']) {
         self.updateMaxTombstoneTTL();
@@ -521,8 +519,12 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
 };
 
 ApplicationClients.prototype.setSocketInspector =
-function setSocketInspector() {
+function setSocketInspector(hasChanged, forceUpdate) {
     var self = this;
+
+    if (!forceUpdate && !hasChanged['clients.socket-inspector.enabled']) {
+        return;
+    }
 
     var socketInspectorEnabled = self.remoteConfig.get(
         'clients.socket-inspector.enabled', false
