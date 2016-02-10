@@ -451,10 +451,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateMaxTombstoneTTL(hasChanged, forceUpdate);
     self.updateLazyHandling(hasChanged, forceUpdate);
     self.updateCircuitsEnabled(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['circuits.shorts']) {
-        self.updateCircuitShorts();
-    }
+    self.updateCircuitShorts(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['rateLimiting.enabled']) {
         self.updateRateLimitingEnabled();
@@ -580,10 +577,11 @@ ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnab
     }
 };
 
-ApplicationClients.prototype.updateCircuitShorts = function updateCircuitShorts() {
+ApplicationClients.prototype.updateCircuitShorts = function updateCircuitShorts(hasChanged, forceUpdate) {
     var self = this;
-    var shorts = self.remoteConfig.get('circuits.shorts', null);
-    self.serviceProxy.updateCircuitShorts(shorts);
+    if (forceUpdate || hasChanged['circuits.shorts']) {
+        self.serviceProxy.updateCircuitShorts(self.remoteConfig.get('circuits.shorts', null));
+    }
 };
 
 ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled() {
