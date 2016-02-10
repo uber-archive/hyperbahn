@@ -38,6 +38,13 @@ function EndpointCircuits(root) {
     this.circuitsByEndpointName = {};
 }
 
+EndpointCircuits.prototype.updateShorts = function updateShorts(shorts) {
+    var keys = Object.keys(this.circuitsByEndpointName);
+    for (var i = 0; i < keys.length; ++i) {
+        this.circuitsByEndpointName[keys[i]].updateShorted();
+    }
+};
+
 EndpointCircuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var circuit = this.circuitsByEndpointName['$' + endpointName];
     if (!circuit) {
@@ -60,6 +67,13 @@ function ServiceCircuits(root) {
     this.root = root;
     this.circuitsByCallerName = {};
 }
+
+ServiceCircuits.prototype.updateShorts = function updateShorts(shorts) {
+    var keys = Object.keys(this.circuitsByCallerName);
+    for (var i = 0; i < keys.length; ++i) {
+        this.circuitsByCallerName[keys[i]].updateShorts(shorts);
+    }
+};
 
 ServiceCircuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var circuits = this.circuitsByCallerName['$' + callerName];
@@ -84,6 +98,7 @@ function Circuits(options) {
     this.statsd = options.statsd;
     this.circuitsByServiceName = {};
     this.config = options.config || {};
+    this.shorts = null;
 
     this.stateOptions = new StateOptions(null, {
         timeHeap: options.timeHeap,
@@ -96,6 +111,32 @@ function Circuits(options) {
     });
     this.egressNodes = options.egressNodes;
 }
+
+Circuits.prototype.updateShorts = function updateShorts(shorts) {
+    this.shorts = parseShorts(shorts);
+    var keys = Object.keys(this.circuitsByServiceName);
+    for (var i = 0; i < keys.length; ++i) {
+        this.circuitsByServiceName[keys[i]].updateShorts();
+    }
+};
+
+Circuits.prototype.isShorted = function isShorted(callerName, serviceName, endpointName) {
+    if (!this.shorts) {
+        return false;
+    }
+
+    var byService = this.shorts[callerName] || this.shorts['*'];
+    if (!byService) {
+        return false;
+    }
+
+    var byEndpoint = byService[serviceName] || byService['*'];
+    if (!byEndpoint) {
+        return false;
+    }
+
+    return byEndpoint[endpointName] ? true : false;
+};
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
     var circuits = this.circuitsByServiceName['$' + serviceName];
@@ -157,6 +198,7 @@ function Circuit(root, callerName, serviceName, endpointName) {
     this.root = root;
     this.state = null;
     this.stateOptions = new StateOptions(this, this.root.stateOptions);
+    this.shorted = false;
 
     this.callerName = callerName || 'no-cn';
     this.serviceName = serviceName;
@@ -173,7 +215,12 @@ function Circuit(root, callerName, serviceName, endpointName) {
         clean(this.endpointName);
 
     this.setState(HealthyState);
+    this.updateShorted();
 }
+
+Circuit.prototype.updateShorted = function updateShorted() {
+    this.shorted = this.root.isShorted(this.callerName, this.serviceName, this.endpointName);
+};
 
 Circuit.prototype.setState = function setState(StateType) {
     var currentType = this.state && this.state.type;
@@ -367,7 +414,7 @@ HealthyState.prototype.onNewPeriod = function onNewPeriod(now) {
         this.totalRequests > this.minRequests) {
         // Transition to unhealthy state if the healthy request rate dips below
         // the acceptable threshold.
-        this.circuit.setState(UnhealthyState);
+        this.circuit.setState(this.circuit.shorted ? ShortedState : UnhealthyState);
         // TODO: useful to mark this dead somehow? for now we're just using "am
         // I still the current state" logic coupled to the consuming
         // circuit in .shouldRequest
@@ -494,3 +541,56 @@ UnhealthyState.prototype.onRequestError = function onRequestError(err) {
 
     this.healthyCount = 0;
 };
+
+function ShortedState(options) {
+    UnhealthyState.call(this, options);
+}
+
+inherits(ShortedState, UnhealthyState);
+
+ShortedState.prototype.type = 'tchannel.shorted';
+ShortedState.prototype.name = 'shorted';
+
+ShortedState.prototype.toString = function shortedHealthyToString() {
+    return '[Shorted state (unhealthy but passing traffic)]';
+};
+
+ShortedState.prototype.shouldRequest = function shouldRequest() {
+    var now = this.timers.now();
+
+    this.checkPeriod(now);
+
+    if (this.circuit.state !== this) {
+        return this.circuit.state.shouldRequest();
+    }
+
+    // TODO: do we want a separate stat for shorted requests?
+
+    // pass all traffic regardless
+    return true;
+};
+
+function parseShorts(shorts) {
+    var byCaller = {};
+    var keys = Object.keys(shorts);
+    for (var i = 0; i < keys.length; ++i) {
+        var key = keys[i];
+        var match = /^([^~]+)~([^~]+)~(.+)$/.exec(key);
+        if (!match) {
+            continue;
+        }
+        var callerName = match[1];
+        var serviceName = match[2];
+        var endpointName = match[3];
+        var byService = byCaller[callerName];
+        if (!byService) {
+            byService = byCaller[callerName] = {};
+        }
+        var byEndpoint = byService[serviceName];
+        if (!byEndpoint) {
+            byEndpoint = byService[serviceName] = {};
+        }
+        byEndpoint[endpointName] = shorts[key];
+    }
+    return byCaller;
+}

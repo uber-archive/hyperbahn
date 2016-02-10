@@ -72,6 +72,10 @@ function ServiceDispatchHandler(options) {
 
     self.circuitsEnabled = false;
     self.circuitsConfig = options.circuitsConfig;
+    self.circuitShorts = {
+        '*~hyperbahn~ad': true,
+        '*~hyperbahn~relay-ad': true
+    };
     self.circuits = null;
 
     self.rateLimiter = new RateLimiter({
@@ -448,11 +452,7 @@ function handleRequest(req, buildRes) {
         serviceChannel = self.createServiceChannel(nextService);
     }
 
-    if (serviceChannel.handler.circuits &&
-        (req.serviceName !== 'hyperbahn' && (
-            req.endpoint !== 'ad' || req.endpoint !== 'relay-ad'
-        ))
-    ) {
+    if (serviceChannel.handler.circuits) {
         var circuit = serviceChannel.handler.circuits.getCircuit(
             req.headers.cn || 'no-cn', req.serviceName, req.endpoint
         );
@@ -1449,8 +1449,29 @@ function initCircuits() {
         statsd: self.statsd,
         random: self.random,
         egressNodes: self.egressNodes,
-        config: self.circuitsConfig
+        config: self.circuitsConfig,
+        shorts: self.circuitShorts
     });
+};
+
+ServiceDispatchHandler.prototype.updateCircuitShorts =
+function updateCircuitShorts(shorts) {
+    var self = this;
+
+    self.circuitShorts = {
+        '*~hyperbahn~ad': true,
+        '*~hyperbahn~relay-ad': true
+    };
+    if (typeof shorts === 'object' && shorts !== null) {
+        var keys = Object.keys(shorts);
+        for (var i = 0; i < keys.length; ++i) {
+            self.circuitShorts[keys[i]] = shorts[keys[i]];
+        }
+    }
+
+    if (self.circuits) {
+        self.circuits.updateShorts(self.circuitShorts);
+    }
 };
 
 ServiceDispatchHandler.prototype.enableCircuits =

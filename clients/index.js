@@ -463,6 +463,10 @@ function onRemoteConfigUpdate(changedKeys, all) {
         self.updateCircuitsEnabled();
     }
 
+    if (all || dict['circuits.shorts']) {
+        self.updateCircuitShorts();
+    }
+
     if (all || dict['rateLimiting.enabled']) {
         self.updateRateLimitingEnabled();
     }
@@ -579,6 +583,12 @@ ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnab
     } else {
         self.serviceProxy.disableCircuits();
     }
+};
+
+ApplicationClients.prototype.updateCircuitShorts = function updateCircuitShorts() {
+    var self = this;
+    var shorts = self.remoteConfig.get('circuits.shorts', null);
+    self.serviceProxy.updateCircuitShorts(shorts);
 };
 
 ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled() {
