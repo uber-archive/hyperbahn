@@ -456,10 +456,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateTotalRpsLimit(hasChanged, forceUpdate);
     self.updateExemptServices(hasChanged, forceUpdate);
     self.updateRpsLimitForServiceName(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['kValue.default'] || hasChanged['kValue.services']) {
-        self.updateKValues();
-    }
+    self.updateKValues(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged.killSwitch) {
         self.updateKillSwitches();
@@ -627,18 +624,23 @@ ApplicationClients.prototype.updateRpsLimitForServiceName = function updateRpsLi
     }
 };
 
-ApplicationClients.prototype.updateKValues = function updateKValues() {
+ApplicationClients.prototype.updateKValues = function updateKValues(hasChanged, forceUpdate) {
     var self = this;
-    var defaultKValue = self.remoteConfig.get('kValue.default', 10);
-    self.egressNodes.setDefaultKValue(defaultKValue);
 
-    var serviceKValues = self.remoteConfig.get('kValue.services', {});
-    var keys = Object.keys(serviceKValues);
-    for (var i = 0; i < keys.length; i++) {
-        var serviceName = keys[i];
-        var kValue = serviceKValues[serviceName];
-        self.egressNodes.setKValueFor(serviceName, kValue);
-        self.serviceProxy.updateServiceChannels();
+    if (forceUpdate || hasChanged['kValue.default']) {
+        var defaultKValue = self.remoteConfig.get('kValue.default', 10);
+        self.egressNodes.setDefaultKValue(defaultKValue);
+    }
+
+    if (forceUpdate || hasChanged['kValue.services']) {
+        var serviceKValues = self.remoteConfig.get('kValue.services', {});
+        var keys = Object.keys(serviceKValues);
+        for (var i = 0; i < keys.length; i++) {
+            var serviceName = keys[i];
+            var kValue = serviceKValues[serviceName];
+            self.egressNodes.setKValueFor(serviceName, kValue);
+            self.serviceProxy.updateServiceChannels();
+        }
     }
 };
 
