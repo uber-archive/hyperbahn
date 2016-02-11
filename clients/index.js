@@ -463,12 +463,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updatePrunePeersPeriod(hasChanged, forceUpdate);
     self.updatePartialAffinityEnabled(hasChanged, forceUpdate);
     self.setMaximumRelayTTL(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['peer-heap.enabled.services'] ||
-        hasChanged['peer-heap.enabled.global']
-    ) {
-        self.updatePeerHeapEnabled();
-    }
+    self.updatePeerHeapEnabled(hasChanged, forceUpdate);
 };
 
 ApplicationClients.prototype.setSocketInspector =
@@ -655,10 +650,13 @@ ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches(ha
     }
 };
 
-ApplicationClients.prototype.updatePeerHeapEnabled = function updatePeerHeapEnabled() {
+ApplicationClients.prototype.updatePeerHeapEnabled = function updatePeerHeapEnabled(hasChanged, forceUpdate) {
     var self = this;
-    var peerHeapConfig = self.remoteConfig.get('peer-heap.enabled.services', {});
-    var peerHeapGlobalConfig = self.remoteConfig.get('peer-heap.enabled.global', false);
-
-    self.serviceProxy.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
+    if (forceUpdate ||
+        hasChanged['peer-heap.enabled.services'] ||
+        hasChanged['peer-heap.enabled.global']) {
+        var peerHeapConfig = self.remoteConfig.get('peer-heap.enabled.services', {});
+        var peerHeapGlobalConfig = self.remoteConfig.get('peer-heap.enabled.global', false);
+        self.serviceProxy.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
+    }
 };
