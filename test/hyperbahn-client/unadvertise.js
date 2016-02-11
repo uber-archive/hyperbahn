@@ -22,10 +22,10 @@
 
 var DebugLogtron = require('debug-logtron');
 var CountedReadySignal = require('ready-signal/counted');
+var timers = require('timers');
 
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 var TChannelJSON = require('tchannel/as/json');
-// var timers = TimeMock(Date.now());
 
 module.exports = runTests;
 
@@ -129,13 +129,14 @@ function runTests(HyperbahnCluster) {
 }
 
 function untilAllInConnsRemoved(remote, callback) {
-    var count = 0;
+    var count = 1;
     forEachConn(remote, function each(conn) {
         if (conn.direction === 'in') {
             count++;
             waitForClose(conn, onConnClose);
         }
     });
+    timers.setImmediate(onConnClose);
 
     function onConnClose() {
         if (--count <= 0) {
