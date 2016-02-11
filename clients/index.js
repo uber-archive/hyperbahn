@@ -457,10 +457,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateExemptServices(hasChanged, forceUpdate);
     self.updateRpsLimitForServiceName(hasChanged, forceUpdate);
     self.updateKValues(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged.killSwitch) {
-        self.updateKillSwitches();
-    }
+    self.updateKillSwitches(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['log.reservoir.size'] ||
         hasChanged['log.reservoir.flushInterval']
@@ -644,8 +641,13 @@ ApplicationClients.prototype.updateKValues = function updateKValues(hasChanged, 
     }
 };
 
-ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches() {
+ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches(hasChanged, forceUpdate) {
     var self = this;
+
+    if (!forceUpdate && !hasChanged.killSwitch) {
+        return;
+    }
+
     self.serviceProxy.unblockAllRemoteConfig();
     var killSwitches = self.remoteConfig.get('killSwitch', []);
 
