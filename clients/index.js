@@ -460,10 +460,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateKillSwitches(hasChanged, forceUpdate);
     self.updateReservoir(hasChanged, forceUpdate);
     self.updateReapPeersPeriod(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['peerPruner.period']) {
-        self.updatePrunePeersPeriod();
-    }
+    self.updatePrunePeersPeriod(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['partialAffinity.enabled']) {
         self.updatePartialAffinityEnabled();
@@ -586,10 +583,12 @@ function updateReapPeersPeriod(hasChanged, forceUpdate) {
 };
 
 ApplicationClients.prototype.updatePrunePeersPeriod =
-function updatePrunePeersPeriod() {
+function updatePrunePeersPeriod(hasChanged, forceUpdate) {
     var self = this;
-    var period = self.remoteConfig.get('peerPruner.period', 0);
-    self.serviceProxy.setPrunePeersPeriod(period);
+    if (forceUpdate || hasChanged['peerPruner.period']) {
+        var period = self.remoteConfig.get('peerPruner.period', 0);
+        self.serviceProxy.setPrunePeersPeriod(period);
+    }
 };
 
 ApplicationClients.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled() {
