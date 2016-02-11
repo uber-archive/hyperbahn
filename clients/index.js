@@ -462,10 +462,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateReapPeersPeriod(hasChanged, forceUpdate);
     self.updatePrunePeersPeriod(hasChanged, forceUpdate);
     self.updatePartialAffinityEnabled(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['relay.maximum-ttl']) {
-        self.setMaximumRelayTTL();
-    }
+    self.setMaximumRelayTTL(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['peer-heap.enabled.services'] ||
         hasChanged['peer-heap.enabled.global']
@@ -490,13 +487,12 @@ function setSocketInspector(hasChanged, forceUpdate) {
 };
 
 ApplicationClients.prototype.setMaximumRelayTTL =
-function setMaximumRelayTTL() {
+function setMaximumRelayTTL(hasChanged, forceUpdate) {
     var self = this;
-
-    var maximumRelayTTL = self.remoteConfig.get(
-        'relay.maximum-ttl', 2 * 60 * 1000
-    );
-    self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+    if (forceUpdate || hasChanged['relay.maximum-ttl']) {
+        var maximumRelayTTL = self.remoteConfig.get('relay.maximum-ttl', 2 * 60 * 1000);
+        self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+    }
 };
 
 ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling(hasChanged, forceUpdate) {
