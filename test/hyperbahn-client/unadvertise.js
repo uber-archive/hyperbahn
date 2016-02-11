@@ -21,6 +21,7 @@
 'use strict';
 
 var DebugLogtron = require('debug-logtron');
+var CountedReadySignal = require('ready-signal/counted');
 
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 var TChannelJSON = require('tchannel/as/json');
@@ -56,10 +57,13 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
+            var unadDone = CountedReadySignal(2);
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, sendSteveRequest);
+            untilAllInConnsRemoved(steve, unadDone.signal);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
+            steveHyperbahnClient.once('unadvertised', unadDone.signal);
             steveHyperbahnClient.unadvertise();
+            unadDone(sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -97,10 +101,13 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
+            var unadDone = CountedReadySignal(2);
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, readvertise);
+            untilAllInConnsRemoved(steve, unadDone.signal);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
+            steveHyperbahnClient.once('unadvertised', unadDone.signal);
             steveHyperbahnClient.unadvertise();
+            unadDone(readvertise);
         }
 
         function onUnadvertised() {
