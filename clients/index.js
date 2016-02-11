@@ -459,10 +459,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateKValues(hasChanged, forceUpdate);
     self.updateKillSwitches(hasChanged, forceUpdate);
     self.updateReservoir(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['peerReaper.period']) {
-        self.updateReapPeersPeriod();
-    }
+    self.updateReapPeersPeriod(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['peerPruner.period']) {
         self.updatePrunePeersPeriod();
@@ -580,10 +577,12 @@ ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimi
 };
 
 ApplicationClients.prototype.updateReapPeersPeriod =
-function updateReapPeersPeriod() {
+function updateReapPeersPeriod(hasChanged, forceUpdate) {
     var self = this;
-    var period = self.remoteConfig.get('peerReaper.period', 0);
-    self.serviceProxy.setReapPeersPeriod(period);
+    if (forceUpdate || hasChanged['peerReaper.period']) {
+        var period = self.remoteConfig.get('peerReaper.period', 0);
+        self.serviceProxy.setReapPeersPeriod(period);
+    }
 };
 
 ApplicationClients.prototype.updatePrunePeersPeriod =
