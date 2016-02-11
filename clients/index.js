@@ -437,7 +437,6 @@ function updateMaxTombstoneTTL(hasChanged, forceUpdate) {
     }
 };
 
-/*eslint complexity: [2, 40]*/
 ApplicationClients.prototype.onRemoteConfigUpdate =
 function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     var self = this;
