@@ -117,7 +117,7 @@ function ApplicationClients(options) {
             statsd: self.statsd
         });
         self.logger = loggerParts.logger;
-        self.logReservoir = loggerParts.logReservoir;
+        self.logReservoir = loggerParts.reservoir;
     }
 
     self.socketInspector = SocketInspector({
@@ -429,106 +429,51 @@ ApplicationClients.prototype.destroy = function destroy() {
 };
 
 ApplicationClients.prototype.updateMaxTombstoneTTL =
-function updateMaxTombstoneTTL() {
+function updateMaxTombstoneTTL(hasChanged, forceUpdate) {
     var self = this;
-
-    var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
-
-    self.tchannel.setMaxTombstoneTTL(ttl);
+    if (forceUpdate || hasChanged['tchannel.max-tombstone-ttl']) {
+        var ttl = self.remoteConfig.get('tchannel.max-tombstone-ttl', 5000);
+        self.tchannel.setMaxTombstoneTTL(ttl);
+    }
 };
 
-/*eslint complexity: [2, 40]*/
 ApplicationClients.prototype.onRemoteConfigUpdate =
-function onRemoteConfigUpdate(changedKeys, all) {
+function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     var self = this;
 
-    var dict = {};
+    var hasChanged = {};
     for (var i = 0; i < changedKeys.length; i++) {
-        dict[changedKeys[i]] = true;
+        hasChanged[changedKeys[i]] = true;
     }
 
-    if (all || dict['clients.socket-inspector.enabled']) {
-        self.setSocketInspector();
-    }
-
-    if (all || dict['tchannel.max-tombstone-ttl']) {
-        self.updateMaxTombstoneTTL();
-    }
-
-    if (all || dict['lazy.handling.enabled']) {
-        self.updateLazyHandling();
-    }
-
-    if (all || dict['circuits.enabled']) {
-        self.updateCircuitsEnabled();
-    }
-
-    if (all || dict['circuits.shorts']) {
-        self.updateCircuitShorts();
-    }
-
-    if (all || dict['rateLimiting.enabled']) {
-        self.updateRateLimitingEnabled();
-    }
-
-    if (all || dict['rateLimiting.totalRpsLimit']) {
-        self.updateTotalRpsLimit();
-    }
-
-    if (all || dict['rateLimiting.exemptServices']) {
-        self.updateExemptServices();
-    }
-
-    if (all || dict['rateLimiting.rpsLimitForServiceName']) {
-        self.updateRpsLimitForServiceName();
-    }
-
-    if (all || dict['kValue.default'] || dict['kValue.services']) {
-        self.updateKValues();
-    }
-
-    if (all || dict.killSwitch) {
-        self.updateKillSwitches();
-    }
-
-    if (all || dict['log.reservoir.size'] ||
-        dict['log.reservoir.flushInterval']
-    ) {
-        self.updateReservoir();
-    }
-
-    if (all || dict['peerReaper.period']) {
-        self.updateReapPeersPeriod();
-    }
-
-    if (all || dict['peerPruner.period']) {
-        self.updatePrunePeersPeriod();
-    }
-
-    if (all || dict['partialAffinity.enabled']) {
-        self.updatePartialAffinityEnabled();
-    }
-
-    if (all || dict['relay.maximum-ttl']) {
-        self.setMaximumRelayTTL();
-    }
-
-    if (all || dict['peer-heap.enabled.services'] ||
-        dict['peer-heap.enabled.global']
-    ) {
-        self.updatePeerHeapEnabled();
-    }
+    self.setSocketInspector(hasChanged, forceUpdate);
+    self.updateMaxTombstoneTTL(hasChanged, forceUpdate);
+    self.updateLazyHandling(hasChanged, forceUpdate);
+    self.updateCircuitsEnabled(hasChanged, forceUpdate);
+    self.updateCircuitShorts(hasChanged, forceUpdate);
+    self.updateRateLimitingEnabled(hasChanged, forceUpdate);
+    self.updateTotalRpsLimit(hasChanged, forceUpdate);
+    self.updateExemptServices(hasChanged, forceUpdate);
+    self.updateRpsLimitForServiceName(hasChanged, forceUpdate);
+    self.updateKValues(hasChanged, forceUpdate);
+    self.updateKillSwitches(hasChanged, forceUpdate);
+    self.updateReservoir(hasChanged, forceUpdate);
+    self.updateReapPeersPeriod(hasChanged, forceUpdate);
+    self.updatePrunePeersPeriod(hasChanged, forceUpdate);
+    self.updatePartialAffinityEnabled(hasChanged, forceUpdate);
+    self.setMaximumRelayTTL(hasChanged, forceUpdate);
+    self.updatePeerHeapEnabled(hasChanged, forceUpdate);
 };
 
 ApplicationClients.prototype.setSocketInspector =
-function setSocketInspector() {
+function setSocketInspector(hasChanged, forceUpdate) {
     var self = this;
 
-    var socketInspectorEnabled = self.remoteConfig.get(
-        'clients.socket-inspector.enabled', false
-    );
+    if (!forceUpdate && !hasChanged['clients.socket-inspector.enabled']) {
+        return;
+    }
 
-    if (socketInspectorEnabled) {
+    if (self.remoteConfig.get('clients.socket-inspector.enabled', false)) {
         self.socketInspector.enable();
     } else {
         self.socketInspector.disable();
@@ -536,17 +481,21 @@ function setSocketInspector() {
 };
 
 ApplicationClients.prototype.setMaximumRelayTTL =
-function setMaximumRelayTTL() {
+function setMaximumRelayTTL(hasChanged, forceUpdate) {
     var self = this;
-
-    var maximumRelayTTL = self.remoteConfig.get(
-        'relay.maximum-ttl', 2 * 60 * 1000
-    );
-    self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+    if (forceUpdate || hasChanged['relay.maximum-ttl']) {
+        var maximumRelayTTL = self.remoteConfig.get('relay.maximum-ttl', 2 * 60 * 1000);
+        self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+    }
 };
 
-ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() {
+ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling(hasChanged, forceUpdate) {
     var self = this;
+
+    if (!forceUpdate && !hasChanged['lazy.handling.enabled']) {
+        return;
+    }
+
     var enabled = self.remoteConfig.get('lazy.handling.enabled', true);
     self.tchannel.setLazyRelaying(enabled);
 
@@ -564,98 +513,130 @@ ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling() 
     }
 };
 
-ApplicationClients.prototype.updateReservoir = function updateReservoir() {
+ApplicationClients.prototype.updateReservoir = function updateReservoir(hasChanged, forceUpdate) {
     var self = this;
-    if (self.logReservoir) {
-        var size = self.remoteConfig.get('log.reservoir.size', 100);
-        var interval = self.remoteConfig.get('log.reservoir.flushInterval', 50);
 
-        self.logReservoir.setFlushInterval(interval);
+    if (!self.logReservoir) {
+        return;
+    }
+
+    if (forceUpdate || hasChanged['log.reservoir.size']) {
+        var size = self.remoteConfig.get('log.reservoir.size', 100);
         self.logReservoir.setSize(size);
     }
-};
 
-ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnabled() {
-    var self = this;
-    var enabled = self.remoteConfig.get('circuits.enabled', false);
-    if (enabled) {
-        self.serviceProxy.enableCircuits();
-    } else {
-        self.serviceProxy.disableCircuits();
+    if (forceUpdate || hasChanged['log.reservoir.flushInterval']) {
+        var interval = self.remoteConfig.get('log.reservoir.flushInterval', 50);
+        self.logReservoir.setFlushInterval(interval);
     }
 };
 
-ApplicationClients.prototype.updateCircuitShorts = function updateCircuitShorts() {
+ApplicationClients.prototype.updateCircuitsEnabled = function updateCircuitsEnabled(hasChanged, forceUpdate) {
     var self = this;
-    var shorts = self.remoteConfig.get('circuits.shorts', null);
-    self.serviceProxy.updateCircuitShorts(shorts);
+    if (forceUpdate || hasChanged['circuits.enabled']) {
+        if (self.remoteConfig.get('circuits.enabled', false)) {
+            self.serviceProxy.enableCircuits();
+        } else {
+            self.serviceProxy.disableCircuits();
+        }
+    }
 };
 
-ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled() {
+ApplicationClients.prototype.updateCircuitShorts = function updateCircuitShorts(hasChanged, forceUpdate) {
     var self = this;
-    var enabled = self.remoteConfig.get('rateLimiting.enabled', false);
-    if (enabled) {
-        self.serviceProxy.enableRateLimiter();
-    } else {
-        self.serviceProxy.disableRateLimiter();
+    if (forceUpdate || hasChanged['circuits.shorts']) {
+        self.serviceProxy.updateCircuitShorts(self.remoteConfig.get('circuits.shorts', null));
+    }
+};
+
+ApplicationClients.prototype.updateRateLimitingEnabled = function updateRateLimitingEnabled(hasChanged, forceUpdate) {
+    var self = this;
+    if (forceUpdate || hasChanged['rateLimiting.enabled']) {
+        if (self.remoteConfig.get('rateLimiting.enabled', false)) {
+            self.serviceProxy.enableRateLimiter();
+        } else {
+            self.serviceProxy.disableRateLimiter();
+        }
     }
 };
 
 ApplicationClients.prototype.updateReapPeersPeriod =
-function updateReapPeersPeriod() {
+function updateReapPeersPeriod(hasChanged, forceUpdate) {
     var self = this;
-    var period = self.remoteConfig.get('peerReaper.period', 0);
-    self.serviceProxy.setReapPeersPeriod(period);
-};
-
-ApplicationClients.prototype.updatePrunePeersPeriod =
-function updatePrunePeersPeriod() {
-    var self = this;
-    var period = self.remoteConfig.get('peerPruner.period', 0);
-    self.serviceProxy.setPrunePeersPeriod(period);
-};
-
-ApplicationClients.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled() {
-    var self = this;
-    var enabled = self.remoteConfig.get('partialAffinity.enabled', false);
-    self.serviceProxy.setPartialAffinityEnabled(enabled);
-};
-
-ApplicationClients.prototype.updateTotalRpsLimit = function updateTotalRpsLimit() {
-    var self = this;
-    var limit = self.remoteConfig.get('rateLimiting.totalRpsLimit', 1200);
-    self.serviceProxy.rateLimiter.updateTotalLimit(limit);
-};
-
-ApplicationClients.prototype.updateExemptServices = function updateExemptServices() {
-    var self = this;
-    var exemptServices = self.remoteConfig.get('rateLimiting.exemptServices', ['autobahn', 'ringpop']);
-    self.serviceProxy.rateLimiter.updateExemptServices(exemptServices);
-};
-
-ApplicationClients.prototype.updateRpsLimitForServiceName = function updateRpsLimitForServiceName() {
-    var self = this;
-    var rpsLimitForServiceName = self.remoteConfig.get('rateLimiting.rpsLimitForServiceName', {});
-    self.serviceProxy.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
-};
-
-ApplicationClients.prototype.updateKValues = function updateKValues() {
-    var self = this;
-    var defaultKValue = self.remoteConfig.get('kValue.default', 10);
-    self.egressNodes.setDefaultKValue(defaultKValue);
-
-    var serviceKValues = self.remoteConfig.get('kValue.services', {});
-    var keys = Object.keys(serviceKValues);
-    for (var i = 0; i < keys.length; i++) {
-        var serviceName = keys[i];
-        var kValue = serviceKValues[serviceName];
-        self.egressNodes.setKValueFor(serviceName, kValue);
-        self.serviceProxy.updateServiceChannels();
+    if (forceUpdate || hasChanged['peerReaper.period']) {
+        var period = self.remoteConfig.get('peerReaper.period', 0);
+        self.serviceProxy.setReapPeersPeriod(period);
     }
 };
 
-ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches() {
+ApplicationClients.prototype.updatePrunePeersPeriod =
+function updatePrunePeersPeriod(hasChanged, forceUpdate) {
     var self = this;
+    if (forceUpdate || hasChanged['peerPruner.period']) {
+        var period = self.remoteConfig.get('peerPruner.period', 0);
+        self.serviceProxy.setPrunePeersPeriod(period);
+    }
+};
+
+ApplicationClients.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled(hasChanged, forceUpdate) {
+    var self = this;
+    if (forceUpdate || hasChanged['partialAffinity.enabled']) {
+        var enabled = self.remoteConfig.get('partialAffinity.enabled', false);
+        self.serviceProxy.setPartialAffinityEnabled(enabled);
+    }
+};
+
+ApplicationClients.prototype.updateTotalRpsLimit = function updateTotalRpsLimit(hasChanged, forceUpdate) {
+    var self = this;
+    if (forceUpdate || hasChanged['rateLimiting.totalRpsLimit']) {
+        var limit = self.remoteConfig.get('rateLimiting.totalRpsLimit', 1200);
+        self.serviceProxy.rateLimiter.updateTotalLimit(limit);
+    }
+};
+
+ApplicationClients.prototype.updateExemptServices = function updateExemptServices(hasChanged, forceUpdate) {
+    var self = this;
+    if (forceUpdate || hasChanged['rateLimiting.exemptServices']) {
+        var exemptServices = self.remoteConfig.get('rateLimiting.exemptServices', ['autobahn', 'ringpop']);
+        self.serviceProxy.rateLimiter.updateExemptServices(exemptServices);
+    }
+};
+
+ApplicationClients.prototype.updateRpsLimitForServiceName = function updateRpsLimitForServiceName(hasChanged, forceUpdate) {
+    var self = this;
+    if (forceUpdate || hasChanged['rateLimiting.rpsLimitForServiceName']) {
+        var rpsLimitForServiceName = self.remoteConfig.get('rateLimiting.rpsLimitForServiceName', {});
+        self.serviceProxy.rateLimiter.updateRpsLimitForAllServices(rpsLimitForServiceName);
+    }
+};
+
+ApplicationClients.prototype.updateKValues = function updateKValues(hasChanged, forceUpdate) {
+    var self = this;
+
+    if (forceUpdate || hasChanged['kValue.default']) {
+        var defaultKValue = self.remoteConfig.get('kValue.default', 10);
+        self.egressNodes.setDefaultKValue(defaultKValue);
+    }
+
+    if (forceUpdate || hasChanged['kValue.services']) {
+        var serviceKValues = self.remoteConfig.get('kValue.services', {});
+        var keys = Object.keys(serviceKValues);
+        for (var i = 0; i < keys.length; i++) {
+            var serviceName = keys[i];
+            var kValue = serviceKValues[serviceName];
+            self.egressNodes.setKValueFor(serviceName, kValue);
+            self.serviceProxy.updateServiceChannels();
+        }
+    }
+};
+
+ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches(hasChanged, forceUpdate) {
+    var self = this;
+
+    if (!forceUpdate && !hasChanged.killSwitch) {
+        return;
+    }
+
     self.serviceProxy.unblockAllRemoteConfig();
     var killSwitches = self.remoteConfig.get('killSwitch', []);
 
@@ -668,10 +649,13 @@ ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches() 
     }
 };
 
-ApplicationClients.prototype.updatePeerHeapEnabled = function updatePeerHeapEnabled() {
+ApplicationClients.prototype.updatePeerHeapEnabled = function updatePeerHeapEnabled(hasChanged, forceUpdate) {
     var self = this;
-    var peerHeapConfig = self.remoteConfig.get('peer-heap.enabled.services', {});
-    var peerHeapGlobalConfig = self.remoteConfig.get('peer-heap.enabled.global', false);
-
-    self.serviceProxy.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
+    if (forceUpdate ||
+        hasChanged['peer-heap.enabled.services'] ||
+        hasChanged['peer-heap.enabled.global']) {
+        var peerHeapConfig = self.remoteConfig.get('peer-heap.enabled.services', {});
+        var peerHeapGlobalConfig = self.remoteConfig.get('peer-heap.enabled.global', false);
+        self.serviceProxy.setPeerHeapEnabled(peerHeapConfig, peerHeapGlobalConfig);
+    }
 };
