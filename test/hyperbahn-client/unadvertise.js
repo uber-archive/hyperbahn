@@ -98,10 +98,7 @@ function runTests(HyperbahnCluster) {
 
         function onAdvertised() {
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, function readvertise() {
-                steveHyperbahnClient.once('advertised', onReadvertised);
-                steveHyperbahnClient.advertise();
-            });
+            untilAllInConnsRemoved(steve, readvertise);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
             steveHyperbahnClient.unadvertise();
         }
@@ -109,6 +106,11 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+        }
+
+        function readvertise() {
+            steveHyperbahnClient.once('advertised', onReadvertised);
+            steveHyperbahnClient.advertise();
         }
 
         function onReadvertised() {
