@@ -458,12 +458,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateRpsLimitForServiceName(hasChanged, forceUpdate);
     self.updateKValues(hasChanged, forceUpdate);
     self.updateKillSwitches(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['log.reservoir.size'] ||
-        hasChanged['log.reservoir.flushInterval']
-    ) {
-        self.updateReservoir();
-    }
+    self.updateReservoir(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['peerReaper.period']) {
         self.updateReapPeersPeriod();
@@ -537,14 +532,21 @@ ApplicationClients.prototype.updateLazyHandling = function updateLazyHandling(ha
     }
 };
 
-ApplicationClients.prototype.updateReservoir = function updateReservoir() {
+ApplicationClients.prototype.updateReservoir = function updateReservoir(hasChanged, forceUpdate) {
     var self = this;
-    if (self.logReservoir) {
-        var size = self.remoteConfig.get('log.reservoir.size', 100);
-        var interval = self.remoteConfig.get('log.reservoir.flushInterval', 50);
 
-        self.logReservoir.setFlushInterval(interval);
+    if (!self.logReservoir) {
+        return;
+    }
+
+    if (forceUpdate || hasChanged['log.reservoir.size']) {
+        var size = self.remoteConfig.get('log.reservoir.size', 100);
         self.logReservoir.setSize(size);
+    }
+
+    if (forceUpdate || hasChanged['log.reservoir.flushInterval']) {
+        var interval = self.remoteConfig.get('log.reservoir.flushInterval', 50);
+        self.logReservoir.setFlushInterval(interval);
     }
 };
 
