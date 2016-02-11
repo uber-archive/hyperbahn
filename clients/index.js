@@ -117,7 +117,7 @@ function ApplicationClients(options) {
             statsd: self.statsd
         });
         self.logger = loggerParts.logger;
-        self.logReservoir = loggerParts.logReservoir;
+        self.logReservoir = loggerParts.reservoir;
     }
 
     self.socketInspector = SocketInspector({
