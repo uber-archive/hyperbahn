@@ -461,10 +461,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateReservoir(hasChanged, forceUpdate);
     self.updateReapPeersPeriod(hasChanged, forceUpdate);
     self.updatePrunePeersPeriod(hasChanged, forceUpdate);
-
-    if (forceUpdate || hasChanged['partialAffinity.enabled']) {
-        self.updatePartialAffinityEnabled();
-    }
+    self.updatePartialAffinityEnabled(hasChanged, forceUpdate);
 
     if (forceUpdate || hasChanged['relay.maximum-ttl']) {
         self.setMaximumRelayTTL();
@@ -591,10 +588,12 @@ function updatePrunePeersPeriod(hasChanged, forceUpdate) {
     }
 };
 
-ApplicationClients.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled() {
+ApplicationClients.prototype.updatePartialAffinityEnabled = function updatePartialAffinityEnabled(hasChanged, forceUpdate) {
     var self = this;
-    var enabled = self.remoteConfig.get('partialAffinity.enabled', false);
-    self.serviceProxy.setPartialAffinityEnabled(enabled);
+    if (forceUpdate || hasChanged['partialAffinity.enabled']) {
+        var enabled = self.remoteConfig.get('partialAffinity.enabled', false);
+        self.serviceProxy.setPartialAffinityEnabled(enabled);
+    }
 };
 
 ApplicationClients.prototype.updateTotalRpsLimit = function updateTotalRpsLimit(hasChanged, forceUpdate) {
