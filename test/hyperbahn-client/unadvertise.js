@@ -85,6 +85,62 @@ function runTests(HyperbahnCluster) {
         }
     });
 
+    HyperbahnCluster.test('advertise, wait for connections, unadvertise and forward', {
+        size: 5,
+        servicePurgePeriod: 50
+    }, function t(cluster, assert) {
+        var steve = cluster.remotes.steve;
+        var bob = cluster.remotes.bob;
+
+        var tchannelJSON = TChannelJSON({
+            logger: cluster.logger
+        });
+
+        var steveHyperbahnClient = new HyperbahnClient({
+            serviceName: steve.serviceName,
+            callerName: 'forward-test',
+            hostPortList: cluster.hostPortList,
+            tchannel: steve.channel,
+            advertiseInterval: 2,
+            logger: DebugLogtron('hyperbahnClient')
+        });
+
+        steveHyperbahnClient.once('advertised', onAdvertised);
+        steveHyperbahnClient.advertise();
+
+        function onAdvertised() {
+            untilExitsConnected(cluster, steve, onceConnected);
+        }
+
+        function onceConnected() {
+            var unadDone = CountedReadySignal(2);
+            assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
+            untilAllInConnsRemoved(steve, unadDone.signal);
+            steveHyperbahnClient.once('unadvertised', onUnadvertised);
+            steveHyperbahnClient.once('unadvertised', unadDone.signal);
+            steveHyperbahnClient.unadvertise();
+            unadDone(sendSteveRequest);
+        }
+
+        function sendSteveRequest() {
+            tchannelJSON.send(bob.clientChannel.request({
+                timeout: 5000,
+                serviceName: steve.serviceName
+            }), 'echo', null, 'oh hi lol', onForwarded);
+        }
+
+        function onUnadvertised() {
+            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
+            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+        }
+
+        function onForwarded(err, resp) {
+            assert.ok(err && err.type === 'tchannel.declined' && err.message === 'no peer available for request');
+            steveHyperbahnClient.destroy();
+            assert.end();
+        }
+    });
+
     HyperbahnCluster.test('advertise, unadvertise and re-advertise', {
         size: 5
     }, function t(cluster, assert) {
@@ -126,6 +182,30 @@ function runTests(HyperbahnCluster) {
             assert.end();
         }
     });
+}
+
+function untilExitsConnected(cluster, remote, callback) {
+    var exits = cluster.apps[0].clients.egressNodes.exitsFor(remote.serviceName);
+    var numExists = Object.keys(exits).length;
+    remote.channel.connectionEvent.on(checkConns);
+    checkConns();
+
+    function checkConns() {
+        var got = {};
+        forEachConn(remote, function each(conn, peer) {
+            var appIndex = cluster.hostPortList.indexOf(peer.hostPort);
+            if (appIndex >= 0) {
+                if (exits[peer.hostPort] !== undefined) {
+                    got[peer.hostPort] = true;
+                }
+            }
+        });
+        var gotExits = Object.keys(got).length;
+        if (gotExits >= numExists) {
+            remote.channel.connectionEvent.removeListener(checkConns);
+            callback();
+        }
+    }
 }
 
 function untilAllInConnsRemoved(remote, callback) {
