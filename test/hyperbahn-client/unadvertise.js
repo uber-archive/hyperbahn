@@ -55,8 +55,6 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.once('advertised', onAdvertised);
         steveHyperbahnClient.advertise();
 
-        var fwdreq;
-
         function onAdvertised() {
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
             untilAllInConnsRemoved(steve, sendSteveRequest);
@@ -65,11 +63,10 @@ function runTests(HyperbahnCluster) {
         }
 
         function sendSteveRequest() {
-            fwdreq = bob.clientChannel.request({
+            tchannelJSON.send(bob.clientChannel.request({
                 timeout: 5000,
                 serviceName: steve.serviceName
-            });
-            tchannelJSON.send(fwdreq, 'echo', null, 'oh hi lol', onForwarded);
+            }), 'echo', null, 'oh hi lol', onForwarded);
         }
 
         function onUnadvertised() {
