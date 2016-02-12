@@ -55,19 +55,18 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.once('advertised', onAdvertised);
         steveHyperbahnClient.advertise();
 
-        var fwdreq;
-
         function onAdvertised() {
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, function onSend() {
-                fwdreq = bob.clientChannel.request({
-                    timeout: 5000,
-                    serviceName: steve.serviceName
-                });
-                tchannelJSON.send(fwdreq, 'echo', null, 'oh hi lol', onForwarded);
-            });
+            untilAllInConnsRemoved(steve, sendSteveRequest);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
             steveHyperbahnClient.unadvertise();
+        }
+
+        function sendSteveRequest() {
+            tchannelJSON.send(bob.clientChannel.request({
+                timeout: 5000,
+                serviceName: steve.serviceName
+            }), 'echo', null, 'oh hi lol', onForwarded);
         }
 
         function onUnadvertised() {
@@ -118,29 +117,31 @@ function runTests(HyperbahnCluster) {
             assert.end();
         }
     });
+}
 
-    function untilAllInConnsRemoved(remote, callback) {
-        var peers = remote.channel.peers.values();
-        var count = 0;
-
-        for (var i = 0; i < peers.length; i++) {
-            var peer = peers[i];
-
-            for (var j = 0; j < peer.connections.length; j++) {
-                var conn = peer.connections[j];
-                if (conn.direction !== 'in') {
-                    continue;
-                }
-
-                count++;
-                waitForClose(conn, onConnClose);
-            }
+function untilAllInConnsRemoved(remote, callback) {
+    var count = 0;
+    forEachConn(remote, function each(conn) {
+        if (conn.direction === 'in') {
+            count++;
+            waitForClose(conn, onConnClose);
         }
+    });
 
-        function onConnClose() {
-            if (--count <= 0) {
-                callback(null);
-            }
+    function onConnClose() {
+        if (--count <= 0) {
+            callback(null);
+        }
+    }
+}
+
+function forEachConn(remote, each) {
+    var peers = remote.channel.peers.values();
+    for (var i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        for (var j = 0; j < peer.connections.length; j++) {
+            var conn = peer.connections[j];
+            each(conn, peer);
         }
     }
 }
