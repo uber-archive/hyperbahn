@@ -661,7 +661,7 @@ function ensurePeerConnected(serviceName, peer, reason, now) {
     }
     delete self.peersToPrune[peer.hostPort];
 
-    if (peer.isConnected('out')) {
+    if (peer.isConnected('out') && !peer.draining) {
         return;
     }
 
