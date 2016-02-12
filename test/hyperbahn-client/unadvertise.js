@@ -21,10 +21,11 @@
 'use strict';
 
 var DebugLogtron = require('debug-logtron');
+var CountedReadySignal = require('ready-signal/counted');
+var timers = require('timers');
 
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 var TChannelJSON = require('tchannel/as/json');
-// var timers = TimeMock(Date.now());
 
 module.exports = runTests;
 
@@ -56,10 +57,13 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
+            var unadDone = CountedReadySignal(2);
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, sendSteveRequest);
+            untilAllInConnsRemoved(steve, unadDone.signal);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
+            steveHyperbahnClient.once('unadvertised', unadDone.signal);
             steveHyperbahnClient.unadvertise();
+            unadDone(sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -97,18 +101,23 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
+            var unadDone = CountedReadySignal(2);
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, function readvertise() {
-                steveHyperbahnClient.once('advertised', onReadvertised);
-                steveHyperbahnClient.advertise();
-            });
+            untilAllInConnsRemoved(steve, unadDone.signal);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
+            steveHyperbahnClient.once('unadvertised', unadDone.signal);
             steveHyperbahnClient.unadvertise();
+            unadDone(readvertise);
         }
 
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+        }
+
+        function readvertise() {
+            steveHyperbahnClient.once('advertised', onReadvertised);
+            steveHyperbahnClient.advertise();
         }
 
         function onReadvertised() {
@@ -120,13 +129,14 @@ function runTests(HyperbahnCluster) {
 }
 
 function untilAllInConnsRemoved(remote, callback) {
-    var count = 0;
+    var count = 1;
     forEachConn(remote, function each(conn) {
         if (conn.direction === 'in') {
             count++;
             waitForClose(conn, onConnClose);
         }
     });
+    timers.setImmediate(onConnClose);
 
     function onConnClose() {
         if (--count <= 0) {
