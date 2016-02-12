@@ -118,29 +118,29 @@ function runTests(HyperbahnCluster) {
             assert.end();
         }
     });
+}
 
-    function untilAllInConnsRemoved(remote, callback) {
-        var peers = remote.channel.peers.values();
-        var count = 0;
+function untilAllInConnsRemoved(remote, callback) {
+    var peers = remote.channel.peers.values();
+    var count = 0;
 
-        for (var i = 0; i < peers.length; i++) {
-            var peer = peers[i];
+    for (var i = 0; i < peers.length; i++) {
+        var peer = peers[i];
 
-            for (var j = 0; j < peer.connections.length; j++) {
-                var conn = peer.connections[j];
-                if (conn.direction !== 'in') {
-                    continue;
-                }
-
-                count++;
-                waitForClose(conn, onConnClose);
+        for (var j = 0; j < peer.connections.length; j++) {
+            var conn = peer.connections[j];
+            if (conn.direction !== 'in') {
+                continue;
             }
+
+            count++;
+            waitForClose(conn, onConnClose);
         }
+    }
 
-        function onConnClose() {
-            if (--count <= 0) {
-                callback(null);
-            }
+    function onConnClose() {
+        if (--count <= 0) {
+            callback(null);
         }
     }
 }
