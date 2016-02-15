@@ -50,7 +50,6 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
         steveHyperbahnClient.once('advertised', onAdvertised);
@@ -101,7 +100,6 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
 
@@ -150,7 +148,6 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
         steveHyperbahnClient.once('advertised', onAdvertised);
@@ -192,7 +189,6 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
 
