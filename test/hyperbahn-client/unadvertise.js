@@ -74,7 +74,8 @@ function runTests(HyperbahnCluster) {
         }
 
         function onForwarded(err, resp) {
-            assert.ok(err && err.type === 'tchannel.declined' && err.message === 'no peer available for request');
+            assert.equal(err && err.type, 'tchannel.declined', 'expected declined error');
+            assert.equal(err && err.message, 'no peer available for request', 'expected "no peer available for request"');
             steveHyperbahnClient.destroy();
             assert.end();
         }
@@ -126,7 +127,8 @@ function runTests(HyperbahnCluster) {
         }
 
         function onForwarded(err, resp) {
-            assert.ok(err && err.type === 'tchannel.declined' && err.message === 'no peer available for request');
+            assert.equal(err && err.type, 'tchannel.declined', 'expected declined error');
+            assert.equal(err && err.message, 'no peer available for request', 'expected "no peer available for request"');
             steveHyperbahnClient.destroy();
             assert.end();
         }
