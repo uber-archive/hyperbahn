@@ -182,6 +182,54 @@ function runTests(HyperbahnCluster) {
             assert.end();
         }
     });
+
+    HyperbahnCluster.test('advertise, wait for connections, unadvertise and re-advertise', {
+        size: 5
+    }, function t(cluster, assert) {
+        var steve = cluster.remotes.steve;
+        var steveHyperbahnClient = new HyperbahnClient({
+            serviceName: steve.serviceName,
+            callerName: 'forward-test',
+            hostPortList: cluster.hostPortList,
+            tchannel: steve.channel,
+            advertiseInterval: 2,
+            logger: DebugLogtron('hyperbahnClient')
+        });
+
+        steveHyperbahnClient.once('advertised', onAdvertised);
+        steveHyperbahnClient.advertise();
+
+        function onAdvertised() {
+            untilExitsConnected(cluster, steve, onceConnected);
+        }
+
+        function onceConnected() {
+            var unadDone = CountedReadySignal(2);
+            assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
+            untilAllInConnsRemoved(steve, unadDone.signal);
+            steveHyperbahnClient.once('unadvertised', onUnadvertised);
+            steveHyperbahnClient.once('unadvertised', unadDone.signal);
+            steveHyperbahnClient.unadvertise();
+            unadDone(readvertise);
+        }
+
+        function onUnadvertised() {
+            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
+            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+        }
+
+        function readvertise() {
+            steveHyperbahnClient.once('advertised', onReadvertised);
+            steveHyperbahnClient.advertise();
+        }
+
+        function onReadvertised() {
+            assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
+            steveHyperbahnClient.destroy();
+            // TODO: wait for connections too
+            assert.end();
+        }
+    });
 }
 
 function untilExitsConnected(cluster, remote, callback) {
