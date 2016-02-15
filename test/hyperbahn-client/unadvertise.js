@@ -250,9 +250,13 @@ function untilExitsConnected(cluster, remote, callback) {
         });
         var gotExits = Object.keys(got).length;
         if (gotExits >= numExists) {
-            remote.channel.connectionEvent.removeListener(checkConns);
-            callback();
+            finish();
         }
+    }
+
+    function finish() {
+        remote.channel.connectionEvent.removeListener(checkConns);
+        callback();
     }
 }
 
