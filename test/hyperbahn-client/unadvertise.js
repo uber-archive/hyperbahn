@@ -249,7 +249,7 @@ function untilExitsConnected(cluster, remote, callback) {
 
         var got = {};
         forEachConn(remote, function each(conn, peer) {
-            if (exits[peer.hostPort] !== undefined) {
+            if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
                 got[peer.hostPort] = true;
             }
         });
