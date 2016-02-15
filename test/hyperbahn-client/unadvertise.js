@@ -241,11 +241,8 @@ function untilExitsConnected(cluster, remote, callback) {
     function checkConns() {
         var got = {};
         forEachConn(remote, function each(conn, peer) {
-            var appIndex = cluster.hostPortList.indexOf(peer.hostPort);
-            if (appIndex >= 0) {
-                if (exits[peer.hostPort] !== undefined) {
-                    got[peer.hostPort] = true;
-                }
+            if (exits[peer.hostPort] !== undefined) {
+                got[peer.hostPort] = true;
             }
         });
         var gotExits = Object.keys(got).length;
