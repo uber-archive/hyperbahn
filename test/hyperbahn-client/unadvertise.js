@@ -63,7 +63,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            untilAllInConnsRemoved(steve, sendSteveRequest);
+            untilAllExitConnsRemoved(cluster, steve, sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -115,7 +115,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            untilAllInConnsRemoved(steve, sendSteveRequest);
+            untilAllExitConnsRemoved(cluster, steve, sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -155,7 +155,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            untilAllInConnsRemoved(steve, readvertise);
+            untilAllExitConnsRemoved(cluster, steve, readvertise);
         }
 
         function readvertise() {
@@ -198,7 +198,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            untilAllInConnsRemoved(steve, readvertise);
+            untilAllExitConnsRemoved(cluster, steve, readvertise);
         }
 
         function readvertise() {
@@ -248,10 +248,11 @@ function untilExitsConnected(cluster, remote, callback) {
     }
 }
 
-function untilAllInConnsRemoved(remote, callback) {
+function untilAllExitConnsRemoved(cluster, remote, callback) {
+    var exits = cluster.apps[0].clients.egressNodes.exitsFor(remote.serviceName);
     var count = 1;
-    forEachConn(remote, function each(conn) {
-        if (conn.direction === 'in') {
+    forEachConn(remote, function each(conn, peer) {
+        if (exits[peer.hostPort]) {
             count++;
             waitForClose(conn, onConnClose);
         }
