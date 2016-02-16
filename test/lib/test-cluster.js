@@ -569,6 +569,50 @@ TestCluster.prototype.checkExitKValue = function checkExitKValue(assert, opts) {
     });
 };
 
+TestCluster.prototype.untilExitsConnected =
+function untilExitsConnected(remote, callback) {
+    var self = this;
+
+    var app = self.apps[0];
+    var exits = app.clients.egressNodes.exitsFor(remote.serviceName);
+    var numExits = Object.keys(exits).length;
+    remote.channel.connectionEvent.on(onConn);
+    checkConns();
+
+    function onConn(conn) {
+        conn.identifiedEvent.on(checkConns);
+    }
+
+    function checkConns(idInfo, newConn) {
+        if (newConn) {
+            newConn.identifiedEvent.removeListener(checkConns);
+        }
+
+        var got = {};
+
+        var peers = remote.channel.peers.values();
+        for (var i = 0; i < peers.length; i++) {
+            var peer = peers[i];
+            for (var j = 0; j < peer.connections.length; j++) {
+                var conn = peer.connections[j];
+                if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
+                    got[peer.hostPort] = true;
+                }
+            }
+        }
+
+        var gotExits = Object.keys(got).length;
+        if (gotExits >= numExits) {
+            finish();
+        }
+    }
+
+    function finish() {
+        remote.channel.connectionEvent.removeListener(onConn);
+        callback();
+    }
+};
+
 TestCluster.prototype.checkExitPeers =
 function checkExitPeers(assert, opts) {
     nodeAssert(opts && opts.serviceName, 'serviceName required');
