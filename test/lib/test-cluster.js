@@ -25,6 +25,7 @@
 var console = require('console');
 var process = require('process');
 var fs = require('fs');
+var timers = require('timers');
 
 var collectParallel = require('collect-parallel/array');
 var CountedReadySignal = require('ready-signal/counted');
@@ -610,6 +611,48 @@ function untilExitsConnected(remote, callback) {
     function finish() {
         remote.channel.connectionEvent.removeListener(onConn);
         callback();
+    }
+};
+
+TestCluster.prototype.untilExitsDisconnected =
+function untilExitsDisconnected(remote, callback) {
+    var self = this;
+
+    var app = self.apps[0];
+    var exits = app.clients.egressNodes.exitsFor(remote.serviceName);
+    var count = 1;
+
+    var peers = remote.channel.peers.values();
+    for (var i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        for (var j = 0; j < peer.connections.length; j++) {
+            if (exits[peer.hostPort]) {
+                count++;
+                waitForClose(peer.connections[j], onConnClose);
+            }
+        }
+    }
+
+    timers.setImmediate(onConnClose);
+
+    function onConnClose() {
+        if (--count <= 0) {
+            callback(null);
+        }
+    }
+
+    function waitForClose(conn, listener) {
+        var done = false;
+
+        conn.errorEvent.on(onEvent);
+        conn.closeEvent.on(onEvent);
+
+        function onEvent() {
+            if (!done) {
+                done = true;
+                listener(conn);
+            }
+        }
     }
 };
 

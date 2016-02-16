@@ -21,7 +21,6 @@
 'use strict';
 
 var DebugLogtron = require('debug-logtron');
-var timers = require('timers');
 
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
 var TChannelJSON = require('tchannel/as/json');
@@ -63,7 +62,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            untilAllExitConnsRemoved(cluster, steve, sendSteveRequest);
+            cluster.untilExitsDisconnected(steve, sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -116,7 +115,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            untilAllExitConnsRemoved(cluster, steve, sendSteveRequest);
+            cluster.untilExitsDisconnected(steve, sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -157,7 +156,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            untilAllExitConnsRemoved(cluster, steve, readvertise);
+            cluster.untilExitsDisconnected(steve, readvertise);
         }
 
         function readvertise() {
@@ -200,7 +199,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            untilAllExitConnsRemoved(cluster, steve, readvertise);
+            cluster.untilExitsDisconnected(steve, readvertise);
         }
 
         function readvertise() {
@@ -215,43 +214,4 @@ function runTests(HyperbahnCluster) {
             assert.end();
         }
     });
-}
-
-function untilAllExitConnsRemoved(cluster, remote, callback) {
-    var exits = cluster.apps[0].clients.egressNodes.exitsFor(remote.serviceName);
-    var count = 1;
-
-    var peers = remote.channel.peers.values();
-    for (var i = 0; i < peers.length; i++) {
-        var peer = peers[i];
-        for (var j = 0; j < peer.connections.length; j++) {
-            var conn = peer.connections[j];
-            if (exits[peer.hostPort]) {
-                count++;
-                waitForClose(conn, onConnClose);
-            }
-        }
-    }
-
-    timers.setImmediate(onConnClose);
-
-    function onConnClose() {
-        if (--count <= 0) {
-            callback(null);
-        }
-    }
-}
-
-function waitForClose(conn, listener) {
-    var done = false;
-
-    conn.errorEvent.on(onEvent);
-    conn.closeEvent.on(onEvent);
-
-    function onEvent() {
-        if (!done) {
-            done = true;
-            listener(conn);
-        }
-    }
 }
