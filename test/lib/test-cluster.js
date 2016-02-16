@@ -384,6 +384,16 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
             return;
         }
 
+        self.untilExitsConnected(remote, onConnected);
+    }
+
+    function onConnected(err) {
+        if (err) {
+            self.logger.error('Failed to get connection from hyperbahn for remote', {
+                error: err
+            });
+            return;
+        }
         cb();
     }
 
