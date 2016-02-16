@@ -21,7 +21,6 @@
 'use strict';
 
 var DebugLogtron = require('debug-logtron');
-var CountedReadySignal = require('ready-signal/counted');
 var timers = require('timers');
 
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
@@ -50,20 +49,21 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
         steveHyperbahnClient.once('advertised', onAdvertised);
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
-            var unadDone = CountedReadySignal(2);
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, unadDone.signal);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
-            steveHyperbahnClient.once('unadvertised', unadDone.signal);
             steveHyperbahnClient.unadvertise();
-            unadDone(sendSteveRequest);
+        }
+
+        function onUnadvertised() {
+            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
+            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+            untilAllExitConnsRemoved(cluster, steve, sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -73,13 +73,9 @@ function runTests(HyperbahnCluster) {
             }), 'echo', null, 'oh hi lol', onForwarded);
         }
 
-        function onUnadvertised() {
-            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
-            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-        }
-
         function onForwarded(err, resp) {
-            assert.ok(err && err.type === 'tchannel.declined' && err.message === 'no peer available for request');
+            assert.equal(err && err.type, 'tchannel.declined', 'expected declined error');
+            assert.equal(err && err.message, 'no peer available for request', 'expected "no peer available for request"');
             steveHyperbahnClient.destroy();
             assert.end();
         }
@@ -101,7 +97,6 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
 
@@ -113,13 +108,15 @@ function runTests(HyperbahnCluster) {
         }
 
         function onceConnected() {
-            var unadDone = CountedReadySignal(2);
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, unadDone.signal);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
-            steveHyperbahnClient.once('unadvertised', unadDone.signal);
             steveHyperbahnClient.unadvertise();
-            unadDone(sendSteveRequest);
+        }
+
+        function onUnadvertised() {
+            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
+            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+            untilAllExitConnsRemoved(cluster, steve, sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -129,13 +126,9 @@ function runTests(HyperbahnCluster) {
             }), 'echo', null, 'oh hi lol', onForwarded);
         }
 
-        function onUnadvertised() {
-            assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
-            assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-        }
-
         function onForwarded(err, resp) {
-            assert.ok(err && err.type === 'tchannel.declined' && err.message === 'no peer available for request');
+            assert.equal(err && err.type, 'tchannel.declined', 'expected declined error');
+            assert.equal(err && err.message, 'no peer available for request', 'expected "no peer available for request"');
             steveHyperbahnClient.destroy();
             assert.end();
         }
@@ -150,25 +143,21 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
         steveHyperbahnClient.once('advertised', onAdvertised);
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
-            var unadDone = CountedReadySignal(2);
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, unadDone.signal);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
-            steveHyperbahnClient.once('unadvertised', unadDone.signal);
             steveHyperbahnClient.unadvertise();
-            unadDone(readvertise);
         }
 
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+            untilAllExitConnsRemoved(cluster, steve, readvertise);
         }
 
         function readvertise() {
@@ -192,7 +181,6 @@ function runTests(HyperbahnCluster) {
             callerName: 'forward-test',
             hostPortList: cluster.hostPortList,
             tchannel: steve.channel,
-            advertiseInterval: 2,
             logger: DebugLogtron('hyperbahnClient')
         });
 
@@ -204,18 +192,15 @@ function runTests(HyperbahnCluster) {
         }
 
         function onceConnected() {
-            var unadDone = CountedReadySignal(2);
             assert.equal(steveHyperbahnClient.state, 'ADVERTISED', 'state should be ADVERTISED');
-            untilAllInConnsRemoved(steve, unadDone.signal);
             steveHyperbahnClient.once('unadvertised', onUnadvertised);
-            steveHyperbahnClient.once('unadvertised', unadDone.signal);
             steveHyperbahnClient.unadvertise();
-            unadDone(readvertise);
         }
 
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
+            untilAllExitConnsRemoved(cluster, steve, readvertise);
         }
 
         function readvertise() {
@@ -265,10 +250,11 @@ function untilExitsConnected(cluster, remote, callback) {
     }
 }
 
-function untilAllInConnsRemoved(remote, callback) {
+function untilAllExitConnsRemoved(cluster, remote, callback) {
+    var exits = cluster.apps[0].clients.egressNodes.exitsFor(remote.serviceName);
     var count = 1;
-    forEachConn(remote, function each(conn) {
-        if (conn.direction === 'in') {
+    forEachConn(remote, function each(conn, peer) {
+        if (exits[peer.hostPort]) {
             count++;
             waitForClose(conn, onConnClose);
         }
