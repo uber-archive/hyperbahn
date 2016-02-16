@@ -235,24 +235,33 @@ function runTests(HyperbahnCluster) {
 function untilExitsConnected(cluster, remote, callback) {
     var exits = cluster.apps[0].clients.egressNodes.exitsFor(remote.serviceName);
     var numExists = Object.keys(exits).length;
-    remote.channel.connectionEvent.on(checkConns);
+    remote.channel.connectionEvent.on(onConn);
     checkConns();
 
-    function checkConns() {
+    function onConn(conn) {
+        conn.identifiedEvent.on(checkConns);
+    }
+
+    function checkConns(idInfo, newConn) {
+        if (newConn) {
+            newConn.identifiedEvent.removeListener(checkConns);
+        }
+
         var got = {};
         forEachConn(remote, function each(conn, peer) {
-            var appIndex = cluster.hostPortList.indexOf(peer.hostPort);
-            if (appIndex >= 0) {
-                if (exits[peer.hostPort] !== undefined) {
-                    got[peer.hostPort] = true;
-                }
+            if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
+                got[peer.hostPort] = true;
             }
         });
         var gotExits = Object.keys(got).length;
         if (gotExits >= numExists) {
-            remote.channel.connectionEvent.removeListener(checkConns);
-            callback();
+            finish();
         }
+    }
+
+    function finish() {
+        remote.channel.connectionEvent.removeListener(onConn);
+        callback();
     }
 }
 
