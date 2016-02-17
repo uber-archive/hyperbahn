@@ -24,7 +24,6 @@ var DebugLogtron = require('debug-logtron');
 var fs = require('fs');
 var path = require('path');
 var test = require('tape');
-var hyperbahnUtils = require('tchannel/hyperbahn/utils');
 
 var TChannelAsThrift = require('tchannel/as/thrift');
 var HyperbahnClient = require('tchannel/hyperbahn/index.js');
@@ -116,7 +115,7 @@ function runTests(HyperbahnCluster) {
             }
             assert.ok(res, 'should be a result');
             assert.ok(res.ok, 'result should be ok');
-            assert.equals(hyperbahnUtils.convertHost(res.body.peers[0]), bob.channel.hostPort,
+            assert.equals(convertHost(res.body.peers[0]), bob.channel.hostPort,
                 'should get the expected hostPort');
             client.destroy();
             assert.end();
@@ -150,7 +149,7 @@ function runTests(HyperbahnCluster) {
 
             assert.ok(res, 'should be a result');
             assert.ok(res.ok, 'result should be ok');
-            assert.equals(hyperbahnUtils.convertHost(res.body.peers[0]), steve.channel.hostPort,
+            assert.equals(convertHost(res.body.peers[0]), steve.channel.hostPort,
                 'should get the expected hostPort');
             assert.end();
         }
@@ -315,9 +314,18 @@ test('convertHost decodes addresses correctly', function t(assert) {
 
     ipConversionTests.forEach(function testRow(tt) {
         var expected = tt[1];
-        var value = hyperbahnUtils.convertHost(tt[0]);
+        var value = convertHost(tt[0]);
         assert.equal(value, expected);
     });
 
     assert.end();
 });
+
+function convertHost(host) {
+    var res = '';
+    res += ((host.ip.ipv4 >>> 24) & 0xff) + '.';
+    res += ((host.ip.ipv4 >>> 16) & 0xff) + '.';
+    res += ((host.ip.ipv4 >>> 8) & 0xff) + '.';
+    res += (host.ip.ipv4 & 0xff);
+    return res + ':' + host.port;
+}
