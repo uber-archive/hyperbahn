@@ -44,15 +44,19 @@ allocCluster.test('register with exit node', {
     function onRegister(err, resp) {
         assert.ifError(err);
 
-        cluster.checkExitPeers(assert, {
-            serviceName: serviceName,
-            hostPort: steve.hostPort
-        });
-
         var body = resp.body;
 
         assert.ok(body.connectionCount > 0 &&
             body.connectionCount <= 5);
+
+        cluster.untilExitsConnected(serviceName, steve, checkExits);
+    }
+
+    function checkExits() {
+        cluster.checkExitPeers(assert, {
+                serviceName: serviceName,
+                hostPort: steve.hostPort
+        });
 
         assert.end();
     }
