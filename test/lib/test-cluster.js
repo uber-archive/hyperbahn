@@ -585,9 +585,22 @@ function untilExitsConnected(serviceName, channel, callback) {
     var self = this;
 
     var app = self.apps[0];
+
     var exits = app.clients.egressNodes.exitsFor(serviceName);
     var numExits = Object.keys(exits).length;
+
+    // Check for all future connections
     channel.connectionEvent.on(onConn);
+
+    // Check for all existing non-identified connections
+    var keys = Object.keys(channel.serverConnections);
+    for (var k = 0; k < keys.length; k++) {
+        var connection = channel.serverConnections[keys[k]];
+        if (!connection.remoteName) {
+            connection.identifiedEvent.on(checkConns);
+        }
+    }
+
     checkConns();
 
     function onConn(conn) {
