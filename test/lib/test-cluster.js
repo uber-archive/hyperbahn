@@ -25,6 +25,7 @@
 var console = require('console');
 var process = require('process');
 var fs = require('fs');
+var timers = require('timers');
 
 var collectParallel = require('collect-parallel/array');
 var CountedReadySignal = require('ready-signal/counted');
@@ -383,6 +384,16 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
             return;
         }
 
+        self.untilExitsConnected(remote.serviceName, remote.channel, onConnected);
+    }
+
+    function onConnected(err) {
+        if (err) {
+            self.logger.error('Failed to get connection from hyperbahn for remote', {
+                error: err
+            });
+            return;
+        }
         cb();
     }
 
@@ -567,6 +578,105 @@ TestCluster.prototype.checkExitKValue = function checkExitKValue(assert, opts) {
             'cluster application has same shards as everyone else'
         );
     });
+};
+
+TestCluster.prototype.untilExitsConnected =
+function untilExitsConnected(serviceName, channel, callback) {
+    var self = this;
+
+    var app = self.apps[0];
+
+    var exits = app.clients.egressNodes.exitsFor(serviceName);
+    var numExits = Object.keys(exits).length;
+
+    // Check for all future connections
+    channel.connectionEvent.on(onConn);
+
+    // Check for all existing non-identified connections
+    var keys = Object.keys(channel.serverConnections);
+    for (var k = 0; k < keys.length; k++) {
+        var connection = channel.serverConnections[keys[k]];
+        if (!connection.remoteName) {
+            connection.identifiedEvent.on(checkConns);
+        }
+    }
+
+    checkConns();
+
+    function onConn(conn) {
+        conn.identifiedEvent.on(checkConns);
+    }
+
+    function checkConns(idInfo, newConn) {
+        if (newConn) {
+            newConn.identifiedEvent.removeListener(checkConns);
+        }
+
+        var got = {};
+
+        var peers = channel.peers.values();
+        for (var i = 0; i < peers.length; i++) {
+            var peer = peers[i];
+            for (var j = 0; j < peer.connections.length; j++) {
+                var conn = peer.connections[j];
+                if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
+                    got[peer.hostPort] = true;
+                }
+            }
+        }
+
+        var gotExits = Object.keys(got).length;
+        if (gotExits >= numExits) {
+            finish();
+        }
+    }
+
+    function finish() {
+        channel.connectionEvent.removeListener(onConn);
+        callback();
+    }
+};
+
+TestCluster.prototype.untilExitsDisconnected =
+function untilExitsDisconnected(serviceName, channel, callback) {
+    var self = this;
+
+    var app = self.apps[0];
+    var exits = app.clients.egressNodes.exitsFor(serviceName);
+    var count = 1;
+
+    var peers = channel.peers.values();
+    for (var i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        for (var j = 0; j < peer.connections.length; j++) {
+            if (exits[peer.hostPort]) {
+                count++;
+                waitForClose(peer.connections[j], onConnClose);
+            }
+        }
+    }
+
+    timers.setImmediate(onConnClose);
+
+    function onConnClose() {
+        if (--count <= 0) {
+            callback(null);
+        }
+    }
+
+    function waitForClose(conn, listener) {
+        var done = false;
+
+        conn.errorEvent.on(onEvent);
+        conn.closeEvent.on(onEvent);
+
+        function onEvent() {
+            if (!done) {
+                done = true;
+                listener(conn);
+            }
+        }
+    }
 };
 
 TestCluster.prototype.checkExitPeers =
