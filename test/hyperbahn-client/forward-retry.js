@@ -32,7 +32,7 @@ if (require.main === module) {
 }
 
 function runTests(HyperbahnCluster) {
-    HyperbahnCluster.test('advertise and forward', {
+    HyperbahnCluster.test('advertise and forward with retry', {
         size: 10
     }, function t(cluster, assert) {
         var steve = cluster.remotes.steve;
