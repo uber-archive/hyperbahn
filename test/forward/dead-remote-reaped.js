@@ -167,7 +167,15 @@ allocCluster.test('dead exit peers get reaped', {
             return;
         }
 
-        pruneClusterPears(cluster, assert, afterResPruneDone);
+        pruneClusterPears(cluster, assert, function thenWaitForConn() {
+            collectParallel(
+                cluster.namedRemotes,
+                function waitForEach(alice, _i, waitDone) {
+                    cluster.untilExitsConnected(alice.serviceName, alice.channel, waitDone);
+                },
+                afterResPruneDone
+            );
+        });
     }
 
     function afterResPruneDone() {
