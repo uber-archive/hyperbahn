@@ -625,14 +625,14 @@ function untilExitsConnected(serviceName, channel, callback) {
 };
 
 TestCluster.prototype.untilExitsDisconnected =
-function untilExitsDisconnected(remote, callback) {
+function untilExitsDisconnected(serviceName, channel, callback) {
     var self = this;
 
     var app = self.apps[0];
-    var exits = app.clients.egressNodes.exitsFor(remote.serviceName);
+    var exits = app.clients.egressNodes.exitsFor(serviceName);
     var count = 1;
 
-    var peers = remote.channel.peers.values();
+    var peers = channel.peers.values();
     for (var i = 0; i < peers.length; i++) {
         var peer = peers[i];
         for (var j = 0; j < peer.connections.length; j++) {

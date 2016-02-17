@@ -62,7 +62,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            cluster.untilExitsDisconnected(steve, sendSteveRequest);
+            cluster.untilExitsDisconnected(steve.serviceName, steve.channel, sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -115,7 +115,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            cluster.untilExitsDisconnected(steve, sendSteveRequest);
+            cluster.untilExitsDisconnected(steve.serviceName, steve.channel, sendSteveRequest);
         }
 
         function sendSteveRequest() {
@@ -156,7 +156,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            cluster.untilExitsDisconnected(steve, readvertise);
+            cluster.untilExitsDisconnected(steve.serviceName, steve.channel, readvertise);
         }
 
         function readvertise() {
@@ -199,7 +199,7 @@ function runTests(HyperbahnCluster) {
         function onUnadvertised() {
             assert.equal(steveHyperbahnClient.latestAdvertisementResult, null, 'latestAdvertisementResult is null');
             assert.equal(steveHyperbahnClient.state, 'UNADVERTISED', 'state should be UNADVERTISED');
-            cluster.untilExitsDisconnected(steve, readvertise);
+            cluster.untilExitsDisconnected(steve.serviceName, steve.channel, readvertise);
         }
 
         function readvertise() {
