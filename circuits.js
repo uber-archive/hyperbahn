@@ -171,7 +171,7 @@ Circuits.prototype.getCircuitForRequest = function getCircuitForRequest(req) {
     var circuit = this.getCircuit(callerName, serviceName, arg1);
 
     if (!circuit.state.shouldRequest()) {
-        return new Result(new ErrorFrame('Declined', 'Service is not healthy'));
+        return new Result(new ErrorFrame('Unhealthy', 'Service is not healthy'));
     }
 
     return new Result(null, circuit);

@@ -70,7 +70,7 @@ RelayNetwork.test('should switch to unhealthy', aliceAndBob, function t(network,
 
     network.cluster.logger.whitelist('info', 'circuit event: unhealthy');
 
-    var declined = 0;
+    var unhealthy = 0;
     var unexpected = 0;
 
     network.exercise(100, 100, eachRequest, eachResponse, onCompletion);
@@ -85,8 +85,8 @@ RelayNetwork.test('should switch to unhealthy', aliceAndBob, function t(network,
     function eachResponse(err, res) {
         if (err.codeName === 'UnexpectedError') {
             unexpected++;
-        } else if (err.codeName === 'Declined') {
-            declined++;
+        } else if (err.codeName === 'Unhealthy') {
+            unhealthy++;
         }
     }
 
@@ -103,7 +103,7 @@ RelayNetwork.test('should switch to unhealthy', aliceAndBob, function t(network,
         assert.equal(logRecord.meta.serviceName, 'bob');
         assert.equal(logRecord.meta.callerName, 'alice');
 
-        assert.ok(declined > 70, 'should largely decline when unhealthy');
+        assert.ok(unhealthy > 70, 'should largely decline when unhealthy');
         assert.ok(unexpected > 20, 'should trickle original error');
 
         assert.end();
@@ -126,13 +126,13 @@ RelayNetwork.test('switches to unhealthy on timeout', aliceAndBob, function t(ne
     }
 
     var timedOut = 0;
-    var declined = 0;
+    var unhealthy = 0;
 
     function eachResponse(err, res) {
         if (err.codeName === 'Timeout') {
             timedOut++;
-        } else if (err.codeName === 'Declined') {
-            declined++;
+        } else if (err.codeName === 'Unhealthy') {
+            unhealthy++;
         }
     }
 
@@ -169,13 +169,13 @@ RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndB
     }
 
     var reset = 0;
-    var declined = 0;
+    var unhealthy = 0;
 
     function eachResponse(err, res) {
         if (err.codeName === 'NetworkError') {
             reset++;
-        } else if (err.codeName === 'Declined') {
-            declined++;
+        } else if (err.codeName === 'Unhealthy') {
+            unhealthy++;
         }
     }
 
@@ -184,7 +184,7 @@ RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndB
             return assert.end(err);
         }
 
-        assert.ok(declined > reset * 2, 'should typicaly decline');
+        assert.ok(unhealthy > reset * 2, 'should typicaly decline');
 
         var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
         assert.equals(circuit.state.type, 'tchannel.unhealthy', 'should switch to unhealthy');
@@ -212,13 +212,13 @@ RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndB
 //     }
 //
 //     var reset = 0;
-//     var declined = 0;
+//     var unhealthy = 0;
 //
 //     function eachResponse(err, res) {
 //         if (err.codeName === 'NetworkError') {
 //             reset++;
-//         } else if (err.codeName === 'Declined') {
-//             declined++;
+//         } else if (err.codeName === 'Unhealthy') {
+//             unhealthy++;
 //         }
 //     }
 //
@@ -228,7 +228,7 @@ RelayNetwork.test('switches to unhealthy on service connection reset', aliceAndB
 //         }
 //
 //
-//         assert.ok(declined > reset * 2, 'should typicaly decline');
+//         assert.ok(unhealthy > reset * 2, 'should typicaly decline');
 //
 //         var circuit = network.getCircuit(0, 'alice', 'bob', 'call');
 //         assert.equals(circuit.state.type, 'tchannel.unhealthy', 'should switch to unhealthy');
@@ -323,7 +323,7 @@ RelayNetwork.test('circuit state machine behaves properly', aliceAndBob, functio
     }
 
     function waitForUnhealthy(err, res) {
-        if (err.type === 'tchannel.declined') {
+        if (err.type === 'tchannel.unhealthy') {
             state = whileUnhealthy;
         } else {
             assert.equals(err.type, 'tchannel.network', 'more initial network errors');
@@ -331,7 +331,7 @@ RelayNetwork.test('circuit state machine behaves properly', aliceAndBob, functio
     }
 
     function whileUnhealthy(err, res) {
-        assert.equals(err.type, 'tchannel.declined', 'decline while unhealthy initially');
+        assert.equals(err.type, 'tchannel.unhealthy', 'decline while unhealthy initially');
         count++;
         if (count > 2) {
             count = 0;
@@ -343,7 +343,7 @@ RelayNetwork.test('circuit state machine behaves properly', aliceAndBob, functio
         if (err.type === 'tchannel.network') {
             state = whileUnhealthy;
         } else {
-            assert.equals(err.type, 'tchannel.declined', 'decline while waiting for probe');
+            assert.equals(err.type, 'tchannel.unhealthy', 'decline while waiting for probe');
         }
     }
 
@@ -391,7 +391,7 @@ RelayNetwork.test('recovers after five successes', aliceAndBob, function t(netwo
 
     function waitForDecline(err, res) {
         count++;
-        if (err.type === 'tchannel.declined') {
+        if (err.type === 'tchannel.unhealthy') {
             assert.ok(count > 2, 'should be some initial unexpected errors');
             count = 0;
             state = waitForProbe;
@@ -410,7 +410,7 @@ RelayNetwork.test('recovers after five successes', aliceAndBob, function t(netwo
                 probes = 0;
                 state = healthyAgain;
             }
-        } else if (err.type === 'tchannel.declined') {
+        } else if (err.type === 'tchannel.unhealthy') {
             count++;
         } else {
             assert.fail('should either decline or succeed in healthy state');
@@ -593,7 +593,7 @@ RelayNetwork.test('should be able to short circuits', aliceAndBob, function t(ne
     network.cluster.logger.whitelist('info', 'circuit event: healthy');
     network.cluster.logger.whitelist('info', 'circuit event: shorted');
 
-    var declined = 0;
+    var unhealthy = 0;
     var unexpected = 0;
 
     network.exercise(100, 100, eachRequest, eachResponse, onCompletion);
@@ -608,8 +608,8 @@ RelayNetwork.test('should be able to short circuits', aliceAndBob, function t(ne
     function eachResponse(err, res) {
         if (err.codeName === 'UnexpectedError') {
             unexpected++;
-        } else if (err.codeName === 'Declined') {
-            declined++;
+        } else if (err.codeName === 'Unhealthy') {
+            unhealthy++;
         }
     }
 
@@ -631,7 +631,7 @@ RelayNetwork.test('should be able to short circuits', aliceAndBob, function t(ne
         assert.equal(items[1].meta.serviceName, 'bob');
         assert.equal(items[1].meta.callerName, 'alice');
 
-        assert.equal(declined, 0, 'should not decline when shorted');
+        assert.equal(unhealthy, 0, 'should not decline when shorted');
         assert.equal(unexpected, 101, 'should slam the underlying problem');
 
         assert.end();

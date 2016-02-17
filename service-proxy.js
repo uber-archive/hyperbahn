@@ -425,7 +425,7 @@ function handleLazily(conn, reqFrame) {
             callerName, serviceName, endpoint
         );
         if (!circuit.state.shouldRequest()) {
-            self.rejectRequestFrame(conn, reqFrame, 'Declined', 'Service is not healthy');
+            self.rejectRequestFrame(conn, reqFrame, 'Unhealthy', 'Service is not healthy');
             return true;
         }
 
@@ -516,7 +516,7 @@ function handleRequest(req, buildRes) {
             req.headers.cn || 'no-cn', req.serviceName, req.endpoint
         );
         if (!circuit.state.shouldRequest()) {
-            buildRes().sendError('Declined', 'Service is not healthy');
+            buildRes().sendError('Unhealthy', 'Service is not healthy');
             return;
         }
 
