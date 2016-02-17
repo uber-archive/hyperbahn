@@ -613,9 +613,12 @@ ApplicationClients.prototype.updateRpsLimitForServiceName = function updateRpsLi
 ApplicationClients.prototype.updateKValues = function updateKValues(hasChanged, forceUpdate) {
     var self = this;
 
+    var changed = false;
+
     if (forceUpdate || hasChanged['kValue.default']) {
         var defaultKValue = self.remoteConfig.get('kValue.default', 10);
         self.egressNodes.setDefaultKValue(defaultKValue);
+        changed = true;
     }
 
     if (forceUpdate || hasChanged['kValue.services']) {
@@ -625,8 +628,12 @@ ApplicationClients.prototype.updateKValues = function updateKValues(hasChanged, 
             var serviceName = keys[i];
             var kValue = serviceKValues[serviceName];
             self.egressNodes.setKValueFor(serviceName, kValue);
-            self.serviceProxy.updateServiceChannels();
+            changed = true;
         }
+    }
+
+    if (changed) {
+        self.serviceProxy.updateServiceChannels();
     }
 };
 
