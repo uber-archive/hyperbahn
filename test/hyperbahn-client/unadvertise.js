@@ -103,7 +103,7 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
-            cluster.untilExitsConnected(steve, onceConnected);
+            cluster.untilExitsConnected(steve.serviceName, steve.channel, onceConnected);
         }
 
         function onceConnected() {
@@ -187,7 +187,7 @@ function runTests(HyperbahnCluster) {
         steveHyperbahnClient.advertise();
 
         function onAdvertised() {
-            cluster.untilExitsConnected(steve, onceConnected);
+            cluster.untilExitsConnected(steve.serviceName, steve.channel, onceConnected);
         }
 
         function onceConnected() {

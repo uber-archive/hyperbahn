@@ -384,7 +384,7 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
             return;
         }
 
-        self.untilExitsConnected(remote, onConnected);
+        self.untilExitsConnected(remote.serviceName, remote.channel, onConnected);
     }
 
     function onConnected(err) {
@@ -581,13 +581,13 @@ TestCluster.prototype.checkExitKValue = function checkExitKValue(assert, opts) {
 };
 
 TestCluster.prototype.untilExitsConnected =
-function untilExitsConnected(remote, callback) {
+function untilExitsConnected(serviceName, channel, callback) {
     var self = this;
 
     var app = self.apps[0];
-    var exits = app.clients.egressNodes.exitsFor(remote.serviceName);
+    var exits = app.clients.egressNodes.exitsFor(serviceName);
     var numExits = Object.keys(exits).length;
-    remote.channel.connectionEvent.on(onConn);
+    channel.connectionEvent.on(onConn);
     checkConns();
 
     function onConn(conn) {
@@ -601,7 +601,7 @@ function untilExitsConnected(remote, callback) {
 
         var got = {};
 
-        var peers = remote.channel.peers.values();
+        var peers = channel.peers.values();
         for (var i = 0; i < peers.length; i++) {
             var peer = peers[i];
             for (var j = 0; j < peer.connections.length; j++) {
@@ -619,7 +619,7 @@ function untilExitsConnected(remote, callback) {
     }
 
     function finish() {
-        remote.channel.connectionEvent.removeListener(onConn);
+        channel.connectionEvent.removeListener(onConn);
         callback();
     }
 };
