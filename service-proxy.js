@@ -103,8 +103,8 @@ function ServiceDispatchHandler(options) {
      * relaysFor             :: Map<serviceName, List<hostPort>>
      * partialRanges         :: Map<serviceName, PartialRange>
      * exitServices          :: Map<serviceName, lastRefresh>
-     * peersToReap           :: Map<hostPort, lastRefresh>
-     * knownPeers            :: Map<hostPort, lastRefresh>
+     * peersToReap           :: Map<hostPort, Map<serviceName, lastRefresh>>
+     * knownPeers            :: Map<hostPort, Map<serviceName, lastRefresh>>
      * connectedServicePeers :: Map<serviceName, Map<hostPort, lastRefresh>>
      * connectedPeerServices :: Map<hostPort, Map<serviceName, lastRefresh>>
      *
