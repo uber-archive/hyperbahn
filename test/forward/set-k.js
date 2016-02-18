@@ -45,6 +45,16 @@ allocCluster.test('set k and forward', {
             return assert.end(err);
         }
 
+        cluster.sendRegister(steve.channel, {
+            serviceName: steve.serviceName
+        }, onceConnected);
+    }
+
+    function onceConnected(err) {
+        if (err) {
+            return assert.end(err);
+        }
+
         cluster.checkExitKValue(assert, {
             serviceName: steve.serviceName,
             kValue: 15
