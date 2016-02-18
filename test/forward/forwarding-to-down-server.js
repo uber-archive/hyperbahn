@@ -111,12 +111,8 @@ allocCluster.test('forwarding to a down service', {
                 cassert.ok(expectedAddr, 'expected exception to steve');
 
                 var expectedType =
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.connect.ECONNREFUSED' ||
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-io.read.ECONNRESET' ||
-                    logErr.fullType === 'tchannel.socket~!~error.wrapped-unknown' ||
-                    logErr.fullType === 'tchannel.socket-closed' ||
-                    logErr.fullType === 'tchannel.connection.reset~!~tchannel.socket~!~error.wrapped-io.read.ECONNRESET' ||
-                    logErr.fullType === 'tchannel.connection.reset~!~tchannel.socket~!~error.wrapped-unknown';
+                    logErr.fullType.indexOf('tchannel.socket') === 0 ||
+                    logErr.fullType.indexOf('tchannel.connection.reset~!~tchannel.socket') === 0;
                 if (!expectedType) {
                     assert.comment('unexpected error type ' + logErr.fullType);
                 }
