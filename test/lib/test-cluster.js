@@ -611,17 +611,11 @@ function untilExitsConnected(serviceName, channel, callback) {
         }
 
         var got = {};
-
-        var peers = channel.peers.values();
-        for (var i = 0; i < peers.length; i++) {
-            var peer = peers[i];
-            for (var j = 0; j < peer.connections.length; j++) {
-                var conn = peer.connections[j];
-                if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
-                    got[peer.hostPort] = true;
-                }
+        forEachPeerConn(channel, function each(conn, peer) {
+            if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
+                got[peer.hostPort] = true;
             }
-        }
+        });
 
         var gotExits = Object.keys(got).length;
         if (gotExits >= numExits) {
@@ -810,5 +804,16 @@ function forEachServerConn(channel, each) {
     for (var i = 0; i < keys.length; i++) {
         var conn = channel.serverConnections[keys[i]];
         each(conn);
+    }
+}
+
+function forEachPeerConn(channel, each) {
+    var peers = channel.peers.values();
+    for (var i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        for (var j = 0; j < peer.connections.length; j++) {
+            var conn = peer.connections[j];
+            each(conn, peer);
+        }
     }
 }
