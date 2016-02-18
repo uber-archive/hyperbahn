@@ -587,7 +587,12 @@ function untilExitsConnected(serviceName, channel, callback) {
     var app = self.apps[0];
 
     var exits = app.clients.egressNodes.exitsFor(serviceName);
-    var numExits = Object.keys(exits).length;
+    var exitKeys = Object.keys(exits);
+    var pending = {};
+    for (var i = 0; i < exitKeys.length; ++i) {
+        var exitKey = exitKeys[i];
+        pending[exitKey] = true;
+    }
 
     // Check for all future connections
     channel.connectionEvent.on(onConn);
@@ -610,15 +615,13 @@ function untilExitsConnected(serviceName, channel, callback) {
             newConn.identifiedEvent.removeListener(checkConns);
         }
 
-        var got = {};
         forEachPeerConn(channel, function each(conn, peer) {
             if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
-                got[peer.hostPort] = true;
+                delete pending[peer.hostPort];
             }
         });
 
-        var gotExits = Object.keys(got).length;
-        if (gotExits >= numExits) {
+        if (!Object.keys(pending).length) {
             finish();
         }
     }
