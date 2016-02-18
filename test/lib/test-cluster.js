@@ -593,13 +593,11 @@ function untilExitsConnected(serviceName, channel, callback) {
     channel.connectionEvent.on(onConn);
 
     // Check for all existing non-identified connections
-    var keys = Object.keys(channel.serverConnections);
-    for (var k = 0; k < keys.length; k++) {
-        var connection = channel.serverConnections[keys[k]];
+    forEachServerConn(channel, function each(connection) {
         if (!connection.remoteName) {
             connection.identifiedEvent.on(checkConns);
         }
-    }
+    });
 
     checkConns();
 
@@ -806,3 +804,11 @@ function forEachHostPort(each) {
         each('namedRemote', i, self.namedRemotes[i].hostPort);
     }
 };
+
+function forEachServerConn(channel, each) {
+    var keys = Object.keys(channel.serverConnections);
+    for (var i = 0; i < keys.length; i++) {
+        var conn = channel.serverConnections[keys[i]];
+        each(conn);
+    }
+}
