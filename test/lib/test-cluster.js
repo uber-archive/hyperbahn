@@ -583,23 +583,34 @@ TestCluster.prototype.checkExitKValue = function checkExitKValue(assert, opts) {
 TestCluster.prototype.untilExitsConnected =
 function untilExitsConnected(serviceName, channel, callback) {
     var self = this;
+    self.untilExitsConnectedExcept(serviceName, channel, {}, callback);
+};
+
+TestCluster.prototype.untilExitsConnectedExcept =
+function untilExitsConnectedExcept(serviceName, channel, except, callback) {
+    var self = this;
 
     var app = self.apps[0];
 
     var exits = app.clients.egressNodes.exitsFor(serviceName);
-    var numExits = Object.keys(exits).length;
+    var exitKeys = Object.keys(exits);
+    var pending = {};
+    for (var i = 0; i < exitKeys.length; ++i) {
+        var exitKey = exitKeys[i];
+        if (!except[exitKey]) {
+            pending[exitKey] = true;
+        }
+    }
 
     // Check for all future connections
     channel.connectionEvent.on(onConn);
 
     // Check for all existing non-identified connections
-    var keys = Object.keys(channel.serverConnections);
-    for (var k = 0; k < keys.length; k++) {
-        var connection = channel.serverConnections[keys[k]];
+    forEachServerConn(channel, function each(connection) {
         if (!connection.remoteName) {
             connection.identifiedEvent.on(checkConns);
         }
-    }
+    });
 
     checkConns();
 
@@ -612,21 +623,13 @@ function untilExitsConnected(serviceName, channel, callback) {
             newConn.identifiedEvent.removeListener(checkConns);
         }
 
-        var got = {};
-
-        var peers = channel.peers.values();
-        for (var i = 0; i < peers.length; i++) {
-            var peer = peers[i];
-            for (var j = 0; j < peer.connections.length; j++) {
-                var conn = peer.connections[j];
-                if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
-                    got[peer.hostPort] = true;
-                }
+        forEachPeerConn(channel, function each(conn, peer) {
+            if (exits[peer.hostPort] !== undefined && conn.direction === 'in') {
+                delete pending[peer.hostPort];
             }
-        }
+        });
 
-        var gotExits = Object.keys(got).length;
-        if (gotExits >= numExits) {
+        if (!Object.keys(pending).length) {
             finish();
         }
     }
@@ -806,3 +809,22 @@ function forEachHostPort(each) {
         each('namedRemote', i, self.namedRemotes[i].hostPort);
     }
 };
+
+function forEachServerConn(channel, each) {
+    var keys = Object.keys(channel.serverConnections);
+    for (var i = 0; i < keys.length; i++) {
+        var conn = channel.serverConnections[keys[i]];
+        each(conn);
+    }
+}
+
+function forEachPeerConn(channel, each) {
+    var peers = channel.peers.values();
+    for (var i = 0; i < peers.length; i++) {
+        var peer = peers[i];
+        for (var j = 0; j < peer.connections.length; j++) {
+            var conn = peer.connections[j];
+            each(conn, peer);
+        }
+    }
+}
