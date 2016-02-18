@@ -34,13 +34,17 @@ allocCluster.test('register to a running server', {
     function onResponse(err, result) {
         assert.ifError(err, 'register does not error');
 
+        var body = result.body;
+        assert.equal(typeof body.connectionCount, 'number');
+
+        cluster.untilExitsConnected('hello-bob', server, checkExits);
+    }
+
+    function checkExits() {
         cluster.checkExitPeers(assert, {
             serviceName: 'hello-bob',
             hostPort: server.hostPort
         });
-
-        var body = result.body;
-        assert.equal(typeof body.connectionCount, 'number');
 
         server.close();
         assert.end();
@@ -59,6 +63,10 @@ allocCluster.test('double register to same hostPort', {
     function onResponse(err, result) {
         assert.ifError(err, 'register does not error');
 
+        cluster.untilExitsConnected('hello-bob', server, thenCheckAndRegAgain);
+    }
+
+    function thenCheckAndRegAgain() {
         cluster.checkExitPeers(assert, {
             serviceName: 'hello-bob',
             hostPort: server.hostPort
@@ -66,20 +74,23 @@ allocCluster.test('double register to same hostPort', {
 
         cluster.sendRegister(server, {
             serviceName: 'hello-bob'
-        }, onResponse2);
+        }, thenWaitAgain);
     }
 
-    function onResponse2(err, result) {
+    function thenWaitAgain(err, result) {
         assert.ifError(err);
 
+        var body = result.body;
+        assert.equal(typeof body.connectionCount, 'number');
+
+        cluster.untilExitsConnected('hello-bob', server, onResponse2);
+    }
+
+    function onResponse2() {
         cluster.checkExitPeers(assert, {
             serviceName: 'hello-bob',
             hostPort: server.hostPort
         });
-
-        var body = result.body;
-
-        assert.equal(typeof body.connectionCount, 'number');
 
         server.close();
         assert.end();

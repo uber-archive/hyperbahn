@@ -35,17 +35,21 @@ allocCluster.test('can register', {
     function onResponse(err, result) {
         assert.ifError(err, 'register does not error');
 
-        cluster.checkExitPeers(assert, {
-            serviceName: 'hello-bob',
-            hostPort: dummy.hostPort
-        });
-
         assert.equal(result.head, null, 'head from register is null');
         var registerResult = result.body;
 
         assert.ok(registerResult.connectionCount <= 5 &&
             registerResult.connectionCount >= 1,
             'expected to have at most 5 register connections');
+
+        cluster.untilExitsConnected('hello-bob', dummy, checkExits);
+    }
+
+    function checkExits() {
+        cluster.checkExitPeers(assert, {
+                serviceName: 'hello-bob',
+                hostPort: dummy.hostPort
+        });
 
         assert.end();
     }

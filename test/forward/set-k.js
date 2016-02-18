@@ -47,7 +47,15 @@ allocCluster.test('set k and forward', {
 
         cluster.sendRegister(steve.channel, {
             serviceName: steve.serviceName
-        }, onceConnected);
+        }, thenWaitForConnections);
+    }
+
+    function thenWaitForConnections(err) {
+        if (err) {
+            return assert.end(err);
+        }
+
+        cluster.untilExitsConnected(steve.serviceName, steve.channel, onceConnected);
     }
 
     function onceConnected(err) {

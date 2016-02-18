@@ -37,11 +37,12 @@ allocCluster.test('register with ringpop divergence', {
 
     var entryNode = cluster.apps[0];
     var exitNode = cluster.apps[1];
+    var dummy = cluster.dummies[0];
 
     var service = entryNode.ring.hashToHostPort(exitNode).service;
     exitNode.ring.forceNonOwnership(service + '~1');
 
-    cluster.sendRegister(cluster.dummies[0], {
+    cluster.sendRegister(dummy, {
         serviceName: service,
         host: entryNode.hostPort
     }, function onResponse(err, resp) {
@@ -50,14 +51,20 @@ allocCluster.test('register with ringpop divergence', {
             return assert.end();
         }
 
+        assert.equal(typeof resp.body.connectionCount, 'number');
+
+        var exceptShardOne = {};
+        exceptShardOne[exitNode.hostPort] = true;
+        cluster.untilExitsConnectedExcept(service, dummy, exceptShardOne, checkExitPeers);
+    });
+
+    function checkExitPeers() {
         cluster.checkExitPeers(assert, {
             serviceName: service,
-            hostPort: cluster.dummies[0].hostPort,
+            hostPort: dummy.hostPort,
             blackList: [exitNode.hostPort]
         });
 
-        assert.equal(typeof resp.body.connectionCount, 'number');
-
         assert.end();
-    });
+    }
 });

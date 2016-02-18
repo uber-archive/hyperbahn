@@ -35,38 +35,40 @@ allocCluster.test('peer reaper runs', {
     cluster.logger.whitelist('info', 'draining peer');
 
     var dummy = cluster.dummies[0];
+    var checks = 0;
 
     cluster.sendRegister(dummy, {
         serviceName: 'hello-bob'
     }, onResponse);
 
+    function checkExitPeers(expectedChecks) {
+        assert.equal(checks, expectedChecks, 'expected check sequence');
+
+        cluster.untilExitsConnected('hello-bob', dummy, function thenDoTheCheck() {
+            checks++;
+            cluster.checkExitPeers(assert, {
+                serviceName: 'hello-bob',
+                hostPort: dummy.hostPort
+            });
+        });
+    }
+
     function onResponse(err, result) {
         assert.ifError(err, 'register does not error');
 
-        cluster.checkExitPeers(assert, {
-            serviceName: 'hello-bob',
-            hostPort: dummy.hostPort
-        });
+        checkExitPeers(0);
 
         setTimeout(afterOneReaps, 275);
     }
 
     function afterOneReaps() {
-        cluster.checkExitPeers(assert, {
-            serviceName: 'hello-bob',
-            hostPort: dummy.hostPort,
-            isDead: false
-        });
+        checkExitPeers(1);
 
         setTimeout(afterTwoReaps, 275);
     }
 
     function afterTwoReaps() {
-        cluster.checkExitPeers(assert, {
-            serviceName: 'hello-bob',
-            hostPort: dummy.hostPort,
-            isDead: true
-        });
+        checkExitPeers(2);
 
         finish();
     }

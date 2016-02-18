@@ -51,7 +51,15 @@ allocCluster.test('find connections for service', {
             function registerEach(dummy, i, done) {
                 cluster.sendRegister(dummy, {
                     serviceName: 'Dummy'
-                }, done);
+                }, thenWait);
+
+                function thenWait(err) {
+                    if (err) {
+                        done(err);
+                        return;
+                    }
+                    cluster.untilExitsConnected('Dummy', dummy, done);
+                }
             },
             function finishRegister(_, results) {
                 for (var i = 0; i < results.length; i++) {

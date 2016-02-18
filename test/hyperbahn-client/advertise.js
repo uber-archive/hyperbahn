@@ -52,11 +52,6 @@ function runTests(HyperbahnCluster) {
         function onResponse() {
             var result = client.latestAdvertisementResult;
 
-            cluster.checkExitPeers(assert, {
-                serviceName: 'hello-bob',
-                hostPort: bob.channel.hostPort
-            });
-
             assert.equal(result.head, null);
 
             // Because of duplicates in a size 5 cluster we know
@@ -64,6 +59,18 @@ function runTests(HyperbahnCluster) {
             assert.ok(result.body.connectionCount <= 5,
                 'expect to have at most 5 advertise results');
 
+            cluster.untilExitsConnected('hello-bob', bob.channel, thenCheckExits);
+        }
+
+        function thenCheckExits() {
+            cluster.checkExitPeers(assert, {
+                serviceName: 'hello-bob',
+                hostPort: bob.channel.hostPort
+            });
+            finish();
+        }
+
+        function finish() {
             client.destroy();
             assert.end();
         }
@@ -100,17 +107,21 @@ function runTests(HyperbahnCluster) {
         function onResponse() {
             var result = client.latestAdvertisementResult;
 
-            cluster.checkExitPeers(assert, {
-                serviceName: 'hello-bob',
-                hostPort: bob.channel.hostPort
-            });
-
             assert.equal(result.head, null);
 
             // Because of duplicates in a size 5 cluster we know
             // that we have at most 5 kValues
             assert.ok(result.body.connectionCount <= 5,
                 'expect to have at most 5 advertise results');
+
+            cluster.untilExitsConnected('hello-bob', bob.channel, thenCheckExits);
+        }
+
+        function thenCheckExits() {
+            cluster.checkExitPeers(assert, {
+                    serviceName: 'hello-bob',
+                    hostPort: bob.channel.hostPort
+            });
 
             assert.end();
         }
