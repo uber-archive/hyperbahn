@@ -157,26 +157,6 @@ Circuits.prototype.getCircuitTuples = function getCircuitTuples() {
     return tuples;
 };
 
-Circuits.prototype.getCircuitForRequest = function getCircuitForRequest(req) {
-    // Default the caller name.
-    // All callers that fail to specifiy a cn share a circuit for each sn:en
-    // and fail together.
-    var callerName = req.headers.cn || 'no-cn';
-    var serviceName = req.serviceName;
-    if (!serviceName) {
-        return new Result(new ErrorFrame('BadRequest', 'All requests must have a service name'));
-    }
-
-    var arg1 = String(req.arg1);
-    var circuit = this.getCircuit(callerName, serviceName, arg1);
-
-    if (!circuit.state.shouldRequest()) {
-        return new Result(new ErrorFrame('Unhealthy', 'Service is not healthy'));
-    }
-
-    return new Result(null, circuit);
-};
-
 function ErrorFrame(codeName, message) {
     this.codeName = codeName;
     this.message = message;
