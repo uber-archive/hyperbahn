@@ -424,8 +424,10 @@ function handleLazily(conn, reqFrame) {
         var circuit = serviceChannel.handler.circuits.getCircuit(
             callerName, serviceName, endpoint
         );
-        if (!circuit.state.shouldRequest()) {
-            self.rejectRequestFrame(conn, reqFrame, 'Unhealthy', 'Service is not healthy');
+        var err = circuit.state.getRequestError();
+        if (err) {
+            self.rejectRequestFrame(conn, reqFrame,
+                err.codeName, err.message);
             return true;
         }
 
@@ -515,8 +517,9 @@ function handleRequest(req, buildRes) {
         var circuit = serviceChannel.handler.circuits.getCircuit(
             req.headers.cn || 'no-cn', req.serviceName, req.endpoint
         );
-        if (!circuit.state.shouldRequest()) {
-            buildRes().sendError('Unhealthy', 'Service is not healthy');
+        var err = circuit.state.getRequestError();
+        if (err) {
+            buildRes().sendError(err.codeName, err.message);
             return;
         }
 

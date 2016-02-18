@@ -347,6 +347,14 @@ PeriodicState.prototype.checkPeriod = function checkPeriod(now) {
     return false;
 };
 
+PeriodicState.prototype.getRequestError = function getRequestError() {
+    if (this.shouldRequest()) {
+        return null;
+    }
+
+    return new ErrorFrame('Unhealthy', 'Service is not healthy');
+};
+
 function HealthyState(options) {
     PeriodicState.call(this, options);
 
