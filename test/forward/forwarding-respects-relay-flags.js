@@ -22,7 +22,7 @@
 
 var allocCluster = require('../lib/test-cluster.js');
 
-allocCluster.test('register and forward', {
+allocCluster.test('register and forward with never retry flag', {
     size: 5,
     namedRemotes: ['mary', 'mary', 'mary']
 }, function t(cluster, assert) {
