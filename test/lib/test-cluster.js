@@ -583,6 +583,12 @@ TestCluster.prototype.checkExitKValue = function checkExitKValue(assert, opts) {
 TestCluster.prototype.untilExitsConnected =
 function untilExitsConnected(serviceName, channel, callback) {
     var self = this;
+    self.untilExitsConnectedExcept(serviceName, channel, {}, callback);
+};
+
+TestCluster.prototype.untilExitsConnectedExcept =
+function untilExitsConnectedExcept(serviceName, channel, except, callback) {
+    var self = this;
 
     var app = self.apps[0];
 
@@ -591,7 +597,9 @@ function untilExitsConnected(serviceName, channel, callback) {
     var pending = {};
     for (var i = 0; i < exitKeys.length; ++i) {
         var exitKey = exitKeys[i];
-        pending[exitKey] = true;
+        if (!except[exitKey]) {
+            pending[exitKey] = true;
+        }
     }
 
     // Check for all future connections
