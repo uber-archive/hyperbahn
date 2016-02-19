@@ -91,6 +91,72 @@ allocCluster.test('request circuit state from endpoint', {
     }
 });
 
+allocCluster.test('request circuit state from endpoint', {
+    size: 2,
+    kValue: 1,
+    remoteConfig: {
+        'rateLimiting.enabled': false,
+        'circuits.enabled': true,
+        'circuits.codeName': 'Unhealthy',
+        'partialAffinity.enabled': true
+    },
+    seedConfig: {
+        'hyperbahn.circuits': {
+            period: 10,
+            maxErrorRate: 0.5,
+            minRequests: 0,
+            probation: 5,
+            enabled: true
+        }
+    }
+}, function t(cluster, assert) {
+    cluster.logger.whitelist('warn', 'forwarding error frame');
+
+    installServer(cluster);
+    warmupAndRequests(cluster, whenTheSmokeClears);
+
+    function whenTheSmokeClears(err) {
+        if (err) {
+            return assert.ifError(err);
+        }
+
+        sendRequest(cluster, false, requestCircuitsState);
+    }
+
+    function requestCircuitsState(_, err) {
+        assert.equal(err.type, 'tchannel.unhealthy');
+
+        getCircuitState(cluster, onCircuitsResponse);
+    }
+
+    function onCircuitsResponse(err, res) {
+        if (err) {
+            return assert.end(err);
+        }
+
+        assert.equals(res.ok, true);
+        var circuits = res.body;
+
+        assert.ok(circuits.length >= 1, 'expected at least one circuit');
+
+        var circuit;
+        for (var i = 0; i < circuits.length; i++) {
+            if (circuits[i].sn === 'bob') {
+                circuit = circuits[i];
+                break;
+            }
+        }
+
+        assert.equals(circuit.cn, 'steve', 'caller name');
+        assert.equals(circuit.sn, 'bob', 'service name');
+        assert.equals(circuit.en, 'ifyousayso', 'endpoint name');
+        assert.equals(circuit.healthy, false, 'unhealthy');
+        assert.equals(circuit.shorted, false, 'not shorted');
+
+        assert.end();
+    }
+});
+
 function getCircuitState(cluster, onCircuitsResponse) {
     var exitNodes = cluster.getExitNodes('bob');
     var hostPort = exitNodes[0].hostPort;
