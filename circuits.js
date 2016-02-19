@@ -97,7 +97,8 @@ function Circuits(options) {
     this.statsd = options.statsd;
     this.circuitsByServiceName = {};
     this.config = options.config || {};
-    this.shorts = null;
+    this.shorts = options.shorts;
+    this.codeName = options.codeName;
 
     this.stateOptions = new StateOptions(null, {
         timeHeap: options.timeHeap,
@@ -110,6 +111,10 @@ function Circuits(options) {
     });
     this.egressNodes = options.egressNodes;
 }
+
+Circuits.prototype.updateCodeName = function updateCodeName(codeName) {
+    this.codeName = codeName;
+};
 
 Circuits.prototype.updateShorts = function updateShorts(shorts) {
     this.shorts = parseShorts(shorts);
@@ -351,7 +356,7 @@ PeriodicState.prototype.getRequestError = function getRequestError() {
         return null;
     }
 
-    return new ErrorFrame('Unhealthy', 'Service is not healthy');
+    return new ErrorFrame(this.circuit.root.codeName, 'Service is not healthy');
 };
 
 function HealthyState(options) {

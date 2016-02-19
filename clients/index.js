@@ -451,6 +451,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateLazyHandling(hasChanged, forceUpdate);
     self.updateCircuitsEnabled(hasChanged, forceUpdate);
     self.updateCircuitShorts(hasChanged, forceUpdate);
+    self.updateCircuitCodeName(hasChanged, forceUpdate);
     self.updateRateLimitingEnabled(hasChanged, forceUpdate);
     self.updateTotalRpsLimit(hasChanged, forceUpdate);
     self.updateExemptServices(hasChanged, forceUpdate);
@@ -547,6 +548,16 @@ ApplicationClients.prototype.updateCircuitShorts = function updateCircuitShorts(
     var self = this;
     if (forceUpdate || hasChanged['circuits.shorts']) {
         self.serviceProxy.updateCircuitShorts(self.remoteConfig.get('circuits.shorts', null));
+    }
+};
+
+ApplicationClients.prototype.updateCircuitCodeName =
+function updateCircuitCodeName(hasChanged, forceUpdate) {
+    var self = this;
+    if (forceUpdate || hasChanged['circuits.codeName']) {
+        self.serviceProxy.updateCircuitCodeName(
+            self.remoteConfig.get('circuits.codeName', 'Declined')
+        );
     }
 };
 

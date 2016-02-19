@@ -181,6 +181,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             rateLimiterEnabled: self.rateLimiterEnabled,
             circuitsConfig: self.circuitsConfig
         });
+        relayChannel.handler.updateCircuitCodeName('Unhealthy');
 
         var hyperbahnChannel = relayChannel.makeSubChannel({
             serviceName: 'hyperbahn'
