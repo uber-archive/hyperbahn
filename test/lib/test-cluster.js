@@ -145,6 +145,7 @@ function TestCluster(opts) {
     }
 
     self.logger.whitelist('info', 'implementing affinity change');
+    self.logger.whitelist('info', 'connecting peers');
 }
 inherits(TestCluster, EventEmitter);
 

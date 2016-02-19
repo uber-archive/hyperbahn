@@ -28,6 +28,7 @@ var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
 var setImmediate = require('timers').setImmediate;
+var stat = require('tchannel/stat-tags.js');
 
 var IntervalScan = require('./lib/interval-scan.js');
 var RateLimiter = require('./rate_limiter.js');
@@ -284,6 +285,33 @@ util.inherits(ServiceDispatchHandler, EventEmitter);
 
 ServiceDispatchHandler.prototype.type = 'tchannel.hyperbahn.service-dispatch-handler';
 
+ServiceDispatchHandler.prototype.rejectRequestFrame =
+function rejectRequestFrame(conn, reqFrame, codeName, message) {
+    var self = this;
+
+    var serviceName = reqFrame.bodyRW.lazy
+        .readServiceStr(reqFrame);
+    var callerName = reqFrame.bodyRW.lazy
+        .readCallerNameStr(reqFrame);
+    var endpoint = reqFrame.bodyRW.lazy
+        .readArg1Str(reqFrame);
+
+    if (callerName && serviceName && endpoint !== null) {
+        self.channel.emitFastStat(
+            'tchannel.inbound.calls.recvd',
+            'counter',
+            1,
+            new stat.InboundCallsRecvdTags(
+                callerName,
+                serviceName,
+                endpoint
+            )
+        );
+    }
+
+    conn.sendLazyErrorFrameForReq(reqFrame, codeName, message);
+};
+
 ServiceDispatchHandler.prototype.handleLazily =
 function handleLazily(conn, reqFrame) {
     var self = this;
@@ -302,7 +330,7 @@ function handleLazily(conn, reqFrame) {
             conn.extendLogInfo()
         );
         // TODO: protocol error instead?
-        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read serviceName');
+        self.rejectRequestFrame(conn, reqFrame, 'BadRequest', 'failed to read serviceName');
         return true;
     }
 
@@ -320,7 +348,7 @@ function handleLazily(conn, reqFrame) {
                 serviceName: serviceName
             })
         );
-        conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'missing cn header');
+        self.rejectRequestFrame(conn, reqFrame, 'BadRequest', 'missing cn header');
         return true;
     }
 
@@ -355,7 +383,7 @@ function handleLazily(conn, reqFrame) {
                     edgeCounters: self.rateLimiter.edgeCounters
                 }))
             );
-            conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
+            self.rejectRequestFrame(conn, reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
             return true;
         } else if (rateLimitReason === RATE_LIMIT_SERVICE) {
             var serviceLimit = self.rateLimiter.getRpsLimitForService(nextService);
@@ -368,9 +396,9 @@ function handleLazily(conn, reqFrame) {
                 }))
             );
             if (routingDelegate) {
-                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', 'Routing delegate ' + routingDelegate + ' is rate-limited by the service rps of ' + serviceLimit);
+                self.rejectRequestFrame(conn, reqFrame, 'Busy', 'Routing delegate ' + routingDelegate + ' is rate-limited by the service rps of ' + serviceLimit);
             } else {
-                conn.sendLazyErrorFrameForReq(reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+                self.rejectRequestFrame(conn, reqFrame, 'Busy', 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
             }
             return true;
         }
@@ -387,7 +415,7 @@ function handleLazily(conn, reqFrame) {
                 })
             );
             // TODO: protocol error instead?
-            conn.sendLazyErrorFrameForReq(reqFrame, 'BadRequest', 'failed to read arg1');
+            self.rejectRequestFrame(conn, reqFrame, 'BadRequest', 'failed to read arg1');
             return true;
         }
 
@@ -395,8 +423,7 @@ function handleLazily(conn, reqFrame) {
             callerName, serviceName, endpoint
         );
         if (!circuit.state.shouldRequest()) {
-            conn.sendLazyErrorFrameForReq(reqFrame,
-                'Declined', 'Service is not healthy');
+            self.rejectRequestFrame(conn, reqFrame, 'Declined', 'Service is not healthy');
             return true;
         }
 
