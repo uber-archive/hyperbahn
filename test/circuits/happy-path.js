@@ -21,6 +21,7 @@
 'use strict';
 
 var setTimeout = require('timers').setTimeout;
+var coreAssert = require('assert');
 
 var allocCluster = require('../lib/test-cluster.js');
 var parallel = require('run-parallel');
@@ -45,80 +46,21 @@ allocCluster.test('request circuit state from endpoint', {
 }, function t(cluster, assert) {
     cluster.logger.whitelist('warn', 'forwarding error frame');
 
-    cluster.remotes.bob.serverChannel.register('ifyousayso',
-        function respond(req, res, head, body) {
-            head = head.toString();
-            body = body.toString();
-            res.headers.as = 'raw';
+    installServer(cluster);
+    warmupAndRequests(cluster, whenTheSmokeClears);
 
-            if (head === 'no') {
-                res.sendError(body, 'error');
-            } else if (head === 'yes') {
-                res.sendOk(body);
-            } else {
-                assert(false, 'request should be yes or no');
-            }
-        });
-
-    var count = 100;
-
-    sendRequest(cluster, true, afterPreparation);
-
-    function afterPreparation(err) {
+    function whenTheSmokeClears(err) {
         if (err) {
-            return assert.end(err);
+            return assert.ifError(err);
         }
 
-        sendRequests();
-    }
-
-    function sendRequests() {
-        var tasks = [];
-        for (var i = 0; i < count; i++) {
-            // 0.5 is the error rate threshold. There is some variance.
-            // Test seems to pass with a success rate of 0.4, flipping the
-            // circuit breaker.
-            tasks.push(sendRequest.bind(null, cluster, Math.random() < 0.2));
-        }
-
-        parallel(tasks, afterBarrage);
-    }
-
-    function afterBarrage(err) {
-        if (err) {
-            return assert.end(err);
-        }
-
-        setTimeout(whenTheSmokeClears, 500);
-    }
-
-    function whenTheSmokeClears() {
         sendRequest(cluster, false, requestCircuitsState);
     }
 
-    function requestCircuitsState() {
-        var exitNodes = cluster.getExitNodes('bob');
-        assert.equal(exitNodes.length, 1);
-        var hostPort = exitNodes[0].hostPort;
+    function requestCircuitsState(_, err) {
+        assert.equal(err.type, 'tchannel.declined');
 
-        // Using bob, because steve's peer is unhealthy.
-        var channel = cluster.remotes.bob.clientChannel;
-        channel.waitForIdentified({
-            host: hostPort
-        }, function onConnect(err) {
-            assert.ifError(err);
-
-            var request = channel.request({
-                serviceName: 'autobahn',
-                timeout: 1000,
-                host: hostPort,
-                hasNoParent: true,
-                headers: {
-                    as: 'json'
-                }
-            });
-            cluster.tchannelJSON.send(request, 'circuits_v1', null, null, onCircuitsResponse);
-        });
+        getCircuitState(cluster, onCircuitsResponse);
     }
 
     function onCircuitsResponse(err, res) {
@@ -149,6 +91,68 @@ allocCluster.test('request circuit state from endpoint', {
     }
 });
 
+function getCircuitState(cluster, onCircuitsResponse) {
+    var exitNodes = cluster.getExitNodes('bob');
+    var hostPort = exitNodes[0].hostPort;
+
+    // Using bob, because steve's peer is unhealthy.
+    var channel = cluster.remotes.bob.clientChannel;
+    channel.waitForIdentified({
+        host: hostPort
+    }, function onConnect(err) {
+        if (err) {
+            return onCircuitsResponse(err);
+        }
+
+        var request = channel.request({
+            serviceName: 'autobahn',
+            timeout: 1000,
+            host: hostPort,
+            hasNoParent: true,
+            headers: {
+                as: 'json'
+            }
+        });
+        cluster.tchannelJSON.send(
+            request, 'circuits_v1', null, null, onCircuitsResponse
+        );
+    });
+}
+
+function warmupAndRequests(cluster, whenTheSmokeClears) {
+    var count = 100;
+
+    sendRequest(cluster, true, afterPreparation);
+
+    function afterPreparation(err) {
+        if (err) {
+            return whenTheSmokeClears(err);
+        }
+
+        sendRequests();
+    }
+
+    function sendRequests() {
+        var tasks = [];
+        for (var i = 0; i < count; i++) {
+            // 0.5 is the error rate threshold. There is some variance.
+            // Test seems to pass with a success rate of 0.4, flipping the
+            // circuit breaker.
+            tasks.push(sendRequest.bind(null, cluster, Math.random() < 0.2));
+        }
+
+        parallel(tasks, afterBarrage);
+    }
+
+    function afterBarrage(err) {
+        if (err) {
+            return whenTheSmokeClears(err);
+        }
+
+        setTimeout(whenTheSmokeClears, 500);
+    }
+}
+
 function sendRequest(cluster, yes, callback) {
     var request = cluster.remotes.steve.clientChannel.request({
         serviceName: 'bob',
@@ -163,7 +167,25 @@ function sendRequest(cluster, yes, callback) {
     }
 
     // Ignore the error responses; they are expected.
-    function onErr() {
-        callback();
+    function onErr(err) {
+        callback(null, err);
+    }
+}
+
+function installServer(cluster) {
+    cluster.remotes.bob.serverChannel.register('ifyousayso', respond);
+
+    function respond(req, res, head, body) {
+        head = head.toString();
+        body = body.toString();
+        res.headers.as = 'raw';
+
+        if (head === 'no') {
+            res.sendError(body, 'error');
+        } else if (head === 'yes') {
+            res.sendOk(body);
+        } else {
+            coreAssert(false, 'request should be yes or no');
+        }
     }
 }
