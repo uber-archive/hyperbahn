@@ -20,7 +20,6 @@
 
 'use strict';
 
-var Result = require('bufrw/result');
 var assert = require('assert');
 var format = require('util').format;
 var inherits = require('util').inherits;
