@@ -23,6 +23,7 @@
 var CollapsedAssert = require('../lib/collapsed-assert.js');
 var allocCluster = require('../lib/test-cluster.js');
 
+/*eslint max-statements: [2, 40]*/
 allocCluster.test('requesting rate limited to cluster', {
     size: 5,
     remoteConfig: {
