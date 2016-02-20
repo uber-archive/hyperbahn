@@ -398,7 +398,7 @@ function handleLazily(conn, reqFrame) {
             if (routingDelegate) {
                 self.rejectRequestFrame(conn, reqFrame, 'Busy', 'Routing delegate ' + routingDelegate + ' is rate-limited by the service rps of ' + serviceLimit);
             } else {
-                self.rejectRequestFrame(conn, reqFrame, 'Busy', 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
+                self.rejectRequestFrame(conn, reqFrame, 'Busy', serviceName + ' is rate-limited by the service rps of ' + serviceLimit);
             }
             return true;
         }
