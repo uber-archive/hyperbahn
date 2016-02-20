@@ -23,6 +23,7 @@
 var CollapsedAssert = require('../lib/collapsed-assert.js');
 var allocCluster = require('../lib/test-cluster.js');
 
+/*eslint max-statements: [2, 40]*/
 allocCluster.test('requesting rate limited to cluster', {
     size: 5,
     remoteConfig: {
@@ -41,6 +42,9 @@ allocCluster.test('requesting rate limited to cluster', {
     );
     cluster.logger.whitelist(
         'warn', 'forwarding error frame'
+    );
+    cluster.logger.whitelist(
+        'info', 'connecting peers'
     );
 
     var steve = cluster.remotes.steve;
@@ -145,6 +149,9 @@ allocCluster.test('requesting rate limited to one host', {
     cluster.logger.whitelist(
         'info', 'hyperbahn node is rate-limited by the total rps limit'
     );
+    cluster.logger.whitelist(
+        'info', 'connecting peers'
+    );
 
     var steve = cluster.remotes.steve;
     var bob = cluster.remotes.bob;
@@ -213,6 +220,17 @@ allocCluster.test('requesting rate limited to one host', {
 
         var allStats = statsByType(stats);
         var latencies = allStats['tchannel.inbound.calls.latency'];
+
+        var recvdStats = allStats['tchannel.inbound.calls.recvd'];
+        var echoRecvd = [];
+
+        for (i = 0; i < recvdStats.length; i++) {
+            if (recvdStats[i].tags.endpoint === 'echo') {
+                echoRecvd.push(recvdStats[i]);
+            }
+        }
+
+        assert.equal(echoRecvd.length, 100, 'expected 100 recvd');
 
         var echoLatencies = [];
         for (i = 0; i < latencies.length; i++) {

@@ -93,7 +93,8 @@ allocCluster.test('forwarding to a down service', {
                 cassert.equal(logLine.meta.serviceName, 'steve',
                     'expected steve error');
             } else if (logLine.msg === 'Refreshing service peer affinity' ||
-                       logLine.msg === 'implementing affinity change') {
+                       logLine.msg === 'implementing affinity change' ||
+                       logLine.msg === 'connecting peers') {
                 cassert.ok(true, 'expected partial affinity logs');
             } else if (logLine.msg === 'error while forwarding' ||
                        logLine.msg === 'resetting connection') {
