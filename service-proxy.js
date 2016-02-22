@@ -809,13 +809,12 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     var serviceChannel = self.getServiceChannel(serviceName, false);
     var peer = serviceChannel.peers.get(hostPort);
 
-    // simply freshen if not new
-    if (peer) {
+    if (!peer) {
+        self.addNewPartialPeer(serviceChannel, hostPort, now);
+    } else {
+        // simply freshen if not new
         self.freshenPartialPeer(peer, serviceName, now);
-        return;
     }
-
-    self.addNewPartialPeer(serviceChannel, hostPort, now);
 };
 
 ServiceDispatchHandler.prototype.addNewPartialPeer =
