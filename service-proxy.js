@@ -809,18 +809,29 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
     var serviceChannel = self.getServiceChannel(serviceName, false);
     var peer = serviceChannel.peers.get(hostPort);
 
-    // simply freshen if not new
-    if (peer) {
+    if (!peer) {
+        self.addNewPartialPeer(serviceChannel, hostPort, now);
+    } else {
+        // simply freshen if not new
         self.freshenPartialPeer(peer, serviceName, now);
-        return;
     }
+};
 
+ServiceDispatchHandler.prototype.addNewPartialPeer =
+function addNewPartialPeer(serviceChannel, hostPort, now) {
+    var self = this;
+
+    var serviceName = serviceChannel.serviceName;
     var partialRange = self.partialRanges[serviceName];
     if (partialRange) {
         partialRange.addWorker(hostPort, now);
     }
 
-    peer = self._getServicePeer(serviceChannel, hostPort);
+    var peer = serviceChannel.peers.add(hostPort);
+    if (!peer.serviceProxyServices) {
+        peer.serviceProxyServices = {};
+    }
+    peer.serviceProxyServices[serviceName] = true;
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
