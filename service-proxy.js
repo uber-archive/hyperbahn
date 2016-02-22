@@ -815,12 +815,20 @@ function refreshServicePeerPartially(serviceName, hostPort, now) {
         return;
     }
 
+    self.addNewPartialPeer(serviceChannel, hostPort, now);
+};
+
+ServiceDispatchHandler.prototype.addNewPartialPeer =
+function addNewPartialPeer(serviceChannel, hostPort, now) {
+    var self = this;
+
+    var serviceName = serviceChannel.serviceName;
     var partialRange = self.partialRanges[serviceName];
     if (partialRange) {
         partialRange.addWorker(hostPort, now);
     }
 
-    peer = self._getServicePeer(serviceChannel, hostPort);
+    self._getServicePeer(serviceChannel, hostPort);
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
