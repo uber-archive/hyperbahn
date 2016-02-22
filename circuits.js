@@ -97,7 +97,7 @@ function Circuits(options) {
     this.statsd = options.statsd;
     this.circuitsByServiceName = {};
     this.config = options.config || {};
-    this.shorts = options.shorts;
+    this.shorts = options.shorts || null;
     this.codeName = options.codeName;
 
     this.stateOptions = new StateOptions(null, {
