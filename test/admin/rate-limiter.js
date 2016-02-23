@@ -20,6 +20,7 @@
 
 'use strict';
 
+var collectParallel = require('collect-parallel/array');
 var Admin = require('../../bin/admin.js');
 var allocCluster = require('../lib/test-cluster.js');
 
@@ -73,7 +74,7 @@ allocCluster.test('set total rate limiter and forward', {
     size: 1,
     remoteConfig: {
         'rateLimiting.enabled': true,
-        'rateLimiting.totalRpsLimit': 2,
+        'rateLimiting.totalRpsLimit': 0,
         'rateLimiting.rpsLimitForServiceName': {
             'steve': 10
         },
@@ -87,7 +88,7 @@ allocCluster.test('set total rate limiter and forward', {
 }, function t(cluster, assert) {
     var bob = cluster.remotes.bob;
 
-    Admin.exec('rate-limiter total-limit 0', {
+    Admin.exec('rate-limiter total-limit 1', {
         hosts: cluster.hostPortList
     }, function onSet(err, arr) {
         assert.ifError(err);
@@ -103,31 +104,23 @@ allocCluster.test('set total rate limiter and forward', {
 
         for (var i = 0; i < results.length; i++) {
             var result = results[i];
-            assert.equal(result.settings.totalRpsLimit, 0, 'set totalRpsLimit should work');
+            assert.equal(result.settings.totalRpsLimit, 1, 'set totalRpsLimit should work');
             assert.equal(result.settings.rpsLimitForServiceName.steve, 10, 'set service limit should not affect others');
         }
 
-        bob.clientChannel.request({
-            serviceName: 'steve',
-            timeout: 50
-        }).send('echo', null, JSON.stringify('oh hi lol'), onReq);
-
-        function onReq(err2) {
-            assert.ifError(err2);
-
+        collectParallel([0, 1, 2, 3, 4], function sendEach(_i, _j, done) {
             bob.clientChannel.request({
                 serviceName: 'steve',
                 timeout: 50
-            }).send('echo', null, JSON.stringify('oh hi lol'), onForwarded);
-        }
-    }
-
-    function onForwarded(err, res, arg2, arg3) {
-        assert.ok(err, 'should fail');
-        assert.equal(err && err.type, 'tchannel.busy',
-            'error type should be busy');
-
-        assert.end();
+            }).send('echo', null, JSON.stringify('oh hi lol'), done);
+        }, function onReqs(_, res) {
+            assert.ifError(res[0].err, 'no error expected from first');
+            assert.ifError(res[1].err, 'no error expected from second');
+            assert.equal(res[2].err && res[2].err.type, 'tchannel.busy', 'expected busy error from third');
+            assert.equal(res[3].err && res[3].err.type, 'tchannel.busy', 'expected busy error from fourth');
+            assert.equal(res[4].err && res[4].err.type, 'tchannel.busy', 'expected busy error from fifth');
+            assert.end();
+        });
     }
 });
 
