@@ -105,3 +105,4 @@ require('./sorted-index-of.js');
 require('./partial-affinity.js');
 require('./partial-range.js');
 require('./peer-reaper-runs.js');
+require('./peer-churn.js');
