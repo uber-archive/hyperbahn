@@ -169,16 +169,22 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
     }
 
     function onReady() {
-        self.remotes.tcollector = self.createRemote({
-            serviceName: 'tcollector',
-            trace: false
-        }, onTCollectorReady);
+        if (!self.opts.noTCollector) {
+            self.remotes.tcollector = self.createRemote({
+                serviceName: 'tcollector',
+                trace: false
+            }, onTCollectorReady);
+        } else {
+            onTCollectorReady();
+        }
     }
 
     function onTCollectorReady() {
-        self.tcollector = FakeTCollector({
-            channel: self.remotes.tcollector.serverChannel
-        });
+        if (self.remotes.tcollector) {
+            self.tcollector = FakeTCollector({
+                channel: self.remotes.tcollector.serverChannel
+            });
+        }
 
         var remotesDone = CountedReadySignal(
             2 + self.namedRemotesConfig.length
@@ -476,7 +482,9 @@ TestCluster.prototype.close = function close(cb) {
 
     self.remotes.steve.destroy();
     self.remotes.bob.destroy();
-    self.remotes.tcollector.destroy();
+    if (self.remotes.tcollector) {
+        self.remotes.tcollector.destroy();
+    }
 
     for (i = 0; i < self.namedRemotes.length; i++) {
         self.namedRemotes[i].destroy();
