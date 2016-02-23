@@ -392,11 +392,13 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
         }, onRegister);
     }
 
-    function destroy() {
+    function destroy(destroyCb) {
         timers.clearTimeout(remote.registerTimer);
         remote.registerTimer = null;
         if (!channel.destroyed) {
-            channel.close();
+            channel.close(destroyCb);
+        } else if (destroyCb) {
+            destroyCb();
         }
     }
 
