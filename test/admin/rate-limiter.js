@@ -25,7 +25,11 @@ var Admin = require('../../bin/admin.js');
 var allocCluster = require('../lib/test-cluster.js');
 
 allocCluster.test('disable rate limiter and forward', {
-    size: 3
+    size: 3,
+    whitelist: [
+        ['info', 'hyperbahn service is rate-limited by the service rps limit'],
+        ['info', 'hyperbahn node is rate-limited by the total rps limit']
+    ]
 }, function t(cluster, assert) {
     var bob = cluster.remotes.bob;
 
@@ -72,6 +76,10 @@ allocCluster.test('disable rate limiter and forward', {
 
 allocCluster.test('set total rate limiter and forward', {
     size: 1,
+    whitelist: [
+        ['info', 'hyperbahn service is rate-limited by the service rps limit'],
+        ['info', 'hyperbahn node is rate-limited by the total rps limit']
+    ],
     remoteConfig: {
         'rateLimiting.enabled': true,
         'rateLimiting.totalRpsLimit': 0,
@@ -126,6 +134,10 @@ allocCluster.test('set total rate limiter and forward', {
 
 allocCluster.test('set service rate limiter and forward', {
     size: 1,
+    whitelist: [
+        ['info', 'hyperbahn service is rate-limited by the service rps limit'],
+        ['info', 'hyperbahn node is rate-limited by the total rps limit']
+    ],
     remoteConfig: {
         'rateLimiting.enabled': true,
         'rateLimiting.totalRpsLimit': 1000,
@@ -189,6 +201,10 @@ allocCluster.test('set service rate limiter and forward', {
 
 allocCluster.test('set exempt service and forward', {
     size: 2,
+    whitelist: [
+        ['info', 'hyperbahn service is rate-limited by the service rps limit'],
+        ['info', 'hyperbahn node is rate-limited by the total rps limit']
+    ],
     remoteConfig: {
         'rateLimiting.enabled': true,
         'rateLimiting.totalRpsLimit': 1000,
