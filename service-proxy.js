@@ -1043,11 +1043,7 @@ function removeServicePeer(serviceName, hostPort) {
     if (self.partialAffinityEnabled) {
         var partialRange = self.partialRanges[serviceName];
         if (partialRange) {
-            // TODO: would be better to do an incremental update:
-            // - remove (if exists)
-            // - recompute if any was removed
-            var workers = serviceChannel.peers.keys().sort();
-            partialRange.compute(null, workers, now);
+            partialRange.removeWorker(hostPort, now);
         }
 
         var result = self.ensurePartialConnections(
