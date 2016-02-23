@@ -192,16 +192,25 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
         remotesDone(onRemotes);
 
-        self.remotes.bob = self.createRemote({
-            serviceName: 'bob',
-            trace: self.opts.trace,
-            traceSample: 1
-        }, remotesDone.signal);
-        self.remotes.steve = self.createRemote({
-            serviceName: 'steve',
-            trace: self.opts.trace,
-            traceSample: 1
-        }, remotesDone.signal);
+        if (!self.opts.noBob) {
+            self.remotes.bob = self.createRemote({
+                serviceName: 'bob',
+                trace: self.opts.trace,
+                traceSample: 1
+            }, remotesDone.signal);
+        } else {
+            remotesDone.signal();
+        }
+
+        if (!self.opts.noSteve) {
+            self.remotes.steve = self.createRemote({
+                serviceName: 'steve',
+                trace: self.opts.trace,
+                traceSample: 1
+            }, remotesDone.signal);
+        } else {
+            remotesDone.signal();
+        }
 
         for (var i = 0; i < self.namedRemotesConfig.length; i++) {
             var serviceName = self.namedRemotesConfig[i];
@@ -480,8 +489,12 @@ TestCluster.prototype.close = function close(cb) {
         }
     }
 
-    self.remotes.steve.destroy();
-    self.remotes.bob.destroy();
+    if (self.remotes.steve) {
+        self.remotes.steve.destroy();
+    }
+    if (self.remotes.bob) {
+        self.remotes.bob.destroy();
+    }
     if (self.remotes.tcollector) {
         self.remotes.tcollector.destroy();
     }
