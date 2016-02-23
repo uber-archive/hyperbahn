@@ -1481,7 +1481,9 @@ function reapSinglePeer(hostPort, serviceNames, now) {
     self.logger.info(
         'reaping dead peer',
         self.extendLogInfo(
-            peer.extendLogInfo(peer.draining.extendLogInfo({}))
+            peer.extendLogInfo(peer.draining.extendLogInfo({
+                serviceNames: serviceNames
+            }))
         )
     );
 
