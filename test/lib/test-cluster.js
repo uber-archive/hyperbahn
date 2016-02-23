@@ -371,10 +371,16 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
         channel: channel,
         serviceName: opts.serviceName,
         hostPort: null,
+        registerEvery: registerEvery,
+        doRegister: doRegister,
+        registerEveryInterval: 0,
+        registerTimer: null,
         destroy: destroy,
         thriftServer: thriftServer,
         thriftClient: thriftClient
     };
+
+    var first = true;
 
     return remote;
 
@@ -387,20 +393,49 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     }
 
     function destroy() {
+        timers.clearTimeout(remote.registerTimer);
+        remote.registerTimer = null;
         if (!channel.destroyed) {
             channel.close();
         }
     }
 
-    function onRegister(err) {
+    function onRegister(err, res) {
         if (err) {
             self.logger.error('Failed to register to hyperbahn for remote', {
                 error: err
             });
+            if (first) {
+                return;
+            }
+        }
+
+        if (first) {
+            first = false;
+            self.untilExitsConnected(remote.serviceName, remote.channel, onConnected);
+            if (opts.registerEvery) {
+                remote.registerEvery(opts.registerEvery);
+            }
             return;
         }
 
-        self.untilExitsConnected(remote.serviceName, remote.channel, onConnected);
+        remote.registerTimer = timers.setTimeout(doRegister, remote.registerEveryInterval);
+    }
+
+    function registerEvery(interval) {
+        remote.registerEveryInterval = interval;
+        timers.clearTimeout(remote.registerTimer);
+        remote.registerTimer = timers.setTimeout(doRegister, remote.registerEveryInterval);
+    }
+
+    function doRegister() {
+        timers.clearTimeout(remote.registerTimer);
+        remote.registerTimer = null;
+        if (!channel.destroyed) {
+            self.sendRegister(channel, {
+                serviceName: opts.serviceName
+            }, onRegister);
+        }
     }
 
     function onConnected(err) {
