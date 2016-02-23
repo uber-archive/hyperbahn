@@ -439,7 +439,7 @@ function shouldRateLimitService(serviceName) {
     }
     var counter = self.serviceCounters[serviceName];
     assert(counter, 'cannot find counter for ' + serviceName);
-    var result = counter.rps > counter.rpsLimit;
+    var result = counter.rpsLimit > 0 && counter.rps > counter.rpsLimit;
     if (result) {
         self.batchStats.pushStat(
             'tchannel.rate-limiting.service-busy',
@@ -459,7 +459,7 @@ function shouldKillSwitchService(serviceName) {
     }
     var counter = self.ksCounters[serviceName];
     assert(counter, 'cannot find kill-switch counter for ' + serviceName);
-    var result = counter.rps > counter.rpsLimit;
+    var result = counter.rpsLimit > 0 && counter.rps > counter.rpsLimit;
     if (result) {
         self.batchStats.pushStat(
             'tchannel.rate-limiting.service-kill-switched',
@@ -476,7 +476,9 @@ function shouldRateLimitTotalRequest(serviceName) {
     var self = this;
     var result;
     if (!serviceName || self.exemptServices.indexOf(serviceName) === -1) {
-        result = self.totalRequestCounter.rps > self.totalRequestCounter.rpsLimit;
+        result =
+            self.totalRequestCounter.rpsLimit > 0 &&
+            self.totalRequestCounter.rps > self.totalRequestCounter.rpsLimit;
     } else {
         result = false;
     }
@@ -498,7 +500,9 @@ function shouldKillSwitchTotalRequest(serviceName) {
     var self = this;
     var result;
     if (!serviceName || self.exemptServices.indexOf(serviceName) === -1) {
-        result = self.totalKsCounter.rps > self.totalKsCounter.rpsLimit;
+        result =
+            self.totalKsCounter.rpsLimit > 0 &&
+            self.totalKsCounter.rps > self.totalKsCounter.rpsLimit;
     } else {
         result = false;
     }
