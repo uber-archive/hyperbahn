@@ -31,6 +31,7 @@ var CollapsedAssert = require('./lib/collapsed-assert.js');
 
 /* eslint-disable no-multi-spaces */
 var PERIOD           = 200;
+var REQUEST_TIMEOUT  = 200;
 var COOL_OFF_PERIODS = 10;
 var CLUSTER_SIZE     = 10;
 var CHURN_FACTOR     = 0.5;
@@ -281,7 +282,7 @@ function checkRequestsTo(serviceName, cohort, desc, chan, assert, cb) {
     var cassert = CollapsedAssert();
     sendMany(chan, 2 * cohort.length, {
         serviceName: serviceName,
-        timeout: 100
+        timeout: REQUEST_TIMEOUT
     }, 'who', '', '', function sent(err, res, arg2, arg3) {
         cassert.ifError(err, 'no unexpected error');
         var serverHostPort = String(arg3);
