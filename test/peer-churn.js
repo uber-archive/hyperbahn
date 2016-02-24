@@ -32,6 +32,7 @@ var CollapsedAssert = require('./lib/collapsed-assert.js');
 /* eslint-disable no-multi-spaces */
 var PERIOD           = 100;
 var REQUEST_TIMEOUT  = 200;
+var REQUEST_FACTOR   = 1;
 var COOL_OFF_PERIODS = 10;
 var CLUSTER_SIZE     = 10;
 var CHURN_FACTOR     = 0.5;
@@ -280,7 +281,7 @@ function checkExitsTo(cluster, serviceName, cohort, desc, assert) {
 /* eslint max-params: [2,8] */
 function checkRequestsTo(serviceName, cohort, desc, chan, assert, cb) {
     var cassert = CollapsedAssert();
-    sendMany(chan, 2 * cohort.length, {
+    sendMany(chan, REQUEST_FACTOR * cohort.length, {
         serviceName: serviceName,
         timeout: REQUEST_TIMEOUT
     }, 'who', '', '', function sent(err, res, arg2, arg3) {
@@ -299,8 +300,13 @@ function sendMany(chan, N, opts, arg1, arg2, arg3, check, cb) {
     var sendsDone = CountedReadySignal(N);
     sendsDone(cb);
     for (var i = 0; i < sendsDone.counter; ++i) {
+        timers.setImmediate(doRequest);
+    }
+
+    function doRequest() {
         chan.request(opts).send(arg1, arg2, arg3, done);
     }
+
     function done(err, res, resArg2, resArg3) {
         check(err, res, resArg2, resArg3);
         sendsDone.signal();
