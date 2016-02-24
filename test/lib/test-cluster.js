@@ -665,6 +665,16 @@ function sendRegister(channel, opts, cb) {
     }, cb);
 };
 
+TestCluster.prototype.sendUnregister =
+function sendDeregister(channel, opts, cb) {
+    var self = this;
+    self.sendHyperbahn(channel, opts, 'unad', null, {
+        services: [{
+            serviceName: opts.serviceName
+        }]
+    }, cb);
+};
+
 /*eslint max-params: [2, 6]*/
 TestCluster.prototype.sendHyperbahn =
 function sendHyperbahn(channel, opts, arg1, arg2, arg3, cb) {
