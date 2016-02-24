@@ -30,13 +30,13 @@ var allocCluster = require('./lib/test-cluster.js');
 var CollapsedAssert = require('./lib/collapsed-assert.js');
 
 /* eslint-disable no-multi-spaces */
-var PERIOD           = 200;
+var PERIOD           = 100;
 var REQUEST_TIMEOUT  = 200;
 var COOL_OFF_PERIODS = 10;
 var CLUSTER_SIZE     = 10;
 var CHURN_FACTOR     = 0.5;
 var K_VALUE          = 5;
-var SERVICE_SIZE     = 20;
+var SERVICE_SIZE     = 10;
 
 function fuzzedPeriods(N) {
     return 1.05 * N * PERIOD;
