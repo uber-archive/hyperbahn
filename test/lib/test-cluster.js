@@ -657,8 +657,30 @@ TestCluster.prototype.getExitNodes = function getExitNodes(serviceName) {
 TestCluster.prototype.sendRegister =
 function sendRegister(channel, opts, cb) {
     var self = this;
+    self.sendHyperbahn(channel, opts, 'ad', null, {
+        services: [{
+            cost: 0,
+            serviceName: opts.serviceName
+        }]
+    }, cb);
+};
 
-    nodeAssert(opts.serviceName, 'need a serviceName to register');
+TestCluster.prototype.sendUnregister =
+function sendDeregister(channel, opts, cb) {
+    var self = this;
+    self.sendHyperbahn(channel, opts, 'unad', null, {
+        services: [{
+            serviceName: opts.serviceName
+        }]
+    }, cb);
+};
+
+/*eslint max-params: [2, 6]*/
+TestCluster.prototype.sendHyperbahn =
+function sendHyperbahn(channel, opts, arg1, arg2, arg3, cb) {
+    var self = this;
+
+    nodeAssert(opts.serviceName, 'need a serviceName to call hyperbahn');
 
     var hyperChan;
     if (channel.subChannels.hyperbahn) {
@@ -695,12 +717,7 @@ function sendRegister(channel, opts, cb) {
             headers: {
                 'cn': opts.serviceName
             }
-        }), 'ad', null, {
-            services: [{
-                cost: 0,
-                serviceName: opts.serviceName
-            }]
-        }, cb);
+        }), arg1, arg2, arg3, cb);
     }
 };
 
@@ -871,6 +888,17 @@ function doRegister() {
         this.cluster.sendRegister(this.channel, {
             serviceName: this.serviceName
         }, this.boundOnRegister);
+    }
+};
+
+TestClusterRemote.prototype.doUnregister =
+function doUnregister(cb) {
+    timers.clearTimeout(this.registerTimer);
+    this.registerTimer = null;
+    if (!this.channel.destroyed) {
+        this.cluster.sendUnregister(this.channel, {
+            serviceName: this.serviceName
+        }, cb);
     }
 };
 
