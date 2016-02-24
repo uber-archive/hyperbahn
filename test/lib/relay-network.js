@@ -197,7 +197,7 @@ RelayNetwork.prototype.setCluster = function setCluster(cluster) {
             if (egressNodes.isExitFor(serviceName)) {
                 self.serviceChannels[index2].forEach(function eachService(serviceChannel) {
                     var chan = relayChannel.handler.getOrCreateServiceChannel(serviceName);
-                    relayChannel.handler._getServicePeer(chan, serviceChannel.hostPort);
+                    relayChannel.handler.getOrCreateServicePeer(chan, serviceChannel.hostPort);
                 });
             }
         });
