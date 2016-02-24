@@ -1467,7 +1467,9 @@ function reapSinglePeer(hostPort, serviceNames, now) {
         }
         self.deletePeerIndex(serviceName, hostPort);
         var partialRange = self.partialRanges[serviceName];
-        partialRange.removeWorker(hostPort, now);
+        if (partialRange) {
+            partialRange.removeWorker(hostPort, now);
+        }
     }
 
     peer.drain({
