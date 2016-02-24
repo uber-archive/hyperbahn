@@ -891,6 +891,17 @@ function doRegister() {
     }
 };
 
+TestClusterRemote.prototype.doUnregister =
+function doUnregister(cb) {
+    timers.clearTimeout(this.registerTimer);
+    this.registerTimer = null;
+    if (!this.channel.destroyed) {
+        this.cluster.sendUnregister(this.channel, {
+            serviceName: this.serviceName
+        }, cb);
+    }
+};
+
 TestClusterRemote.prototype.onRegister =
 function onRegister(err, res) {
     if (err) {
