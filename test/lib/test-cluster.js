@@ -298,161 +298,19 @@ function grow(n, callback) {
 
 TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     var self = this;
-    var serverChannel;
-    var clientChannel;
-    var thriftServer;
-    var thriftClient;
-    var thriftSpec;
 
-    var channel = TChannel({
-        logger: self.logger,
-        trace: opts.trace,
-        traceSample: opts.traceSample
-    });
-    self.timers = channel.timers;
-    channel.on('listening', onListen);
-    channel.listen(0, '127.0.0.1');
-    var serviceConfig = self.remotesConfig[opts.serviceName];
-
-    if (serviceConfig) {
-        thriftSpec = serviceConfig.thriftSpec;
-    }
-
-    if (opts.trace) {
-        var tcreporter = TCReporter({
-            callerName: 'tcollector-' + opts.serviceName,
-            logger: self.logger,
-            channel: channel.makeSubChannel({
-                peers: self.hostPortList,
-                serviceName: 'tcollector-client'
-            })
-        });
-        channel.tracer.reporter = function reporter(span) {
-            tcreporter.report(span);
-        };
-    }
-
-    serverChannel = channel.makeSubChannel({
-        serviceName: opts.serviceName
-    });
-
-    clientChannel = channel.makeSubChannel({
-        serviceName: 'autobahn-client',
-        peers: self.hostPortList,
-        requestDefaults: {
-            hasNoParent: true,
-            headers: {
-                as: 'raw',
-                cn: opts.serviceName
-            }
-        }
-    });
-
-    if (thriftSpec) {
-        var thriftPath = thriftSpec;
-        var thriftSource = fs.readFileSync(thriftPath).toString();
-
-        thriftServer = channel.TChannelAsThrift({
-            source: thriftSource,
-            channel: serverChannel
-        });
-
-        thriftClient = channel.TChannelAsThrift({
-            source: thriftSource,
-            channel: clientChannel
-        });
-    } else {
-        serverChannel.register('echo', echo);
-    }
-
-    var remote = {
-        clientChannel: clientChannel,
-        serverChannel: serverChannel,
-        channel: channel,
-        serviceName: opts.serviceName,
-        hostPort: null,
-        registerEvery: registerEvery,
-        doRegister: doRegister,
-        registerEveryInterval: 0,
-        registerTimer: null,
-        destroy: destroy,
-        thriftServer: thriftServer,
-        thriftClient: thriftClient
-    };
-
-    var first = true;
-
+    var remote = new TestClusterRemote(self, opts, ready);
+    this.timers = remote.channel.timers;
     return remote;
 
-    function onListen() {
-        remote.hostPort = channel.hostPort;
-
-        self.sendRegister(channel, {
-            serviceName: opts.serviceName
-        }, onRegister);
-    }
-
-    function destroy(destroyCb) {
-        timers.clearTimeout(remote.registerTimer);
-        remote.registerTimer = null;
-        if (!channel.destroyed) {
-            channel.close(destroyCb);
-        } else if (destroyCb) {
-            destroyCb();
-        }
-    }
-
-    function onRegister(err, res) {
+    function ready(err) {
         if (err) {
-            self.logger.error('Failed to register to hyperbahn for remote', {
-                error: err
-            });
-            if (first) {
-                return;
-            }
-        }
-
-        if (first) {
-            first = false;
-            self.untilExitsConnected(remote.serviceName, remote.channel, onConnected);
-            if (opts.registerEvery) {
-                remote.registerEvery(opts.registerEvery);
-            }
-            return;
-        }
-
-        remote.registerTimer = timers.setTimeout(doRegister, remote.registerEveryInterval);
-    }
-
-    function registerEvery(interval) {
-        remote.registerEveryInterval = interval;
-        timers.clearTimeout(remote.registerTimer);
-        remote.registerTimer = timers.setTimeout(doRegister, remote.registerEveryInterval);
-    }
-
-    function doRegister() {
-        timers.clearTimeout(remote.registerTimer);
-        remote.registerTimer = null;
-        if (!channel.destroyed) {
-            self.sendRegister(channel, {
-                serviceName: opts.serviceName
-            }, onRegister);
-        }
-    }
-
-    function onConnected(err) {
-        if (err) {
-            self.logger.error('Failed to get connection from hyperbahn for remote', {
-                error: err
+            self.logger.error('Failed to initialize remote', {
+                    error: err
             });
             return;
         }
         cb();
-    }
-
-    function echo(req, res, a, b) {
-        res.headers.as = 'raw';
-        res.sendOk(String(a), String(b));
     }
 };
 
@@ -886,4 +744,161 @@ function forEachPeerConn(channel, each) {
             each(conn, peer);
         }
     }
+}
+
+function TestClusterRemote(cluster, opts, ready) {
+    var self = this;
+
+    this.cluster = cluster;
+    this.opts = opts;
+    this.ready = ready;
+
+    this.serviceName = this.opts.serviceName;
+    this.serviceConfig = this.cluster.remotesConfig[this.serviceName];
+
+    this.channel = TChannel({
+        logger: this.cluster.logger,
+        trace: this.opts.trace,
+        traceSample: this.opts.traceSample
+    });
+
+    this.clientChannel = this.channel.makeSubChannel({
+        serviceName: 'autobahn-client',
+        peers: this.cluster.hostPortList,
+        requestDefaults: {
+            hasNoParent: true,
+            headers: {
+                as: 'raw',
+                cn: this.serviceName
+            }
+        }
+    });
+
+    this.serverChannel = this.channel.makeSubChannel({
+        serviceName: this.serviceName
+    });
+
+    this.hostPort = null;
+    this.registerEveryInterval = 0;
+    this.registerTimer = null;
+
+    this.thriftSpec = null;
+    this.thriftSource = null;
+    this.thriftServer = null;
+    this.thriftClient = null;
+
+    if (this.serviceConfig) {
+        this.thriftSpec = this.serviceConfig.thriftSpec;
+    }
+
+    if (this.opts.trace) {
+        var tcreporter = TCReporter({
+            callerName: 'tcollector-' + this.serviceName,
+            logger: this.cluster.logger,
+            channel: this.channel.makeSubChannel({
+                peers: this.cluster.hostPortList,
+                serviceName: 'tcollector-client'
+            })
+        });
+        this.channel.tracer.reporter = function reporter(span) {
+            tcreporter.report(span);
+        };
+    }
+
+    if (this.thriftSpec) {
+        this.thriftSource = fs.readFileSync(this.thriftSpec).toString();
+
+        this.thriftServer = this.channel.TChannelAsThrift({
+            source: this.thriftSource,
+            channel: this.serverChannel
+        });
+
+        this.thriftClient = this.channel.TChannelAsThrift({
+            source: this.thriftSource,
+            channel: this.clientChannel
+        });
+    } else {
+        this.serverChannel.register('echo', echo);
+    }
+
+    this.boundDoRegister = boundDoRegister;
+    this.boundOnRegister = boundOnRegister;
+
+    this.firstRegistration = true;
+
+    this.channel.listeningEvent.on(onListen);
+
+    function onListen() {
+        self.channel.listeningEvent.removeListener(onListen);
+        self.hostPort = self.channel.hostPort;
+        self.doRegister();
+    }
+
+    this.channel.listen(0, '127.0.0.1');
+
+    function boundDoRegister() {
+        self.doRegister();
+    }
+
+    function boundOnRegister(err, res) {
+        self.onRegister(err, res);
+    }
+}
+
+TestClusterRemote.prototype.destroy =
+function destroy(cb) {
+    timers.clearTimeout(this.registerTimer);
+    this.registerTimer = null;
+    if (!this.channel.destroyed) {
+        this.channel.close(cb);
+    } else if (cb) {
+        cb();
+    }
+};
+
+TestClusterRemote.prototype.registerEvery =
+function registerEvery(interval) {
+    this.registerEveryInterval = interval;
+    timers.clearTimeout(this.registerTimer);
+    this.registerTimer = timers.setTimeout(this.boundDoRegister, this.registerEveryInterval);
+};
+
+TestClusterRemote.prototype.doRegister =
+function doRegister() {
+    timers.clearTimeout(this.registerTimer);
+    this.registerTimer = null;
+    if (!this.channel.destroyed) {
+        this.cluster.sendRegister(this.channel, {
+            serviceName: this.serviceName
+        }, this.boundOnRegister);
+    }
+};
+
+TestClusterRemote.prototype.onRegister =
+function onRegister(err, res) {
+    if (err) {
+        if (this.firstRegistration) {
+            this.ready(err);
+            return;
+        }
+        this.cluster.logger.error('Failed to register to hyperbahn for remote', {
+            error: err
+        });
+    }
+
+    if (this.firstRegistration) {
+        this.firstRegistration = false;
+        if (this.opts.registerEvery) {
+            this.registerEvery(this.opts.registerEvery);
+        }
+        this.cluster.untilExitsConnected(this.serviceName, this.channel, this.ready);
+        return;
+    }
+
+    this.registerTimer = timers.setTimeout(this.boundDoRegister, this.registerEveryInterval);
+};
+
+function echo(req, res, a, b) {
+    res.headers.as = 'raw';
+    res.sendOk(String(a), String(b));
 }
