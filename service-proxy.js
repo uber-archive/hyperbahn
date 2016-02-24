@@ -584,13 +584,6 @@ function getServiceChannel(serviceName, create) {
     return serviceChannel;
 };
 
-ServiceDispatchHandler.prototype.getServicePeer =
-function getServicePeer(serviceName, hostPort) {
-    var self = this;
-    var serviceChannel = self.getOrCreateServiceChannel(serviceName);
-    return self._getServicePeer(serviceChannel, hostPort);
-};
-
 ServiceDispatchHandler.prototype._getServicePeer =
 function _getServicePeer(serviceChannel, hostPort) {
     var peer = serviceChannel.peers.get(hostPort);
@@ -693,7 +686,7 @@ function refreshServicePeer(serviceName, hostPort) {
     // Mark known peers, so they are candidates for future reaping
     addIndexEntry(self.knownPeers, hostPort, serviceName, now);
 
-    var peer = self.getServicePeer(serviceName, hostPort);
+    var peer = self._getServicePeer(serviceChannel, hostPort);
     self.ensurePeerConnected(serviceName, peer, 'service peer refresh', now);
 };
 
