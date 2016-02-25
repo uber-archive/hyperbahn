@@ -112,7 +112,7 @@ allocCluster.test('peer churn', {
 
     function setupSecondRound() {
         assert.comment('- setupSecondRound');
-        checkNoLogs('first phase sends', cluster, assert);
+        checkAllLogs(cluster, assert, checkConnectingLog);
         second = createRemotes(cluster, Math.round(CHURN_FACTOR * first.length), serverOpts, gotSecondRound);
     }
 
