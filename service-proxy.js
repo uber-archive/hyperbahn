@@ -925,7 +925,8 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
         // TODO: why not return early
     }
 
-    var result = self.computeAffinityChange(serviceChannel, partialRange, now);
+    var result = new AffinityChange(self, serviceChannel, partialRange, now);
+
     if (!result.noop) {
         self.logger.info(
             'implementing affinity change',
@@ -937,65 +938,9 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
                 numToDisconnect: result.toDisconnect.length
             }))
         );
-        self.implementAffinityChange(serviceChannel, result.toConnect, result.toDisconnect, now);
+        result.implement();
     }
     return result;
-};
-
-ServiceDispatchHandler.prototype.computeAffinityChange =
-function computeAffinityChange(serviceChannel, partialRange, now) {
-    var self = this;
-
-    var connectedPeers = self.connectedServicePeers[serviceChannel.serviceName];
-    var connectedPeerKeys = connectedPeers ? Object.keys(connectedPeers) : [];
-    var toConnect = [];
-    var toDisconnect = [];
-    var isAffine = {};
-    var i;
-    var worker;
-    var peer;
-    var result = {
-        noop: false,
-        toConnect: toConnect,
-        toDisconnect: toDisconnect,
-        isAffine: isAffine
-    };
-    for (i = 0; i < partialRange.affineWorkers.length; i++) {
-        worker = partialRange.affineWorkers[i];
-        peer = self.getOrCreateServicePeer(serviceChannel, worker);
-        isAffine[worker] = true;
-        if (!(connectedPeers && connectedPeers[worker]) || !peer.isConnected('out')) {
-            toConnect.push(worker);
-        }
-    }
-    for (i = 0; i < connectedPeerKeys.length; i++) {
-        worker = connectedPeerKeys[i];
-        if (!isAffine[worker] && !self.peersToPrune[worker]) {
-            toDisconnect.push(worker);
-        }
-    }
-    if (!toConnect.length && !toDisconnect.length) {
-        result.noop = true;
-    }
-
-    return result;
-};
-
-ServiceDispatchHandler.prototype.implementAffinityChange =
-function implementAffinityChange(serviceChannel, toConnect, toDisconnect, now) {
-    var self = this;
-
-    var serviceName = serviceChannel.serviceName;
-    var peer = null;
-    var i;
-    for (i = 0; i < toConnect.length; i++) {
-        peer = self.getOrCreateServicePeer(serviceChannel, toConnect[i]);
-        self.ensurePeerConnected(serviceName, peer, 'service peer affinity change', now);
-    }
-    for (i = 0; i < toDisconnect.length; i++) {
-        peer = self.getOrCreateServicePeer(serviceChannel, toDisconnect[i]);
-        self.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', now);
-    }
 };
 
 ServiceDispatchHandler.prototype.ensurePeerDisconnected =
@@ -1687,6 +1632,73 @@ function setPeerHeapEnabled(peerHeapEnabledServices, peerHeapEnabledGlobal) {
             enabled = self.peerHeapEnabledServices[serviceName];
         }
         self.channel.subChannels[serviceName].setChoosePeerWithHeap(enabled);
+    }
+};
+
+function AffinityChange(proxy, serviceChannel, partialRange, now) {
+    this.proxy = proxy;
+    this.serviceChannel = serviceChannel;
+    this.partialRange = partialRange;
+    this.now = now;
+
+    this.noop = false;
+    this.toConnect = [];
+    this.toDisconnect = [];
+    this.isAffine = {};
+
+    this.compute();
+}
+
+AffinityChange.prototype.extendLogInfo =
+function extendLogInfo(info) {
+    info = this.partialRange.extendLogInfo(info);
+    info = this.proxy.extendLogInfo(info);
+    return info;
+};
+
+AffinityChange.prototype.compute =
+function compute() {
+    var connectedPeers = this.proxy.connectedServicePeers[this.serviceChannel.serviceName];
+    var connectedPeerKeys = connectedPeers ? Object.keys(connectedPeers) : [];
+    var i;
+    var worker;
+    var peer;
+
+    for (i = 0; i < this.partialRange.affineWorkers.length; i++) {
+        worker = this.partialRange.affineWorkers[i];
+        this.isAffine[worker] = true;
+        peer = this.proxy.getOrCreateServicePeer(this.serviceChannel, worker);
+        if (!(connectedPeers && connectedPeers[worker]) || !peer.isConnected('out')) {
+            this.toConnect.push(worker);
+        }
+    }
+
+    for (i = 0; i < connectedPeerKeys.length; i++) {
+        worker = connectedPeerKeys[i];
+        if (!this.isAffine[worker] && !this.proxy.peersToPrune[worker]) {
+            this.toDisconnect.push(worker);
+        }
+    }
+
+    if (!this.toConnect.length && !this.toDisconnect.length) {
+        this.noop = true;
+    }
+};
+
+AffinityChange.prototype.implement =
+function implement() {
+    var serviceName = this.serviceChannel.serviceName;
+    var peer = null;
+    var i;
+
+    for (i = 0; i < this.toConnect.length; i++) {
+        peer = this.proxy.getOrCreateServicePeer(this.serviceChannel, this.toConnect[i]);
+        this.proxy.ensurePeerConnected(serviceName, peer, 'service peer affinity change', this.now);
+    }
+
+    for (i = 0; i < this.toDisconnect.length; i++) {
+        peer = this.proxy.getOrCreateServicePeer(this.serviceChannel, this.toDisconnect[i]);
+        this.proxy.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', this.now);
     }
 };
 
