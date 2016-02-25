@@ -35,6 +35,8 @@ var RateLimiter = require('./rate_limiter.js');
 var PartialRange = require('./partial_range.js');
 var Circuits = require('./circuits.js');
 
+var MAX_AFFINITY_AUDIT_ROUNDS = 3;
+
 var DEFAULT_LOG_GRACE_PERIOD = 5 * 60 * 1000;
 var SERVICE_PURGE_PERIOD = 5 * 60 * 1000;
 var DEFAULT_MIN_PEERS_PER_WORKER = 5;
@@ -1646,11 +1648,32 @@ function AffinityChange(proxy, serviceChannel, partialRange, now) {
     this.toConnect = [];
     this.toDisconnect = [];
     this.isAffine = {};
+    this.staleToConnect = 0;
+    this.staleToDisconnect = 0;
 
     this.connectedPeers = null;
     this.connectedPeerKeys = [];
 
     this.compute();
+
+    this.audited = false;
+    for (var i = 0; i < MAX_AFFINITY_AUDIT_ROUNDS; ++i) {
+        var priorNoop = this.noop;
+        if (!this.audit()) {
+            this.audited = true;
+            break;
+        }
+        this.proxy.logger.warn(
+            'affinity change failed audit',
+            this.extendLogInfo({
+                auditRound: i,
+                staleToConnect: this.staleToConnect,
+                staleToDisconnect: this.staleToDisconnect,
+                noopBeforeAudit: priorNoop,
+                noopAfterAudit: this.noop
+            })
+        );
+    }
 }
 
 AffinityChange.prototype.extendLogInfo =
@@ -1696,25 +1719,80 @@ function compute() {
     }
 };
 
+AffinityChange.prototype.audit =
+function audit() {
+    this.staleToConnect = 0;
+    this.staleToDisconnect = 0;
+
+    var peer = null;
+    var worker;
+    var i;
+
+    for (i = 0; i < this.toConnect.length; i++) {
+        worker = this.toConnect[i];
+        peer = this.serviceChannel.peers.get(worker);
+        if (!peer) {
+            this.proxy.logger.warn(
+                'removing stale partial affinity worker',
+                this.extendLogInfo({
+                    hostPort: worker
+                })
+            );
+            this.partialRange.removeWorker(worker, this.now);
+            ++this.staleToConnect;
+        }
+    }
+
+    for (i = 0; i < this.toDisconnect.length; i++) {
+        worker = this.toDisconnect[i];
+        peer = this.serviceChannel.peers.get(worker);
+        if (!peer) {
+            this.proxy.logger.warn(
+                'removing stale partial affinity worker',
+                this.extendLogInfo({
+                    hostPort: worker
+                })
+            );
+            this.partialRange.removeWorker(worker, this.now);
+            if (this.connectedPeers) {
+                delete this.connectedPeers[worker];
+            }
+            ++this.staleToDisconnect;
+        }
+    }
+
+    if (this.staleToConnect > 0 || this.staleToDisconnect > 0) {
+        this.compute();
+        return true;
+    }
+
+    return false;
+};
+
 AffinityChange.prototype.implement =
 function implement() {
+    if (!this.audited) {
+        this.proxy.logger.error(
+            'refusing to implement broken affinity change',
+            this.extendLogInfo({
+                staleToConnect: this.staleToConnect,
+                staleToDisconnect: this.staleToDisconnect
+            })
+        );
+        return;
+    }
+
     var serviceName = this.serviceChannel.serviceName;
     var peer = null;
     var i;
 
     for (i = 0; i < this.toConnect.length; i++) {
         peer = this.serviceChannel.peers.get(this.toConnect[i]);
-        if (!peer) {
-            continue;
-        }
         this.proxy.ensurePeerConnected(serviceName, peer, 'service peer affinity change', this.now);
     }
 
     for (i = 0; i < this.toDisconnect.length; i++) {
         peer = this.serviceChannel.peers.get(this.toDisconnect[i]);
-        if (!peer) {
-            continue;
-        }
         this.proxy.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', this.now);
     }
 };
