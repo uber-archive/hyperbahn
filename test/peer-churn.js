@@ -144,6 +144,7 @@ allocCluster.test('peer churn', {
         checkAllLogs(cluster, assert, function checkEachLog(record) {
             assert.ok([
                 // happens for destructive shutdown
+                'reaping dead peers',
                 'Failed to register to hyperbahn for remote',
                 'expected registration failure during destruction',
                 'resetting connection',
