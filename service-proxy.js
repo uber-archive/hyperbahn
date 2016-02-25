@@ -1647,6 +1647,9 @@ function AffinityChange(proxy, serviceChannel, partialRange, now) {
     this.toDisconnect = [];
     this.isAffine = {};
 
+    this.connectedPeers = null;
+    this.connectedPeerKeys = [];
+
     this.compute();
 }
 
@@ -1661,23 +1664,24 @@ AffinityChange.prototype.compute =
 function compute() {
     this.partialRange.computeIfNeeded();
 
-    var connectedPeers = this.proxy.connectedServicePeers[this.serviceChannel.serviceName];
-    var connectedPeerKeys = connectedPeers ? Object.keys(connectedPeers) : [];
     var i;
     var worker;
     var peer;
+
+    this.connectedPeers = this.proxy.connectedServicePeers[this.serviceChannel.serviceName] || null;
+    this.connectedPeerKeys = this.connectedPeers ? Object.keys(this.connectedPeers) : [];
 
     for (i = 0; i < this.partialRange.affineWorkers.length; i++) {
         worker = this.partialRange.affineWorkers[i];
         this.isAffine[worker] = true;
         peer = this.serviceChannel.peers.get(worker);
-        if (!(connectedPeers && connectedPeers[worker]) || !(peer && peer.isConnected('out'))) {
+        if (!(this.connectedPeers && this.connectedPeers[worker]) || !(peer && peer.isConnected('out'))) {
             this.toConnect.push(worker);
         }
     }
 
-    for (i = 0; i < connectedPeerKeys.length; i++) {
-        worker = connectedPeerKeys[i];
+    for (i = 0; i < this.connectedPeerKeys.length; i++) {
+        worker = this.connectedPeerKeys[i];
         if (!this.isAffine[worker] && !this.proxy.peersToPrune[worker]) {
             this.toDisconnect.push(worker);
         }
