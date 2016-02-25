@@ -1667,8 +1667,8 @@ function compute() {
     for (i = 0; i < this.partialRange.affineWorkers.length; i++) {
         worker = this.partialRange.affineWorkers[i];
         this.isAffine[worker] = true;
-        peer = this.proxy.getOrCreateServicePeer(this.serviceChannel, worker);
-        if (!(connectedPeers && connectedPeers[worker]) || !peer.isConnected('out')) {
+        peer = this.serviceChannel.peers.get(worker);
+        if (!(connectedPeers && connectedPeers[worker]) || !(peer && peer.isConnected('out'))) {
             this.toConnect.push(worker);
         }
     }
