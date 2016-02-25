@@ -1692,12 +1692,18 @@ function implement() {
     var i;
 
     for (i = 0; i < this.toConnect.length; i++) {
-        peer = this.proxy.getOrCreateServicePeer(this.serviceChannel, this.toConnect[i]);
+        peer = this.serviceChannel.peers.get(this.toConnect[i]);
+        if (!peer) {
+            continue;
+        }
         this.proxy.ensurePeerConnected(serviceName, peer, 'service peer affinity change', this.now);
     }
 
     for (i = 0; i < this.toDisconnect.length; i++) {
-        peer = this.proxy.getOrCreateServicePeer(this.serviceChannel, this.toDisconnect[i]);
+        peer = this.serviceChannel.peers.get(this.toDisconnect[i]);
+        if (!peer) {
+            continue;
+        }
         this.proxy.ensurePeerDisconnected(serviceName, peer, 'service peer affinity change', this.now);
     }
 };
