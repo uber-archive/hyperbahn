@@ -1671,6 +1671,10 @@ function compute() {
     this.connectedPeers = this.proxy.connectedServicePeers[this.serviceChannel.serviceName] || null;
     this.connectedPeerKeys = this.connectedPeers ? Object.keys(this.connectedPeers) : [];
 
+    this.toConnect = [];
+    this.toDisconnect = [];
+    this.isAffine = {};
+
     for (i = 0; i < this.partialRange.affineWorkers.length; i++) {
         worker = this.partialRange.affineWorkers[i];
         this.isAffine[worker] = true;
