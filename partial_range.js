@@ -67,20 +67,15 @@ function isValid() {
     return this.relayIndex >= 0;
 };
 
-PartialRange.prototype.compute =
-function compute(relays, workers, now) {
-    if (relays) {
-        this.relays = relays;
-    }
+PartialRange.prototype.setRelays =
+function setRelays(relays, now) {
+    this.relays = relays;
+    this.pendingCompute = now;
+};
 
-    if (workers) {
-        this.workers = workers;
-    }
-
-    if (!relays && !workers) {
-        return;
-    }
-
+PartialRange.prototype.setWorkers =
+function setWorkers(workers, now) {
+    this.workers = workers;
     this.pendingCompute = now;
 };
 

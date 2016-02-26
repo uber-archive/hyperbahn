@@ -773,7 +773,8 @@ function getPartialRange(serviceName, reason, now) {
             self.minPeersPerRelay
         );
         self.partialRanges[serviceName] = partialRange;
-        partialRange.compute(relays, workers, now);
+        partialRange.setRelays(relays, now);
+        partialRange.setWorkers(workers, now);
     }
 
     if (!partialRange.isValid()) {
@@ -1095,7 +1096,7 @@ function updateServiceChannel(serviceChannel, now) {
         if (self.partialAffinityEnabled) {
             var partialRange = self.partialRanges[serviceChannel.serviceName];
             if (partialRange) {
-                partialRange.compute(self.relaysFor[serviceChannel.serviceName], null, now);
+                partialRange.setRelays(self.relaysFor[serviceChannel.serviceName], now);
             }
         }
 
