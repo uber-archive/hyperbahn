@@ -816,16 +816,16 @@ function addNewPartialPeer(serviceChannel, hostPort, now) {
     var self = this;
 
     var serviceName = serviceChannel.serviceName;
-    var partialRange = self.partialRanges[serviceName];
-    if (partialRange) {
-        partialRange.addWorker(hostPort, now);
-    }
-
     var peer = serviceChannel.peers.add(hostPort);
     if (!peer.serviceProxyServices) {
         peer.serviceProxyServices = {};
     }
     peer.serviceProxyServices[serviceName] = true;
+
+    var partialRange = self.partialRanges[serviceName];
+    if (partialRange) {
+        partialRange.addWorker(hostPort, now);
+    }
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
