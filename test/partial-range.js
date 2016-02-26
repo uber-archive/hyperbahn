@@ -71,7 +71,9 @@ function buildPartialRanges(state) {
 function computePartialRanges(state, assert) {
     for (var i = 0; i < state.partialRanges.length; i++) {
         var partialRange = state.partialRanges[i];
-        partialRange.compute(state.relays, state.workers, 1);
+        partialRange.setRelays(state.relays, 1);
+        partialRange.setWorkers(state.workers, 1);
+        partialRange.computeIfNeeded();
         assert.ok(
             partialRange.isValid(),
             'partialRanges[' + i + ']: should be valid after compute');
