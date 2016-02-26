@@ -1104,9 +1104,8 @@ function updateServiceChannel(serviceChannel, now) {
 
         if (serviceChannel.serviceProxyMode === 'forward') {
             self.changeToExit(serviceChannel);
-        } else {
-            self.updateServiceNodes(serviceChannel, now);
         }
+        self.updateServiceNodes(serviceChannel, now);
     } else {
         if (self.partialAffinityEnabled) {
             delete self.partialRanges[serviceChannel.serviceName];
@@ -1114,9 +1113,8 @@ function updateServiceChannel(serviceChannel, now) {
 
         if (serviceChannel.serviceProxyMode === 'exit') {
             self.changeToForward(exitNodes, serviceChannel, now);
-        } else {
-            self.updateExitNodes(exitNodes, serviceChannel);
         }
+        self.updateExitNodes(exitNodes, serviceChannel);
     }
 };
 
