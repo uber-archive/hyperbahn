@@ -39,10 +39,12 @@ function PartialRange(relayHostPort, minPeersPerWorker, minPeersPerRelay) {
     this.length            = NaN;
     this.start             = NaN;
     this.stop              = NaN;
+    this.pendingCompute    = null;
 }
 
 PartialRange.prototype.extendLogInfo =
 function extendLogInfo(info) {
+    this.computeIfNeeded();
     info.relayHostPort     = this.relayHostPort;
     info.minPeersPerWorker = this.minPeersPerWorker;
     info.minPeersPerRelay  = this.minPeersPerRelay;
@@ -61,6 +63,7 @@ function extendLogInfo(info) {
 
 PartialRange.prototype.isValid =
 function isValid() {
+    this.computeIfNeeded();
     return this.relayIndex >= 0;
 };
 
@@ -78,7 +81,17 @@ function compute(relays, workers, now) {
         return;
     }
 
-    this.recompute(now);
+    this.pendingCompute = now;
+};
+
+PartialRange.prototype.computeIfNeeded =
+function computeIfNeeded() {
+    if (this.pendingCompute !== null) {
+        if (this.relays && this.workers) {
+            this.recompute(this.pendingCompute);
+        }
+        this.pendingCompute = null;
+    }
 };
 
 PartialRange.prototype.addWorker =
@@ -89,7 +102,7 @@ function addWorker(hostPort, now) {
     }
 
     this.workers.splice(~i, 0, hostPort);
-    this.recompute(now);
+    this.pendingCompute = now;
 };
 
 PartialRange.prototype.removeWorker =
@@ -100,7 +113,7 @@ function removeWorker(hostPort, now) {
     }
 
     this.workers.splice(i, 1); // XXX swap-out? sliceNconcat?
-    this.recompute(now);
+    this.pendingCompute = now;
 };
 
 PartialRange.prototype.recompute =

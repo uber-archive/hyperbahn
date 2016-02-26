@@ -1658,6 +1658,8 @@ function extendLogInfo(info) {
 
 AffinityChange.prototype.compute =
 function compute() {
+    this.partialRange.computeIfNeeded();
+
     var connectedPeers = this.proxy.connectedServicePeers[this.serviceChannel.serviceName];
     var connectedPeerKeys = connectedPeers ? Object.keys(connectedPeers) : [];
     var i;
