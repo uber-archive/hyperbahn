@@ -63,6 +63,9 @@ allocCluster.test('peer churn', {
         // XXX do we care about the rare:
         // AUTOBAHN INFO: ignoring outresponse.send on a closed connection ~ { responseId: 5,
 
+        ['warn', 'affinity change failed audit'],
+        ['warn', 'removing stale partial affinity worker'],
+
         ['info', 'reaping dead peers'],
         ['info', 'reaping dead peer'],
         ['info', 'draining peer'],
@@ -143,6 +146,10 @@ allocCluster.test('peer churn', {
 
         checkAllLogs(cluster, assert, function checkEachLog(record) {
             assert.ok([
+                // TODO: this is a bug parlayed into a warning
+                'affinity change failed audit',
+                'removing stale partial affinity worker',
+
                 // happens for destructive shutdown
                 'reaping dead peers',
                 'Failed to register to hyperbahn for remote',
