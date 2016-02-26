@@ -99,7 +99,7 @@ function removeWorker(hostPort, now) {
         return;
     }
 
-    this.workers.splice(i, 0); // XXX swap-out? sliceNconcat?
+    this.workers.splice(i, 1); // XXX swap-out? sliceNconcat?
     this.recompute(now);
 };
 
