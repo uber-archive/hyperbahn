@@ -25,6 +25,7 @@ var CountedReadySignal = require('ready-signal/counted');
 var timers = require('timers');
 var util = require('util');
 
+var Turnip = require('./lib/turnip').Turnip;
 var Turnips = require('./lib/turnip').Turnips;
 var allocCluster = require('./lib/test-cluster.js');
 var CollapsedAssert = require('./lib/collapsed-assert.js');
@@ -130,21 +131,48 @@ allocCluster.test('peer churn', {
 
     function thenShutdownFirstRound() {
         assert.comment('- thenShutdownFirstRound');
+
+        turnips = new Turnips();
+        turnips.ready = new CountedReadySignal(first.length);
+
         collectParallel(first, function each(remote, i, done) {
+            var hostPort = remote.channel.hostPort;
+            var parts = hostPort.split(':');
+            var host = parts[0];
+            var port = parseInt(parts[1], 10);
+
             // half of them do an unad then destroy, the other half just go away
             if (i % 2 === 0) {
                 remote.doUnregister(function unreged(err) {
                     assert.ifError(err, 'expected no unregister error');
-                    remote.destroy(done);
+                    remote.destroy(plant);
                 });
             } else {
-                remote.destroy(done);
+                remote.destroy(plant);
+            }
+
+            function plant() {
+                assert.comment('-- planting turnip[' + i + '] on ' + hostPort);
+                turnips.turnips[i] = new Turnip(port, host, ready);
+                done();
+            }
+
+            function ready(err) {
+                assert.comment('-- turnip[' + i + '] ready on ' + hostPort);
+                assert.ifError(err, 'no unexpected turnip error');
+                turnips.ready.signal();
             }
         }, thenWaitForReaper);
     }
 
     function thenWaitForReaper() {
         assert.comment('- thenWaitForReaper');
+
+        timers.setTimeout(thenTurnip, fuzzedPeriods(SETTLE_PERIODS));
+    }
+
+    function thenTurnip() {
+        assert.comment('- thenTurnip');
 
         checkAllLogs(cluster, assert, function checkEachLog(record) {
             assert.ok([
@@ -164,20 +192,8 @@ allocCluster.test('peer churn', {
                 'draining peer',
                 'implementing affinity change',
                 'stopping peer drain',
-                'pruning peers'
-            ].indexOf(record.msg) >= 0, 'expected reaping logs');
-        });
+                'pruning peers',
 
-        timers.setTimeout(thenTurnip, fuzzedPeriods(SETTLE_PERIODS));
-    }
-
-    function thenTurnip() {
-        assert.comment('- thenTurnip');
-
-        // checkNoLogs('reap', cluster, assert);
-
-        checkAllLogs(cluster, assert, function checkEachLog(record) {
-            assert.ok([
                 // these happen more for the peers that didn't unad above
                 'connecting peers',
                 'resetting connection',
@@ -188,12 +204,7 @@ allocCluster.test('peer churn', {
             ].indexOf(record.msg) >= 0, 'expected peer churn logs');
         });
 
-        turnips = Turnips.forAll(first, function getRemotePortHost(remote) {
-            var parts = remote.channel.hostPort.split(':');
-            var host = parts[0];
-            var port = parseInt(parts[1], 10);
-            return [port, host];
-        }, thenWaitAndSee);
+        turnips.ready(thenWaitAndSee);
     }
 
     function thenWaitAndSee() {
