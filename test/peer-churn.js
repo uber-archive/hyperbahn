@@ -31,7 +31,7 @@ var CollapsedAssert = require('./lib/collapsed-assert.js');
 
 /* eslint-disable no-multi-spaces */
 var PERIOD          = 100;
-var REQUEST_TIMEOUT = 200;
+var REQUEST_TIMEOUT = 2 * PERIOD;
 var REQUEST_FACTOR  = 1;
 var SETTLE_PERIODS  = 10;
 var CLUSTER_SIZE    = 10;
