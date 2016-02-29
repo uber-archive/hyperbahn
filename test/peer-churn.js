@@ -39,6 +39,7 @@ var CLUSTER_SIZE        = 10;
 var CHURN_FACTOR        = 0.5;
 var K_VALUE             = 5;
 var SERVICE_SIZE        = 10;
+var SUSTAIN_PARALLEL    = 10 * SERVICE_SIZE;
 var ENDPOINT_DELAY      = 0.5 * PERIOD;
 var ENDPOINT_DELAY_FUZZ = 0.50;
 
@@ -65,6 +66,21 @@ allocCluster.test('peer churn', {
 
         // XXX do we care about the rare:
         // AUTOBAHN INFO: ignoring outresponse.send on a closed connection ~ { responseId: 5,
+
+        // TODO: provoked by sustained traffic
+        ['info', 'OutResponse.send() after inreq timed out'],
+        ['info', 'error for timed out outgoing response'],
+        ['info', 'expected error while forwarding'],
+        ['info', 'forwarding expected error frame'],
+        ['info', 'got call response for timed out call request'],
+        ['info', 'got expected errorframe without call request'],
+        ['info', 'ignoring outresponse.send on a closed connection'],
+        ['info', 'popOutReq received for unknown or lost id'],
+        ['warn', 'Relay advertise failed with expected err'],
+        ['warn', 'forwarding error frame'],
+        ['warn', 'got errorframe without call request'],
+        ['warn', 'got unexpected call response without call request'],
+        ['warn', 'mismatched expired operation tombstone'],
 
         ['warn', 'affinity change failed audit'],
         ['warn', 'removing stale partial affinity worker'],
@@ -102,6 +118,8 @@ allocCluster.test('peer churn', {
     var first = null;
     var second = null;
     var turnips = null;
+    var sustained = null;
+    var cohort = null;
 
     function clientReady() {
         assert.comment('- clientReady');
@@ -126,7 +144,40 @@ allocCluster.test('peer churn', {
         assert.comment('- gotSecondRound');
         checkAllLogs(cluster, assert, checkConnectingLog);
         checkExitsTo(cluster, 'lucy', second, 'the second peers', assert);
-        checkRequestsTo('lucy', first.concat(second), 'either generation', client.clientChannel, assert, thenShutdownFirstRound);
+        checkRequestsTo('lucy', first.concat(second), 'either generation', client.clientChannel, assert, thenStartSustainedTraffic);
+    }
+
+    function thenStartSustainedTraffic() {
+        assert.comment('- thenStartSustainedTraffic');
+        sustained = checkSustainedTo('lucy', client.clientChannel, normalSustainedCheck);
+        cohort = first.concat(second);
+
+        timers.setTimeout(thenCheckFirstRound, fuzzedPeriods(SETTLE_PERIODS));
+    }
+
+    function normalSustainedCheck(err, delay, serverHostPort, cassert) {
+        cassert.ifError(err, 'no unexpected sustained request error');
+        cassert.ok(cohort.some(function isit(remote) {
+            return remote.hostPort === serverHostPort;
+        }), 'expected sustained request to be served by cohort');
+    }
+
+    function sustainedCheckDuringShutdown(err, delay, serverHostPort, cassert) {
+        if (err && err.type === 'tchannel.request.timeout' ||
+            err && err.type === 'tchannel.timeout') {
+            cassert.ok('expected timeout error'); // TODO: why do we get these? could we not?
+            return;
+        }
+        normalSustainedCheck(err, delay, serverHostPort, cassert);
+    }
+
+    function thenCheckFirstRound() {
+        assert.comment('- thenCheckFirstRound');
+
+        sustained.checkpoint().report(assert, 'expected sustained requests to be served by either generation');
+        sustained.check = sustainedCheckDuringShutdown;
+
+        thenShutdownFirstRound();
     }
 
     function thenShutdownFirstRound() {
@@ -180,6 +231,12 @@ allocCluster.test('peer churn', {
                 'expected registration failure during destruction',
                 'resetting connection',
 
+                // happens for destructive with sustained
+                'error while forwarding',
+                'forwarding error frame',
+                'expected error while forwarding',
+                'ignoring outresponse.send on a closed connection', // TODO: can we fix this one?
+
                 // these happen due to the unads
                 'Peer drained and closed due to unadvertisement',
                 'canceling peer drain',
@@ -196,7 +253,9 @@ allocCluster.test('peer churn', {
     function thenTurnip() {
         assert.comment('- thenTurnip');
 
-        // checkNoLogs('reap', cluster, assert);
+        sustained.checkpoint().report(assert, 'expected sustained requests to be served by either generation');
+        cohort = second;
+        sustained.check = normalSustainedCheck;
 
         checkAllLogs(cluster, assert, function checkEachLog(record) {
             assert.ok([
@@ -206,7 +265,23 @@ allocCluster.test('peer churn', {
                 'reaping dead peers',
                 'reaping dead peer',
                 'draining peer',
-                'pruning peers'
+                'pruning peers',
+
+                // these happen for the unad peers
+                'Peer drained and closed due to unadvertisement',
+
+                // happens for destructive with sustained
+                'expected error while forwarding',
+                'forwarding expected error frame',
+                'error while forwarding',
+                'forwarding error frame',
+                'got call response for timed out call request',
+
+                // TODO: can we fix these?
+                'ignoring outresponse.send on a closed connection',
+                'error for timed out outgoing response',
+                'OutResponse.send() after inreq timed out'
+
             ].indexOf(record.msg) >= 0, 'expected peer churn logs');
         });
 
@@ -225,7 +300,12 @@ allocCluster.test('peer churn', {
         assert.comment('- thenTendAndSend');
         checkNoLogs('turnip tending', cluster, assert);
         checkTurnips();
-        sendAfterChurn();
+        thenStopSustaining();
+    }
+
+    function thenStopSustaining() {
+        assert.comment('- thenStopSustaining');
+        sustained.cancel(sendAfterChurn);
     }
 
     function checkTurnips() {
@@ -242,6 +322,9 @@ allocCluster.test('peer churn', {
 
     function sendAfterChurn() {
         assert.comment('- sendAfterChurn');
+
+        sustained.checkpoint().report(assert, 'expected sustained requests to be served by second');
+
         checkRequestsTo('lucy', second, 'the second peers', client.clientChannel, assert, thenDestroySecondRound);
     }
 
@@ -343,6 +426,43 @@ function checkRequestsTo(serviceName, cohort, desc, chan, assert, cb) {
     });
 }
 
+function checkSustainedTo(serviceName, chan, check) {
+    var cassert = CollapsedAssert();
+    var cancel = sustainMany(chan, SUSTAIN_PARALLEL, {
+        serviceName: serviceName,
+        timeout: REQUEST_TIMEOUT
+    }, 'who', '', '', sent);
+
+    var finished = null;
+    var sustain = {
+        checkpoint: checkpoint,
+        check: check,
+        cancel: finish
+    };
+    return sustain;
+
+    function sent(err, res, arg2, arg3) {
+        sustain.check(err, parseFloat(arg2), String(arg3), cassert);
+    }
+
+    function checkpoint() {
+        var prior = cassert;
+        cassert = CollapsedAssert();
+        return prior;
+    }
+
+    function finish(finishedCb) {
+        if (!finished) {
+            finished = finishedCb;
+            cancel(thenReport);
+        }
+    }
+
+    function thenReport() {
+        finished();
+    }
+}
+
 function sendMany(chan, N, opts, arg1, arg2, arg3, check, cb) {
     var sendsDone = CountedReadySignal(N);
     sendsDone(cb);
@@ -357,6 +477,42 @@ function sendMany(chan, N, opts, arg1, arg2, arg3, check, cb) {
     function done(err, res, resArg2, resArg3) {
         check(err, res, resArg2, resArg3);
         sendsDone.signal();
+    }
+}
+
+function sustainMany(chan, N, opts, arg1, arg2, arg3, check) {
+    var ongoing = 0;
+    var drained = null;
+    // - callback to be called once ongoing <= 0
+    // - stops making new requests once drained !== null
+    fill();
+    return cancel;
+
+    function cancel(drainedCb) {
+        drained = drainedCb;
+    }
+
+    function fill() {
+        if (drained) {
+            if (ongoing === 0) {
+                drained();
+            }
+            return;
+        }
+        while (ongoing < N) {
+            doRequest();
+        }
+    }
+
+    function doRequest() {
+        ++ongoing;
+        chan.request(opts).send(arg1, arg2, arg3, done);
+    }
+
+    function done(err, res, resArg2, resArg3) {
+        --ongoing;
+        check(err, res, resArg2, resArg3);
+        fill();
     }
 }
 
