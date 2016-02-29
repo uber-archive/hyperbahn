@@ -22,10 +22,10 @@
 
 var collectParallel = require('collect-parallel/array');
 var CountedReadySignal = require('ready-signal/counted');
-var net = require('net');
 var timers = require('timers');
 var util = require('util');
 
+var Turnips = require('./lib/turnip').Turnips;
 var allocCluster = require('./lib/test-cluster.js');
 var CollapsedAssert = require('./lib/collapsed-assert.js');
 
@@ -186,7 +186,12 @@ allocCluster.test('peer churn', {
             ].indexOf(record.msg) >= 0, 'expected peer churn logs');
         });
 
-        turnips = createTurnips(first, thenWaitAndSee);
+        turnips = Turnips.forAll(first, function getRemotePortHost(remote) {
+            var parts = remote.channel.hostPort.split(':');
+            var host = parts[0];
+            var port = parseInt(parts[1], 10);
+            return [port, host];
+        }, thenWaitAndSee);
     }
 
     function thenWaitAndSee() {
@@ -205,9 +210,10 @@ allocCluster.test('peer churn', {
         var logs = turnips.takeConnLogs();
         for (var i = 0; i < logs.length; ++i) {
             var log = logs[i];
+            var turnip = turnips.turnips[i];
             assert.equal(log.length, 0, util.format(
                 'expected no connections to turnip[%s] (%s)',
-                i, turnips[i].remote.channel.hostPort
+                i, turnip.hostPort
             ));
         }
     }
@@ -234,7 +240,7 @@ allocCluster.test('peer churn', {
 
         checkTurnips();
 
-        destroyAll(second.concat(turnips).concat([client]), finish);
+        destroyAll(second.concat([turnips, client]), finish);
     }
 
     function finish() {
@@ -368,60 +374,5 @@ function checkNoLogs(desc, cluster, assert) {
                 record.levelName, record.msg, record._logData.fields
             ));
         }
-    }
-}
-
-// creates dirst-stupid fixture tcp servers in place of each destroyed remote
-function createTurnips(remotes, cb) {
-    var turnips = [];
-    turnips.takeConnLogs = takeConnLogs;
-    collectParallel(remotes, createEachTurnip, cb);
-    return turnips;
-
-    function takeConnLogs() {
-        var logs = [];
-        for (var i = 0; i < turnips.length; ++i) {
-            logs[i] = turnips[i].takeConnLog();
-        }
-        return logs;
-    }
-
-    function createEachTurnip(remote, i, done) {
-        turnips[i] = createTurnip(remote, done);
-    }
-}
-
-function createTurnip(remote, cb) {
-    var turnip = {
-        remote: remote,
-        server: net.createServer(onConnection),
-        connLog: [],
-        destroy: destroy,
-        takeConnLog: takeConnLog
-    };
-
-    var parts = remote.channel.hostPort.split(':');
-    var host = parts[0];
-    var port = parseInt(parts[1], 10);
-    turnip.server.listen(port, host, cb);
-
-    return turnip;
-
-    function takeConnLog() {
-        var log = turnip.connLog;
-        turnip.connLog = [];
-        return log;
-    }
-
-    function destroy(destroyCb) {
-        turnip.server.close(destroyCb);
-    }
-
-    function onConnection(socket) {
-        turnip.connLog.push({
-            remoteAddress: socket.remoteAddress,
-            remotePort: socket.remotePort
-        });
-        socket.end();
     }
 }
