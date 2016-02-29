@@ -308,7 +308,7 @@ function checkRequestsTo(serviceName, cohort, desc, chan, assert, cb) {
         serviceName: serviceName,
         timeout: REQUEST_TIMEOUT
     }, 'who', '', '', function sent(err, res, arg2, arg3) {
-        cassert.ifError(err, 'no unexpected error');
+        cassert.ifError(err, 'no unexpected check request error');
         var serverHostPort = String(arg3);
         cassert.ok(cohort.some(function isit(remote) {
             return remote.hostPort === serverHostPort;
