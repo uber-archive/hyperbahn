@@ -199,11 +199,14 @@ allocCluster.test('peer churn', {
 
         checkNoLogs('turnip', cluster, assert);
 
-        timers.setTimeout(function tendTurnips() {
-            checkNoLogs('turnip tending', cluster, assert);
-            checkTurnips();
-            sendAfterChurn();
-        }, fuzzedPeriods(COOL_OFF_PERIODS));
+        timers.setTimeout(thenTendAndSend, fuzzedPeriods(COOL_OFF_PERIODS));
+    }
+
+    function thenTendAndSend() {
+        assert.comment('- thenTendAndSend');
+        checkNoLogs('turnip tending', cluster, assert);
+        checkTurnips();
+        sendAfterChurn();
     }
 
     function checkTurnips() {
