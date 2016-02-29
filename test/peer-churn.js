@@ -30,14 +30,16 @@ var allocCluster = require('./lib/test-cluster.js');
 var CollapsedAssert = require('./lib/collapsed-assert.js');
 
 /* eslint-disable no-multi-spaces */
-var PERIOD          = 100;
-var REQUEST_TIMEOUT = 2 * PERIOD;
-var REQUEST_FACTOR  = 1;
-var SETTLE_PERIODS  = 10;
-var CLUSTER_SIZE    = 10;
-var CHURN_FACTOR    = 0.5;
-var K_VALUE         = 5;
-var SERVICE_SIZE    = 10;
+var PERIOD              = 100;
+var REQUEST_TIMEOUT     = 2 * PERIOD;
+var REQUEST_FACTOR      = 1;
+var SETTLE_PERIODS      = 10;
+var CLUSTER_SIZE        = 10;
+var CHURN_FACTOR        = 0.5;
+var K_VALUE             = 5;
+var SERVICE_SIZE        = 10;
+var ENDPOINT_DELAY      = 0.5 * PERIOD;
+var ENDPOINT_DELAY_FUZZ = 0.50;
 
 function fuzzedPeriods(N) {
     return 1.05 * N * PERIOD;
@@ -285,8 +287,13 @@ function createRemotes(cluster, N, opts, cb) {
 }
 
 function who(req, res) {
-    res.headers.as = 'raw';
-    res.sendOk('', req.channel.hostPort);
+    var delay = ENDPOINT_DELAY + 1 + (0.5 - Math.random()) * ENDPOINT_DELAY_FUZZ;
+    timers.setTimeout(thenRespond, delay);
+
+    function thenRespond() {
+        res.headers.as = 'raw';
+        res.sendOk(delay.toString(), req.channel.hostPort);
+    }
 }
 
 function checkExitsTo(cluster, serviceName, cohort, desc, assert) {
