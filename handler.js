@@ -248,6 +248,14 @@ function handleRelay(endpoint, req, arg2, arg3, cb) {
     var services = arg3.services;
     var logger = self.channel.logger;
 
+    // TODO: validate -> BadRequest
+    // if (!Array.isArray(services)) { }
+    // for (var i = 0; i < services.length; i++) {
+    //     var service = services[i];
+    //     // TODO typeof service.serviceName !== 'string' || !serviceName.length
+    //     // TODO typeof service.hostPort !== 'string' || !hostPort.length
+    // }
+
     for (var i = 0; i < services.length; i++) {
         var service = services[i];
         if (endpoint === 'ad') {
@@ -352,6 +360,7 @@ function logError(err, opts, response) {
 HyperbahnHandler.prototype.advertise =
 function advertise(service) {
     var self = this;
+    // doesn't guarantee serviceName
     self.channel.topChannel.handler.refreshServicePeer(service.serviceName, service.hostPort);
 };
 
