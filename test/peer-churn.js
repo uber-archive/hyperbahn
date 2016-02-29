@@ -30,14 +30,14 @@ var allocCluster = require('./lib/test-cluster.js');
 var CollapsedAssert = require('./lib/collapsed-assert.js');
 
 /* eslint-disable no-multi-spaces */
-var PERIOD           = 100;
-var REQUEST_TIMEOUT  = 200;
-var REQUEST_FACTOR   = 1;
-var COOL_OFF_PERIODS = 10;
-var CLUSTER_SIZE     = 10;
-var CHURN_FACTOR     = 0.5;
-var K_VALUE          = 5;
-var SERVICE_SIZE     = 10;
+var PERIOD          = 100;
+var REQUEST_TIMEOUT = 200;
+var REQUEST_FACTOR  = 1;
+var SETTLE_PERIODS  = 10;
+var CLUSTER_SIZE    = 10;
+var CHURN_FACTOR    = 0.5;
+var K_VALUE         = 5;
+var SERVICE_SIZE    = 10;
 
 function fuzzedPeriods(N) {
     return 1.05 * N * PERIOD;
@@ -166,7 +166,7 @@ allocCluster.test('peer churn', {
             ].indexOf(record.msg) >= 0, 'expected reaping logs');
         });
 
-        timers.setTimeout(thenTurnip, fuzzedPeriods(COOL_OFF_PERIODS));
+        timers.setTimeout(thenTurnip, fuzzedPeriods(SETTLE_PERIODS));
     }
 
     function thenTurnip() {
@@ -199,7 +199,7 @@ allocCluster.test('peer churn', {
 
         checkNoLogs('turnip', cluster, assert);
 
-        timers.setTimeout(thenTendAndSend, fuzzedPeriods(COOL_OFF_PERIODS));
+        timers.setTimeout(thenTendAndSend, fuzzedPeriods(SETTLE_PERIODS));
     }
 
     function thenTendAndSend() {
