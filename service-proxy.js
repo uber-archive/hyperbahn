@@ -696,17 +696,6 @@ function refreshServicePeer(serviceName, hostPort) {
     self.ensurePeerConnected(serviceName, peer, 'service peer refresh', now);
 };
 
-ServiceDispatchHandler.prototype.deletePeerIndex =
-function deletePeerIndex(serviceName, hostPort) {
-    var self = this;
-
-    if (self.partialAffinityEnabled) {
-        deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
-        deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
-    }
-    deleteIndexEntry(self.knownPeers, hostPort, serviceName);
-};
-
 ServiceDispatchHandler.prototype.ensurePeerConnected =
 function ensurePeerConnected(serviceName, peer, reason, now) {
     var self = this;
@@ -1406,7 +1395,13 @@ function reapSinglePeer(hostPort, serviceNames, now) {
         if (serviceChannel) {
             serviceChannel.peers.delete(hostPort);
         }
-        self.deletePeerIndex(serviceName, hostPort);
+
+        if (self.partialAffinityEnabled) {
+            deleteIndexEntry(self.connectedServicePeers, serviceName, hostPort);
+            deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
+        }
+        deleteIndexEntry(self.knownPeers, hostPort, serviceName);
+
         var partialRange = self.partialRanges[serviceName];
         if (partialRange) {
             partialRange.removeWorker(hostPort, now);
