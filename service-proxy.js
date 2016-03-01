@@ -937,7 +937,7 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
     if (!result.noop) {
         self.logger.info(
             'implementing affinity change',
-            self.extendLogInfo(partialRange.extendLogInfo({
+            result.extendLogInfo({
                 serviceName: serviceName,
                 reason: reason,
                 causingWorker: hostPort,
