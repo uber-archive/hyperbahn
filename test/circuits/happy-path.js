@@ -97,7 +97,9 @@ allocCluster.test('request circuit state from endpoint', {
     remoteConfig: {
         'rateLimiting.enabled': false,
         'circuits.enabled': true,
-        'circuits.codeName': 'Unhealthy',
+        'circuits.codeNames': {
+            '*~*~*': 'Unhealthy'
+        },
         'partialAffinity.enabled': true
     },
     seedConfig: {

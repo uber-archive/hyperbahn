@@ -80,7 +80,7 @@ function ServiceDispatchHandler(options) {
         '*~hyperbahn~ad': true,
         '*~hyperbahn~relay-ad': true
     };
-    self.circuitsCodeName = 'Declined';
+    self.circuitsCodeNames = {};
     self.circuits = null;
 
     self.rateLimiter = new RateLimiter({
@@ -1504,18 +1504,18 @@ function initCircuits() {
         egressNodes: self.egressNodes,
         config: self.circuitsConfig,
         shorts: self.circuitShorts,
-        codeName: self.circuitsCodeName
+        codeNamesTable: self.circuitsCodeNames
     });
 };
 
-ServiceDispatchHandler.prototype.updateCircuitCodeName =
-function updateCircuitCodeName(codeName) {
+ServiceDispatchHandler.prototype.updateCircuitCodeNames =
+function updateCircuitCodeNames(codeNames) {
     var self = this;
 
-    self.circuitsCodeName = codeName;
+    self.circuitsCodeNames = codeNames;
 
     if (self.circuits) {
-        self.circuits.updateCodeName(codeName);
+        self.circuits.updateCodeNames(codeNames);
     }
 };
 

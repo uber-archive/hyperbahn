@@ -37,10 +37,17 @@ function EndpointCircuits(root) {
     this.circuitsByEndpointName = {};
 }
 
-EndpointCircuits.prototype.updateShorts = function updateShorts(shorts) {
+EndpointCircuits.prototype.updateShorts = function updateShorts() {
     var keys = Object.keys(this.circuitsByEndpointName);
     for (var i = 0; i < keys.length; ++i) {
         this.circuitsByEndpointName[keys[i]].updateShorted();
+    }
+};
+
+EndpointCircuits.prototype.updateCodeNames = function updateCodeNames() {
+    var keys = Object.keys(this.circuitsByEndpointName);
+    for (var i = 0; i < keys.length; ++i) {
+        this.circuitsByEndpointName[keys[i]].updateCodeName();
     }
 };
 
@@ -67,10 +74,17 @@ function ServiceCircuits(root) {
     this.circuitsByCallerName = {};
 }
 
-ServiceCircuits.prototype.updateShorts = function updateShorts(shorts) {
+ServiceCircuits.prototype.updateShorts = function updateShorts() {
     var keys = Object.keys(this.circuitsByCallerName);
     for (var i = 0; i < keys.length; ++i) {
-        this.circuitsByCallerName[keys[i]].updateShorts(shorts);
+        this.circuitsByCallerName[keys[i]].updateShorts();
+    }
+};
+
+ServiceCircuits.prototype.updateCodeNames = function updateCodeNames() {
+    var keys = Object.keys(this.circuitsByCallerName);
+    for (var i = 0; i < keys.length; i++) {
+        this.circuitsByCallerName[keys[i]].updateCodeNames();
     }
 };
 
@@ -98,7 +112,7 @@ function Circuits(options) {
     this.circuitsByServiceName = {};
     this.config = options.config || {};
     this.shorts = options.shorts || null;
-    this.codeName = options.codeName;
+    this.codeNamesTable = options.codeNamesTable || null;
 
     this.stateOptions = new StateOptions(null, {
         timeHeap: options.timeHeap,
@@ -112,12 +126,16 @@ function Circuits(options) {
     this.egressNodes = options.egressNodes;
 }
 
-Circuits.prototype.updateCodeName = function updateCodeName(codeName) {
-    this.codeName = codeName;
+Circuits.prototype.updateCodeNames = function updateCodeNames(codeNames) {
+    this.codeNamesTable = parseTripletTable(codeNames);
+    var keys = Object.keys(this.circuitsByServiceName);
+    for (var i = 0; i < keys.length; i++) {
+        this.circuitsByServiceName[keys[i]].updateCodeNames();
+    }
 };
 
 Circuits.prototype.updateShorts = function updateShorts(shorts) {
-    this.shorts = parseShorts(shorts);
+    this.shorts = parseTripletTable(shorts);
     var keys = Object.keys(this.circuitsByServiceName);
     for (var i = 0; i < keys.length; ++i) {
         this.circuitsByServiceName[keys[i]].updateShorts();
@@ -140,6 +158,26 @@ Circuits.prototype.isShorted = function isShorted(callerName, serviceName, endpo
     }
 
     return byEndpoint[endpointName] ? true : false;
+};
+
+Circuits.prototype.getCodeName = function getCodeName(callerName, serviceName, endpointName) {
+    if (!this.codeNamesTable) {
+        return 'Declined';
+    }
+
+    var byService = this.codeNamesTable[callerName] || this.codeNamesTable['*'];
+    if (!byService) {
+        return 'Declined';
+    }
+
+    var byEndpoint = byService[serviceName] || byService['*'];
+    if (!byEndpoint) {
+        return 'Declined';
+    }
+
+    var value = byEndpoint[endpointName] || byEndpoint['*'];
+
+    return value ? value : 'Declined';
 };
 
 Circuits.prototype.getCircuit = function getCircuit(callerName, serviceName, endpointName) {
@@ -183,6 +221,7 @@ function Circuit(root, callerName, serviceName, endpointName) {
     this.state = null;
     this.stateOptions = new StateOptions(this, this.root.stateOptions);
     this.shorted = false;
+    this.codeName = 'Declined';
 
     this.callerName = callerName || 'no-cn';
     this.serviceName = serviceName;
@@ -200,7 +239,12 @@ function Circuit(root, callerName, serviceName, endpointName) {
 
     this.setState(HealthyState);
     this.updateShorted();
+    this.updateCodeName();
 }
+
+Circuit.prototype.updateCodeName = function updateCodeName() {
+    this.codeName = this.root.getCodeName(this.calledName, this.serviceName, this.endpointName);
+};
 
 Circuit.prototype.updateShorted = function updateShorted() {
     this.shorted = this.root.isShorted(this.callerName, this.serviceName, this.endpointName);
@@ -356,7 +400,7 @@ PeriodicState.prototype.getRequestError = function getRequestError() {
         return null;
     }
 
-    return new ErrorFrame(this.circuit.root.codeName, 'Service is not healthy');
+    return new ErrorFrame(this.circuit.codeName, 'Service is not healthy');
 };
 
 function HealthyState(options) {
@@ -562,9 +606,9 @@ ShortedState.prototype.shouldRequest = function shouldRequest() {
     return true;
 };
 
-function parseShorts(shorts) {
+function parseTripletTable(tripletTable) {
     var byCaller = {};
-    var keys = Object.keys(shorts);
+    var keys = Object.keys(tripletTable);
     for (var i = 0; i < keys.length; ++i) {
         var key = keys[i];
         var match = /^([^~]+)~([^~]+)~(.+)$/.exec(key);
@@ -582,7 +626,7 @@ function parseShorts(shorts) {
         if (!byEndpoint) {
             byEndpoint = byService[serviceName] = {};
         }
-        byEndpoint[endpointName] = shorts[key];
+        byEndpoint[endpointName] = tripletTable[key];
     }
     return byCaller;
 }
