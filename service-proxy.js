@@ -80,6 +80,7 @@ function ServiceDispatchHandler(options) {
         '*~hyperbahn~ad': true,
         '*~hyperbahn~relay-ad': true
     };
+    self.circuitsCodeNames = {};
     self.circuits = null;
 
     self.rateLimiter = new RateLimiter({
@@ -424,8 +425,10 @@ function handleLazily(conn, reqFrame) {
         var circuit = serviceChannel.handler.circuits.getCircuit(
             callerName, serviceName, endpoint
         );
-        if (!circuit.state.shouldRequest()) {
-            self.rejectRequestFrame(conn, reqFrame, 'Declined', 'Service is not healthy');
+        var err = circuit.state.getRequestError();
+        if (err) {
+            self.rejectRequestFrame(conn, reqFrame,
+                err.codeName, err.message);
             return true;
         }
 
@@ -515,8 +518,9 @@ function handleRequest(req, buildRes) {
         var circuit = serviceChannel.handler.circuits.getCircuit(
             req.headers.cn || 'no-cn', req.serviceName, req.endpoint
         );
-        if (!circuit.state.shouldRequest()) {
-            buildRes().sendError('Declined', 'Service is not healthy');
+        var err = circuit.state.getRequestError();
+        if (err) {
+            buildRes().sendError(err.codeName, err.message);
             return;
         }
 
@@ -1499,8 +1503,20 @@ function initCircuits() {
         random: self.random,
         egressNodes: self.egressNodes,
         config: self.circuitsConfig,
-        shorts: self.circuitShorts
+        shorts: self.circuitShorts,
+        codeNamesTable: self.circuitsCodeNames
     });
+};
+
+ServiceDispatchHandler.prototype.updateCircuitCodeNames =
+function updateCircuitCodeNames(codeNames) {
+    var self = this;
+
+    self.circuitsCodeNames = codeNames;
+
+    if (self.circuits) {
+        self.circuits.updateCodeNames(codeNames);
+    }
 };
 
 ServiceDispatchHandler.prototype.updateCircuitShorts =
