@@ -822,6 +822,12 @@ function addNewPartialPeer(serviceChannel, hostPort, now) {
         partialRange.addWorker(hostPort, now);
     }
 
+    self.logger.info('ADD NEW PARTIAL PEER KNOWS', {
+        serviceName: serviceName,
+        hostPort: hostPort,
+        now: now
+    });
+
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, hostPort, serviceName);
     // Mark known peers, so they are candidates for future reaping
@@ -863,6 +869,12 @@ function freshenPartialPeer(peer, serviceName, now) {
         deleteIndexEntry(self.connectedServicePeers, serviceName, peer.hostPort);
         deleteIndexEntry(self.connectedPeerServices, hostPort, serviceName);
     }
+
+    self.logger.info('FRESHEN PARTIAL PEER KNOWS', {
+        serviceName: serviceName,
+        hostPort: hostPort,
+        now: now
+    });
 
     // Unmark recently seen peers, so they don't get reaped
     deleteIndexEntry(self.peersToReap, peer.hostPort, serviceName);
@@ -932,7 +944,7 @@ function ensurePartialConnections(serviceChannel, serviceName, hostPort, reason,
                 causingWorker: hostPort,
                 numToConnect: result.toConnect.length,
                 numToDisconnect: result.toDisconnect.length
-            }))
+            })
         );
         result.implement();
     }
@@ -1362,6 +1374,11 @@ function reapSinglePeer(hostPort, serviceNames, now) {
     var self = this;
 
     if (self.knownPeers[hostPort]) {
+        self.logger.info('REAP ABORT, WHO KNOWS', {
+            serviceNames: serviceNames,
+            hostPort: hostPort,
+            now: now
+        });
         return;
     }
 
@@ -1752,7 +1769,15 @@ function audit() {
         worker = this.toDisconnect[i];
         peer = this.serviceChannel.peers.get(worker);
         if (!peer) {
+            // this.proxy.logger.warn(
+            //     'DEBUG workers before',
+            //     {workers: this.partialRange.workers.join(','), worker: worker}
+            // );
             this.removeWorker(worker, 'toDisconnect');
+            // this.proxy.logger.warn(
+            //     'DEBUG workers after',
+            //     {workers: this.partialRange.workers.join(',')}
+            // );
             ++this.staleToDisconnect;
         }
     }
