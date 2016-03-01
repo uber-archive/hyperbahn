@@ -1748,13 +1748,7 @@ function audit() {
         worker = this.toConnect[i];
         peer = this.serviceChannel.peers.get(worker);
         if (!peer) {
-            this.proxy.logger.warn(
-                'removing stale partial affinity worker',
-                this.extendLogInfo({
-                    hostPort: worker
-                })
-            );
-            this.partialRange.removeWorker(worker, this.now);
+            this.removeWorker(worker, 'toConnect');
             ++this.staleToConnect;
         }
     }
@@ -1763,16 +1757,7 @@ function audit() {
         worker = this.toDisconnect[i];
         peer = this.serviceChannel.peers.get(worker);
         if (!peer) {
-            this.proxy.logger.warn(
-                'removing stale partial affinity worker',
-                this.extendLogInfo({
-                    hostPort: worker
-                })
-            );
-            this.partialRange.removeWorker(worker, this.now);
-            if (this.connectedPeers) {
-                delete this.connectedPeers[worker];
-            }
+            this.removeWorker(worker, 'toDisconnect');
             ++this.staleToDisconnect;
         }
     }
@@ -1783,6 +1768,21 @@ function audit() {
     }
 
     return false;
+};
+
+AffinityChange.prototype.removeWorker =
+function removeWorker(worker, which) {
+    this.proxy.logger.warn(
+        'removing stale partial affinity worker',
+        this.extendLogInfo({
+            which: which,
+            worker: worker
+        })
+    );
+    this.partialRange.removeWorker(worker, this.now);
+    if (this.connectedPeers) {
+        delete this.connectedPeers[worker];
+    }
 };
 
 AffinityChange.prototype.implement =
