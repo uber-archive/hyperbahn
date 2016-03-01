@@ -537,6 +537,10 @@ function checkAllLogs(cluster, assert, check) {
                 record.levelName, record.msg, record._logData.fields
             ));
         }
+        assert.comment(util.format(
+            'LOG: %s %s: %j',
+            record.levelName, record.msg, record._logData.fields
+        ));
     }
     assert.removeListener('result', onResult);
 
@@ -554,6 +558,9 @@ function checkNoLogs(desc, cluster, assert) {
         for (var i = 0; i < records.length; ++i) {
             var record = records[i];
             assert.comment(util.format('UNEXPECTED LOG: %s %s: %j',
+                record.levelName, record.msg, record._logData.fields
+            ));
+            assert.comment(util.format('LOG: %s %s: %j',
                 record.levelName, record.msg, record._logData.fields
             ));
         }
