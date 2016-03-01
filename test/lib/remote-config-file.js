@@ -33,7 +33,10 @@ function RemoteConfigFile(name) {
     }
 
     var self = this;
-    name = name || 'UNKNOWN[' + process.pid + ']';
+
+    name = name || 'UNKNOWN';
+    name += '[' + process.pid + ']';
+
     self.filePath = path.join('/tmp',
                               'remote_config_' + name + '.json');
 }
