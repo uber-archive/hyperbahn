@@ -22,22 +22,24 @@
 
 var collectParallel = require('collect-parallel/array');
 var CountedReadySignal = require('ready-signal/counted');
-var net = require('net');
 var timers = require('timers');
 var util = require('util');
 
+var Turnips = require('./lib/turnip').Turnips;
 var allocCluster = require('./lib/test-cluster.js');
 var CollapsedAssert = require('./lib/collapsed-assert.js');
 
 /* eslint-disable no-multi-spaces */
-var PERIOD           = 100;
-var REQUEST_TIMEOUT  = 200;
-var REQUEST_FACTOR   = 1;
-var COOL_OFF_PERIODS = 10;
-var CLUSTER_SIZE     = 10;
-var CHURN_FACTOR     = 0.5;
-var K_VALUE          = 5;
-var SERVICE_SIZE     = 10;
+var PERIOD              = 100;
+var REQUEST_TIMEOUT     = 2 * PERIOD;
+var REQUEST_FACTOR      = 1;
+var SETTLE_PERIODS      = 10;
+var CLUSTER_SIZE        = 10;
+var CHURN_FACTOR        = 0.5;
+var K_VALUE             = 5;
+var SERVICE_SIZE        = 10;
+var ENDPOINT_DELAY      = 0.5 * PERIOD;
+var ENDPOINT_DELAY_FUZZ = 0.50;
 
 function fuzzedPeriods(N) {
     return 1.05 * N * PERIOD;
@@ -166,7 +168,7 @@ allocCluster.test('peer churn', {
             ].indexOf(record.msg) >= 0, 'expected reaping logs');
         });
 
-        timers.setTimeout(thenTurnip, fuzzedPeriods(COOL_OFF_PERIODS));
+        timers.setTimeout(thenTurnip, fuzzedPeriods(SETTLE_PERIODS));
     }
 
     function thenTurnip() {
@@ -186,7 +188,12 @@ allocCluster.test('peer churn', {
             ].indexOf(record.msg) >= 0, 'expected peer churn logs');
         });
 
-        turnips = createTurnips(first, thenWaitAndSee);
+        turnips = Turnips.forAll(first, function getRemotePortHost(remote) {
+            var parts = remote.channel.hostPort.split(':');
+            var host = parts[0];
+            var port = parseInt(parts[1], 10);
+            return [port, host];
+        }, thenWaitAndSee);
     }
 
     function thenWaitAndSee() {
@@ -194,20 +201,24 @@ allocCluster.test('peer churn', {
 
         checkNoLogs('turnip', cluster, assert);
 
-        timers.setTimeout(function tendTurnips() {
-            checkNoLogs('turnip tending', cluster, assert);
-            checkTurnips();
-            sendAfterChurn();
-        }, fuzzedPeriods(COOL_OFF_PERIODS));
+        timers.setTimeout(thenTendAndSend, fuzzedPeriods(SETTLE_PERIODS));
+    }
+
+    function thenTendAndSend() {
+        assert.comment('- thenTendAndSend');
+        checkNoLogs('turnip tending', cluster, assert);
+        checkTurnips();
+        sendAfterChurn();
     }
 
     function checkTurnips() {
         var logs = turnips.takeConnLogs();
         for (var i = 0; i < logs.length; ++i) {
             var log = logs[i];
+            var turnip = turnips.turnips[i];
             assert.equal(log.length, 0, util.format(
                 'expected no connections to turnip[%s] (%s)',
-                i, turnips[i].remote.channel.hostPort
+                i, turnip.hostPort
             ));
         }
     }
@@ -234,7 +245,7 @@ allocCluster.test('peer churn', {
 
         checkTurnips();
 
-        destroyAll(second.concat(turnips).concat([client]), finish);
+        destroyAll(second.concat([turnips, client]), finish);
     }
 
     function finish() {
@@ -276,8 +287,13 @@ function createRemotes(cluster, N, opts, cb) {
 }
 
 function who(req, res) {
-    res.headers.as = 'raw';
-    res.sendOk('', req.channel.hostPort);
+    var delay = ENDPOINT_DELAY + 1 + (0.5 - Math.random()) * ENDPOINT_DELAY_FUZZ;
+    timers.setTimeout(thenRespond, delay);
+
+    function thenRespond() {
+        res.headers.as = 'raw';
+        res.sendOk(delay.toString(), req.channel.hostPort);
+    }
 }
 
 function checkExitsTo(cluster, serviceName, cohort, desc, assert) {
@@ -299,7 +315,7 @@ function checkRequestsTo(serviceName, cohort, desc, chan, assert, cb) {
         serviceName: serviceName,
         timeout: REQUEST_TIMEOUT
     }, 'who', '', '', function sent(err, res, arg2, arg3) {
-        cassert.ifError(err, 'no unexpected error');
+        cassert.ifError(err, 'no unexpected check request error');
         var serverHostPort = String(arg3);
         cassert.ok(cohort.some(function isit(remote) {
             return remote.hostPort === serverHostPort;
@@ -368,60 +384,5 @@ function checkNoLogs(desc, cluster, assert) {
                 record.levelName, record.msg, record._logData.fields
             ));
         }
-    }
-}
-
-// creates dirst-stupid fixture tcp servers in place of each destroyed remote
-function createTurnips(remotes, cb) {
-    var turnips = [];
-    turnips.takeConnLogs = takeConnLogs;
-    collectParallel(remotes, createEachTurnip, cb);
-    return turnips;
-
-    function takeConnLogs() {
-        var logs = [];
-        for (var i = 0; i < turnips.length; ++i) {
-            logs[i] = turnips[i].takeConnLog();
-        }
-        return logs;
-    }
-
-    function createEachTurnip(remote, i, done) {
-        turnips[i] = createTurnip(remote, done);
-    }
-}
-
-function createTurnip(remote, cb) {
-    var turnip = {
-        remote: remote,
-        server: net.createServer(onConnection),
-        connLog: [],
-        destroy: destroy,
-        takeConnLog: takeConnLog
-    };
-
-    var parts = remote.channel.hostPort.split(':');
-    var host = parts[0];
-    var port = parseInt(parts[1], 10);
-    turnip.server.listen(port, host, cb);
-
-    return turnip;
-
-    function takeConnLog() {
-        var log = turnip.connLog;
-        turnip.connLog = [];
-        return log;
-    }
-
-    function destroy(destroyCb) {
-        turnip.server.close(destroyCb);
-    }
-
-    function onConnection(socket) {
-        turnip.connLog.push({
-            remoteAddress: socket.remoteAddress,
-            remotePort: socket.remotePort
-        });
-        socket.end();
     }
 }
