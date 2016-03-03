@@ -157,7 +157,9 @@ Circuits.prototype.isShorted = function isShorted(callerName, serviceName, endpo
         return false;
     }
 
-    return byEndpoint[endpointName] ? true : false;
+    var value = byEndpoint[endpointName] || byEndpoint['*'];
+
+    return value ? value : false;
 };
 
 Circuits.prototype.getCodeName = function getCodeName(callerName, serviceName, endpointName) {
