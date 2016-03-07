@@ -98,7 +98,7 @@ TimeSeriesCluster.test('testing worker with low rate limit', {
 
         // Ignore first bucket as it's the warmup bucket
         // which is a statistical outlier for this test.
-        for (var i = 1; i < cluster.buckets.length; i++) {
+        for (var i = 2; i < cluster.buckets.length; i++) {
             cluster.assertRange(assert, {
                 value: results[i].errorCount,
                 min: 0,
