@@ -732,23 +732,52 @@ function connectSinglePeer(hostPort, connectInfo) {
     var self = this;
 
     if (self.peersToPrune[hostPort]) {
+
+        self.logger.info('SKIPPING PEER CONNECTION: PRUNED', self.extendLogInfo({
+            hostPort: hostPort,
+            connectInfo: connectInfo
+        }));
+
         return;
     }
 
     var serviceName = connectInfo.serviceName;
     var serviceChannel = self.getServiceChannel(serviceName);
     if (!serviceChannel) {
+
+        self.logger.info('SKIPPING PEER CONNECTION: NO SERVICE CHANNEL', self.extendLogInfo({
+            hostPort: hostPort,
+            connectInfo: connectInfo
+        }));
+
         return;
     }
 
     var peer = serviceChannel.peers.get(hostPort);
     if (!peer) {
+
+        self.logger.info('SKIPPING PEER CONNECTION: NO PEER', self.extendLogInfo({
+            hostPort: hostPort,
+            connectInfo: connectInfo
+        }));
+
         return;
     }
 
     if (peer.draining) {
+
+        self.logger.info('SKIPPING PEER CONNECTION: PEER DRAINING', self.extendLogInfo({
+            hostPort: hostPort,
+            connectInfo: connectInfo
+        }));
+
         return;
     }
+
+    self.logger.info('CONNECTING TO PEER', self.extendLogInfo({
+        hostPort: hostPort,
+        connectInfo: connectInfo
+    }));
 
     peer.connectTo();
 };
