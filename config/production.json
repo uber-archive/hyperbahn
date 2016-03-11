@@ -1,6 +1,7 @@
 {
     "info.team": "rt",
     "info.project": "autobahn",
+    "info.projectScope": "autobahn",
 
     "clients.remote-config": {
         "pollInterval": 60000
