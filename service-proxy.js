@@ -1369,7 +1369,7 @@ function pruneSinglePeer(hostPort, pruneInfo) {
 };
 
 ServiceDispatchHandler.prototype.reapSinglePeer =
-function reapSinglePeer(hostPort, serviceNames, now) {
+function reapSinglePeer(hostPort, serviceTimes, now) {
     var self = this;
 
     if (self.knownPeers[hostPort]) {
@@ -1400,6 +1400,7 @@ function reapSinglePeer(hostPort, serviceNames, now) {
         peer.clearDrain('superceded by peer reap');
     }
 
+    var serviceNames = Object.keys(serviceTimes);
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];
         var serviceChannel = self.getServiceChannel(serviceName);
