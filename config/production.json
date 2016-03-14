@@ -1,6 +1,9 @@
 {
     "info.team": "rt",
-    "info.project": "autobahn",
+    "info.statsdName": "autobahn",
+    "info.ringpopName": "autobahn",
+    "info.uncaughtName": "autobahn",
+    "info.kafkaName": "autobahn",
 
     "clients.remote-config": {
         "pollInterval": 60000
