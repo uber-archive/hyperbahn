@@ -1400,8 +1400,9 @@ function reapSinglePeer(hostPort, serviceNames, now) {
         peer.clearDrain('superceded by peer reap');
     }
 
-    for (var i = 0; i < serviceNames.length; i++) {
-        var serviceName = serviceNames[i];
+    var serviceKeys = Object.keys(serviceNames);
+    for (var i = 0; i < serviceKeys.length; i++) {
+        var serviceName = serviceKeys[i];
         var serviceChannel = self.getServiceChannel(serviceName);
         if (serviceChannel) {
             serviceChannel.peers.delete(hostPort);
@@ -1425,7 +1426,7 @@ function reapSinglePeer(hostPort, serviceNames, now) {
         'reaping dead peer',
         self.extendLogInfo(
             peer.extendLogInfo(peer.draining.extendLogInfo({
-                serviceNames: serviceNames
+                serviceKeys: serviceKeys
             }))
         )
     );
