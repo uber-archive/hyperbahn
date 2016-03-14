@@ -75,7 +75,7 @@ function ApplicationClients(options) {
 
     // Used in setupRingpop method
     self.ringpopTimeouts = config.get('hyperbahn.ringpop.timeouts');
-    self.projectName = config.get('info.projectScope');
+    self.ringpopName = config.get('info.ringpopName');
 
     self._getHostForTchannelAttemptLimit =
         options.getHostForTchannelAttemptLimit ||
@@ -96,7 +96,7 @@ function ApplicationClients(options) {
             DualStatsd({
                 host: statsOptions.host,
                 port: statsOptions.port,
-                project: config.get('info.projectScope'),
+                project: config.get('info.statsdName'),
                 processTitle: options.processTitle
             }) :
             NullStatsd()
@@ -109,7 +109,7 @@ function ApplicationClients(options) {
         var loggerParts = createLogger({
             team: config.get('info.team'),
             processTitle: options.processTitle,
-            project: config.get('info.project'),
+            project: config.get('info.kafkaName'),
             kafka: config.get('clients.logtron.kafka'),
             logFile: config.get('clients.logtron.logFile'),
             console: config.get('clients.logtron.console'),
@@ -131,7 +131,7 @@ function ApplicationClients(options) {
         statsd: self.statsd,
         statsdKey: 'uncaught-exception',
         meta: {
-            project: config.get('info.projectScope'),
+            project: config.get('info.uncaughtName'),
             environment: process.env.NODE_ENV,
             hostname: os.hostname().split('.')[0]
         },
@@ -367,7 +367,7 @@ function setupRingpop(cb) {
     var self = this;
 
     self.ringpop = RingPop({
-        app: self.projectName,
+        app: self.ringpopName,
         hostPort: self.tchannel.hostPort,
         channel: self.ringpopChannel,
         logger: self.logger,
