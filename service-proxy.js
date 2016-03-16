@@ -382,8 +382,8 @@ function handleLazily(conn, reqFrame) {
                 'hyperbahn node is rate-limited by the total rps limit',
                 self.extendLogInfo(conn.extendLogInfo({
                     rpsLimit: totalLimit,
-                    serviceCounters: self.rateLimiter.serviceCounters,
-                    edgeCounters: self.rateLimiter.edgeCounters
+                    'serviceCounters_noindex': self.rateLimiter.serviceCounters,
+                    'edgeCounters_noindex': self.rateLimiter.edgeCounters
                 }))
             );
             self.rejectRequestFrame(conn, reqFrame, 'Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
@@ -394,8 +394,8 @@ function handleLazily(conn, reqFrame) {
                 'hyperbahn service is rate-limited by the service rps limit',
                 self.extendLogInfo(conn.extendLogInfo({
                     rpsLimit: serviceLimit,
-                    serviceCounters: self.rateLimiter.serviceCounters,
-                    edgeCounters: self.rateLimiter.edgeCounters
+                    'serviceCounters_noindex': self.rateLimiter.serviceCounters,
+                    'edgeCounters_noindex': self.rateLimiter.edgeCounters
                 }))
             );
             if (routingDelegate) {
@@ -484,8 +484,8 @@ function handleRequest(req, buildRes) {
                 'hyperbahn node is rate-limited by the total rps limit',
                 self.extendLogInfo(req.extendLogInfo({
                     rpsLimit: totalLimit,
-                    serviceCounters: self.rateLimiter.serviceCounters,
-                    edgeCounters: self.rateLimiter.edgeCounters
+                    'serviceCounters_noindex': self.rateLimiter.serviceCounters,
+                    'edgeCounters_noindex': self.rateLimiter.edgeCounters
                 }))
             );
             buildRes().sendError('Busy', 'hyperbahn node is rate-limited by the total rps of ' + totalLimit);
@@ -496,8 +496,8 @@ function handleRequest(req, buildRes) {
                 'hyperbahn service is rate-limited by the service rps limit',
                 self.extendLogInfo(req.extendLogInfo({
                     rpsLimit: serviceLimit,
-                    serviceCounters: self.rateLimiter.serviceCounters,
-                    edgeCounters: self.rateLimiter.edgeCounters
+                    'serviceCounters_noindex': self.rateLimiter.serviceCounters,
+                    'edgeCounters_noindex': self.rateLimiter.edgeCounters
                 }))
             );
             if (routingDelegate) {
