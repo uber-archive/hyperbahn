@@ -25,8 +25,8 @@
 
     "clients.logtron.console": false,
     "clients.logtron.kafka": {
-        "leafHost": "localhost",
-        "leafPort": 9093
+        "proxyHost": "localhost",
+        "proxyPort": 18084
     },
     "clients.logtron.logFile": "/var/log/hyperbahn/hyperbahn.log",
     "clients.logtron.sentry": null,
