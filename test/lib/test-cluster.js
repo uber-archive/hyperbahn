@@ -211,7 +211,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
         self.forEachHostPort(function each(name, i, hp) {
             name = name.toUpperCase() + i;
-            console.error('TEST SETUP: ' + name + ' ' + hp);
+            //console.error('TEST SETUP: ' + name + ' ' + hp);
         });
 
         cb();
@@ -376,6 +376,9 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
 
     function onRegister(err) {
         if (err) {
+            console.error('Failed to register to hyperbahn for remote', {
+                error: err
+            });
             self.logger.error('Failed to register to hyperbahn for remote', {
                 error: err
             });
@@ -624,26 +627,35 @@ function sendRegister(channel, opts, cb) {
 
     nodeAssert(opts.serviceName, 'need a serviceName to register');
 
-    var hyperChan;
-    if (channel.subChannels.hyperbahn) {
-        hyperChan = channel.subChannels.hyperbahn;
-    } else if (!channel.subChannels.hyperbahn) {
-        hyperChan = channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: self.hostPortList
-        });
-    }
+    //var hyperChan;
+    //if (channel.subChannels.hyperbahn) {
+        //hyperChan = channel.subChannels.hyperbahn;
+    //} else if (!channel.subChannels.hyperbahn) {
+        //hyperChan = channel.makeSubChannel({
+            //serviceName: 'hyperbahn',
+            //peers: self.hostPortList
+        //});
+    //}
+    var hyperChan = channel.subChannels.hyperbahn || channel.makeSubChannel({
+        serviceName: 'hyperbahn',
+        peers: self.hostPortList
+    });
+
 
     if (opts.host) {
         channel.waitForIdentified({
             host: opts.host
         }, send);
     } else {
+        // this is called
         send();
     }
 
     function send(err) {
         if (err) {
+            console.error('YOYO: error during sendRegister', {
+                err: err
+            });
             return cb(err);
         }
 
