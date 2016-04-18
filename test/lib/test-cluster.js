@@ -149,14 +149,21 @@ inherits(TestCluster, EventEmitter);
 
 TestCluster.prototype.bootstrap = function bootstrap(cb) {
     var self = this;
+    console.log('Yo calling bootstarp');
 
     self.grow(self.size, onRingpopReady);
 
     function onRingpopReady(err) {
+        console.log('Yo done grow');
+
         if (err) {
+            console.log('Yo grow errored ', {
+                error: err
+            });
             cb(err);
             return;
         }
+
 
         // bob and steve
         var ready = CountedReadySignal(self.dummySize);
@@ -167,6 +174,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
     }
 
     function onReady() {
+        console.log('Yo creating tcollector remote');
         self.remotes.tcollector = self.createRemote({
             serviceName: 'tcollector',
             trace: false
@@ -174,6 +182,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
     }
 
     function onTCollectorReady() {
+        console.log('Yo done creating tcollector remote');
         self.tcollector = FakeTCollector({
             channel: self.remotes.tcollector.serverChannel
         });
@@ -184,11 +193,13 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
         remotesDone(onRemotes);
 
+        console.log('Yo creating bob remote');
         self.remotes.bob = self.createRemote({
             serviceName: 'bob',
             trace: self.opts.trace,
             traceSample: 1
         }, remotesDone.signal);
+        console.log('Yo creating bob remote');
         self.remotes.steve = self.createRemote({
             serviceName: 'steve',
             trace: self.opts.trace,
@@ -197,6 +208,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 
         for (var i = 0; i < self.namedRemotesConfig.length; i++) {
             var serviceName = self.namedRemotesConfig[i];
+            console.log('Yo creating ' + serviceName + ' remote');
             self.namedRemotes[i] = self.createRemote({
                 serviceName: serviceName,
                 remotesConfig: self.remotesConfig[serviceName],
@@ -207,6 +219,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
     }
 
     function onRemotes() {
+        console.log('Yo done creating all remotes');
         self.emit('listening');
 
         self.forEachHostPort(function each(name, i, hp) {
@@ -221,6 +234,7 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
 TestCluster.prototype.grow =
 function grow(n, callback) {
     var self = this;
+    console.log('Yo calling grow')
 
     var newApps = createApps();
 
@@ -376,6 +390,9 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
 
     function onRegister(err) {
         if (err) {
+            console.error('Failed to register to hyperbahn for remote', {
+                error: err
+            });
             self.logger.error('Failed to register to hyperbahn for remote', {
                 error: err
             });
@@ -624,26 +641,36 @@ function sendRegister(channel, opts, cb) {
 
     nodeAssert(opts.serviceName, 'need a serviceName to register');
 
-    var hyperChan;
-    if (channel.subChannels.hyperbahn) {
-        hyperChan = channel.subChannels.hyperbahn;
-    } else if (!channel.subChannels.hyperbahn) {
-        hyperChan = channel.makeSubChannel({
-            serviceName: 'hyperbahn',
-            peers: self.hostPortList
-        });
-    }
+    //var hyperChan;
+    //if (channel.subChannels.hyperbahn) {
+        //hyperChan = channel.subChannels.hyperbahn;
+    //} else if (!channel.subChannels.hyperbahn) {
+        //hyperChan = channel.makeSubChannel({
+            //serviceName: 'hyperbahn',
+            //peers: self.hostPortList
+        //});
+    //}
+    console.log('HI', Object.keys(channel.subChannels))
+    var hyperChan = channel.subChannels.hyperbahn || channel.makeSubChannel({
+        serviceName: 'hyperbahn',
+        peers: self.hostPortList
+    });
+
 
     if (opts.host) {
         channel.waitForIdentified({
             host: opts.host
         }, send);
     } else {
+        // this is called
         send();
     }
 
     function send(err) {
         if (err) {
+            console.error('YOYO: error during sendRegister', {
+                err: err
+            });
             return cb(err);
         }
 
@@ -661,7 +688,14 @@ function sendRegister(channel, opts, cb) {
                 cost: 0,
                 serviceName: opts.serviceName
             }]
-        }, cb);
+        }, function onSend(err, response) {
+            if (err) {
+                console.log('YOYO: Error during tchannelJson send', {
+                    error: err
+                });
+            }
+            cb(err, response);
+        });
     }
 };
 
@@ -684,6 +718,6 @@ function forEachHostPort(each) {
     }
 
     for (i = 0; i < self.namedRemotes.length; i++) {
-        each('namedRemote', i, self.namedRemotes[i].hostPort);
+        each(self.namedRemotes[i].serviceName, i, self.namedRemotes[i].hostPort);
     }
 };
