@@ -86,7 +86,7 @@ TestCluster.test = tapeCluster(tape, TestCluster);
 
 module.exports = TestCluster;
 
-/*eslint complexity: [2, 15] */
+/*eslint complexity: [2, 25] */
 function TestCluster(opts) {
     if (!(this instanceof TestCluster)) {
         return new TestCluster(opts);
@@ -133,7 +133,7 @@ function TestCluster(opts) {
 
     self.tchannelJSON = TChannelJSON();
     self.logger = DebugLogtron('autobahn');
-    self.statsd = NullStatsd(opts.statsdSize || 5);
+    self.statsd = opts.noStats ? null : NullStatsd(opts.statsdSize || 5);
 
     if (self.opts.whitelist) {
         for (var i = 0; i < self.opts.whitelist.length; i++) {
@@ -207,13 +207,14 @@ TestCluster.prototype.bootstrap = function bootstrap(cb) {
     }
 
     function onRemotes() {
+        if (process.env.DEBUG_TEST) {
+            self.forEachHostPort(function each(name, i, hp) {
+                name = name.toUpperCase() + i;
+                console.error('TEST SETUP: ' + name + ' ' + hp);
+            });
+        }
+
         self.emit('listening');
-
-        self.forEachHostPort(function each(name, i, hp) {
-            name = name.toUpperCase() + i;
-            console.error('TEST SETUP: ' + name + ' ' + hp);
-        });
-
         cb();
     }
 };
@@ -231,7 +232,7 @@ function grow(n, callback) {
         var i = self.apps.length;
         var j = 0;
         for (; j < n; i++, j++) {
-            var app = self.createApplication('127.0.0.1:0');
+            var app = self.createApplication('127.0.0.1:0', null);
             app.clusterAppsIndex = i;
             self.apps[i] = app;
             apps.push(app);
@@ -287,6 +288,7 @@ TestCluster.prototype.createRemote = function createRemote(opts, cb) {
     var thriftSpec;
 
     var channel = TChannel({
+        initTimeout: 5000,
         logger: self.logger,
         trace: opts.trace,
         traceSample: opts.traceSample
@@ -473,8 +475,13 @@ TestCluster.prototype.close = function close(cb) {
 };
 
 TestCluster.prototype.createApplication =
-function createApplication(hostPort) {
+function createApplication(hostPort, bootFile) {
     var self = this;
+
+    if (bootFile === undefined) {
+        bootFile = self.ringpopHosts;
+    }
+
     var parts = hostPort.split(':');
     var host = parts[0];
     var port = Number(parts[1]);
@@ -482,7 +489,7 @@ function createApplication(hostPort) {
     var localOpts = shallowExtend(self.opts);
     localOpts.seedConfig = deepExtend(localOpts.seedConfig || {}, {
         'tchannel.host': host,
-        'hyperbahn.ringpop.bootstrapFile': self.ringpopHosts
+        'hyperbahn.ringpop.bootstrapFile': bootFile
     });
     localOpts.argv = {
         port: port
@@ -526,6 +533,7 @@ function createApplication(hostPort) {
 TestCluster.prototype.createDummy = function createDummy(cb) {
     var self = this;
     var dummy = TChannel({
+        initTimeout: 5000,
         logger: self.logger,
         traceSample: 1
     });
@@ -652,7 +660,10 @@ function sendRegister(channel, opts, cb) {
             host: opts.host,
             hasNoParent: true,
             trace: false,
-            timeout: 5000,
+            timeout: opts.timeout || 5000,
+            retryFlags: {
+                never: true
+            },
             headers: {
                 'cn': opts.serviceName
             }
@@ -684,6 +695,6 @@ function forEachHostPort(each) {
     }
 
     for (i = 0; i < self.namedRemotes.length; i++) {
-        each('namedRemote', i, self.namedRemotes[i].hostPort);
+        each(self.namedRemotes[i].serviceName, i, self.namedRemotes[i].hostPort);
     }
 };
