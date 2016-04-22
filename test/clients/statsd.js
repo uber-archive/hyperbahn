@@ -61,7 +61,8 @@ test('statsd can talk to a server', function t(assert) {
                 'my-app..' + os.hostname().split('.')[0] +
                     '.some-stat:1|c\n',
                 'my-app.per-worker..' + os.hostname().split('.')[0] +
-                    '.test-hyperbahn.some-stat:1|c\n'
+                    '.test-hyperbahn.some-stat:1|c\n',
+                'my-app.all-workers.some-stat:1|c\n'
             ]);
 
             server.close();
