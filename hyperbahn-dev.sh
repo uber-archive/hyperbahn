@@ -20,11 +20,16 @@ fi
 
 $DIR/setup-dotfiles.sh $H0 $H1
 
-tmux new-session -s 'hyperbahn' -n 'hyperbahn-0' \; \
+tmux new-session -s 'hyperbahn' \; \
+    new-window -n 'hyperbahn-0' \; \
     new-window -n 'hyperbahn-1' \; \
     new-window -n 'hyperbahn-adhoc' \; \
-    send -t hyperbahn-0 'make run-local-0' Enter \; \
-    send -t hyperbahn-1 'make run-local-1' Enter \; \
+    select-window -t hyperbahn-adhoc \; \
+    send "sleep 1" Enter \; \
+    select-window -t hyperbahn-0 \; \
+    send "sleep 1; make run-local-0" Enter \; \
+    select-window -t hyperbahn-1 \; \
+    send "make run-local-1" Enter \; \
     select-window -t hyperbahn-adhoc \; \
     send "sleep 1; command -v $LOCAL_BIN/tcurl >/dev/null 2>&1 && export PATH=$LOCAL_BIN:\$PATH" Enter \; \
     send "tcurl -p $H0 autobahn health_v1" Enter \; \
