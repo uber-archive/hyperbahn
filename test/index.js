@@ -27,7 +27,6 @@ var TestCluster = require('./lib/test-cluster.js');
 */
 
 require('./endpoint-logging.js');
-require('./health.js');
 
 require('./admin/channels.js');
 require('./admin/kill-switch.js');

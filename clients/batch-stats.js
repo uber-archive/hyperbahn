@@ -64,7 +64,14 @@ function handleStat(stat) {
         stat.name === 'tchannel.inbound.calls.recvd'
     ) {
         self.writeToStatsd(self.statsd.globalClient, stat);
-        self.writeToStatsd(self.statsd.perWorkerClient, stat);
+        if (
+            stat.service === 'autobahn' ||
+            stat.callerService === 'autobahn' ||
+            stat.service === 'hyperbahn' ||
+            stat.callerService === 'hyperbahn'
+        ) {
+            self.writeToStatsd(self.statsd.perWorkerClient, stat);
+        }
     } else if (
         stat.name === 'tchannel.inbound.request.size' ||
         stat.name === 'tchannel.inbound.request.size' ||
