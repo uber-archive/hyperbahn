@@ -448,6 +448,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
 
     self.setSocketInspector(hasChanged, forceUpdate);
     self.updateMaxTombstoneTTL(hasChanged, forceUpdate);
+    self.updateHyperbahnTimeouts(hasChanged, forceUpdate);
     self.updateLazyHandling(hasChanged, forceUpdate);
     self.updateCircuitsEnabled(hasChanged, forceUpdate);
     self.updateCircuitShorts(hasChanged, forceUpdate);
@@ -488,6 +489,22 @@ function setMaximumRelayTTL(hasChanged, forceUpdate) {
     if (forceUpdate || hasChanged['relay.maximum-ttl']) {
         var maximumRelayTTL = self.remoteConfig.get('relay.maximum-ttl', 2 * 60 * 1000);
         self.tchannel.setMaximumRelayTTL(maximumRelayTTL);
+    }
+};
+
+ApplicationClients.prototype.updateHyperbahnTimeouts =
+function updateHyperbahnTimeouts(hasChanged, forceUpdate) {
+    var self = this;
+    if (!forceUpdate && !hasChanged['hyperbahn.timeouts']) {
+        return;
+    }
+
+    var hyperbahnTimeouts = self.remoteConfig.get('hyperbahn.timeouts', {});
+
+    if (hyperbahnTimeouts.relayAdTimeout !== undefined) {
+        self.hyperbahnHandler.relayAdTimeout = hyperbahnTimeouts.relayAdTimeout;
+    } else {
+        self.hyperbahnHandler.relayAdTimeout = HyperbahnHandler.RELAY_AD_TIMEOUT;
     }
 };
 
