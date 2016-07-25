@@ -32,11 +32,10 @@ var TChannelJSON = require('tchannel/as/json');
 var TChannelThrift = require('tchannel/as/thrift');
 var TChannelEndpointHandler = require('tchannel/endpoint-handler');
 
-var MAX_RELAY_AD_ATTEMPTS = 2;
-var RELAY_AD_RETRY_TIME = 1 * 1000;
-var RELAY_AD_TIMEOUT = 500;
-
-var RELAY_TIMEOUT = 500;
+HyperbahnHandler.MAX_RELAY_AD_ATTEMPTS = 2;
+HyperbahnHandler.RELAY_AD_RETRY_TIME = 1 * 1000;
+HyperbahnHandler.RELAY_AD_TIMEOUT = 500;
+HyperbahnHandler.RELAY_TIMEOUT = 500;
 
 var thriftSource = fs.readFileSync(
     path.join(__dirname, 'hyperbahn.thrift'), 'utf8'
@@ -104,13 +103,13 @@ function HyperbahnHandler(options) {
         self.discoverAffine);
 
     self.relayAdTimeout = options.relayAdTimeout ||
-        RELAY_AD_TIMEOUT;
+        HyperbahnHandler.RELAY_AD_TIMEOUT;
     self.relayAdRetryTime = options.relayAdRetryTime ||
-        RELAY_AD_RETRY_TIME;
+        HyperbahnHandler.RELAY_AD_RETRY_TIME;
     self.maxRelayAdAttempts = options.maxRelayAdAttempts ||
-        MAX_RELAY_AD_ATTEMPTS;
+        HyperbahnHandler.MAX_RELAY_AD_ATTEMPTS;
 
-    self.relayTimeout = options.relayTimeout || RELAY_TIMEOUT;
+    self.relayTimeout = options.relayTimeout || HyperbahnHandler.RELAY_TIMEOUT;
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
 
