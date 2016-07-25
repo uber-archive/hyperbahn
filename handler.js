@@ -181,14 +181,14 @@ function sendRelays(req, arg2, arg3, endpoint, cb) {
             services: exitNodeServices,
             inreq: req,
             endpoint: endpoint
-        }, onFinish);
+        }, onRelaySent);
     }
 
-    onFinish();
+    onRelaySent();
 
     // TODO remove blocking on fanout finish. Requires fixing
     // hyperbahn tests upstream
-    function onFinish() {
+    function onRelaySent() {
         if (--counter === 0) {
             finish();
         }
