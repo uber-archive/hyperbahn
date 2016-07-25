@@ -138,9 +138,10 @@ function handleUnadvertise(handler, req, arg2, arg3, cb) {
 
 HyperbahnHandler.prototype.sendRelays =
 function sendRelays(req, arg2, arg3, endpoint, cb) {
-    /*eslint max-statements: [2, 25], max-params: [2, 6]*/
+    /*eslint max-statements: [2, 30], max-params: [2, 6]*/
     var self = this;
     var services = arg3.services;
+    var finished = false;
 
     var servicesByExitNode = {};
 
@@ -180,23 +181,31 @@ function sendRelays(req, arg2, arg3, endpoint, cb) {
             services: exitNodeServices,
             inreq: req,
             endpoint: endpoint
-        }, onFinish);
+        }, onRelaySent);
     }
 
-    onFinish();
+    onRelaySent();
 
     // TODO remove blocking on fanout finish. Requires fixing
     // hyperbahn tests upstream
-    function onFinish() {
-        if (--counter === 0) {
-            cb(null, {
-                ok: true,
-                head: null,
-                body: {
-                    connectionCount: exitNodeKeys.length
-                }
-            });
+    function onRelaySent() {
+        if (--counter <= 0) {
+            finish();
         }
+    }
+
+    function finish() {
+        if (finished) {
+            return;
+        }
+        finished = true;
+        cb(null, {
+            ok: true,
+            head: null,
+            body: {
+                connectionCount: exitNodeKeys.length
+            }
+        });
     }
 };
 
