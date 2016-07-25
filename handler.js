@@ -27,6 +27,7 @@ var util = require('util');
 var fs = require('fs');
 var path = require('path');
 var setTimeout = require('timers').setTimeout;
+var clearTimeout = require('timers').clearTimeout;
 var Errors = require('tchannel/errors.js');
 var TChannelJSON = require('tchannel/as/json');
 var TChannelThrift = require('tchannel/as/thrift');
@@ -35,6 +36,7 @@ var TChannelEndpointHandler = require('tchannel/endpoint-handler');
 HyperbahnHandler.MAX_RELAY_AD_ATTEMPTS = 2;
 HyperbahnHandler.RELAY_AD_RETRY_TIME = 1 * 1000;
 HyperbahnHandler.RELAY_AD_TIMEOUT = 500;
+HyperbahnHandler.RELAY_FANOUT_TIMEOUT = 0;
 HyperbahnHandler.RELAY_TIMEOUT = 500;
 
 var thriftSource = fs.readFileSync(
@@ -110,6 +112,11 @@ function HyperbahnHandler(options) {
         HyperbahnHandler.MAX_RELAY_AD_ATTEMPTS;
 
     self.relayTimeout = options.relayTimeout || HyperbahnHandler.RELAY_TIMEOUT;
+
+    self.relayFanoutTimeout = HyperbahnHandler.RELAY_FANOUT_TIMEOUT;
+    if (options.relayFanoutTimeout !== undefined) {
+        self.relayFanoutTimeout = options.relayFanoutTimeout;
+    }
 }
 util.inherits(HyperbahnHandler, TChannelEndpointHandler);
 
@@ -184,6 +191,11 @@ function sendRelays(req, arg2, arg3, endpoint, cb) {
         }, onRelaySent);
     }
 
+    var fanoutTimeout = null;
+    if (self.relayFanoutTimeout > 0) {
+        fanoutTimeout = setTimeout(finish, self.relayFanoutTimeout);
+    }
+
     onRelaySent();
 
     // TODO remove blocking on fanout finish. Requires fixing
@@ -199,6 +211,7 @@ function sendRelays(req, arg2, arg3, endpoint, cb) {
             return;
         }
         finished = true;
+        clearTimeout(fanoutTimeout);
         cb(null, {
             ok: true,
             head: null,

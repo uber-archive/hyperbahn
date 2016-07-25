@@ -199,7 +199,8 @@ function ApplicationClients(options) {
         channel: self.hyperbahnChannel,
         egressNodes: self.egressNodes,
         callerName: 'autobahn',
-        relayAdTimeout: hyperbahnTimeouts.relayAdTimeout
+        relayAdTimeout: hyperbahnTimeouts.relayAdTimeout,
+        relayFanoutTimeout: hyperbahnTimeouts.relayFanoutTimeout
     });
     self.hyperbahnChannel.handler = self.hyperbahnHandler;
 
@@ -505,6 +506,12 @@ function updateHyperbahnTimeouts(hasChanged, forceUpdate) {
         self.hyperbahnHandler.relayAdTimeout = hyperbahnTimeouts.relayAdTimeout;
     } else {
         self.hyperbahnHandler.relayAdTimeout = HyperbahnHandler.RELAY_AD_TIMEOUT;
+    }
+
+    if (hyperbahnTimeouts.relayFanoutTimeout !== undefined) {
+        self.hyperbahnHandler.relayFanoutTimeout = hyperbahnTimeouts.relayFanoutTimeout;
+    } else {
+        self.hyperbahnHandler.relayFanoutTimeout = HyperbahnHandler.RELAY_FANOUT_TIMEOUT;
     }
 };
 
