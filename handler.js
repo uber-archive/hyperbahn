@@ -189,7 +189,7 @@ function sendRelays(req, arg2, arg3, endpoint, cb) {
     // TODO remove blocking on fanout finish. Requires fixing
     // hyperbahn tests upstream
     function onRelaySent() {
-        if (--counter === 0) {
+        if (--counter <= 0) {
             finish();
         }
     }
