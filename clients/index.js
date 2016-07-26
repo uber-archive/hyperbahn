@@ -460,6 +460,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updateRpsLimitForServiceName(hasChanged, forceUpdate);
     self.updateKValues(hasChanged, forceUpdate);
     self.updateKillSwitches(hasChanged, forceUpdate);
+    self.updateServiceKillSwitchFactor(hasChanged, forceUpdate);
     self.updateReservoir(hasChanged, forceUpdate);
     self.updateReapPeersPeriod(hasChanged, forceUpdate);
     self.updatePrunePeersPeriod(hasChanged, forceUpdate);
@@ -699,6 +700,18 @@ ApplicationClients.prototype.updateKillSwitches = function updateKillSwitches(ha
             self.serviceProxy.blockRemoteConfig(edge[0], edge[1]);
         }
     }
+};
+
+ApplicationClients.prototype.updateServiceKillSwitchFactor =
+function updateServiceKillSwitchFactor(hasChanged, forceUpdate) {
+    var self = this;
+
+    if (!forceUpdate && !hasChanged.serviceKillSwitchFactor) {
+        return;
+    }
+
+    self.serviceProxy.rateLimiter.setServiceKillSwitchFactor(
+        self.remoteConfig.get('serviceKillSwitchFactor', 0));
 };
 
 ApplicationClients.prototype.updatePeerHeapEnabled = function updatePeerHeapEnabled(hasChanged, forceUpdate) {

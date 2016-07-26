@@ -31,6 +31,7 @@ var DEFAULT_BUCKET_NUMBER = 20;
 
 var DEFAULT_TOTAL_KILL_SWITCH_BUFFER = 200;
 var DEFAULT_SERVICE_KILL_SWITCH_FACTOR = 2;
+var MIN_SERVICE_KILL_SWITCH_FACTOR = 1;
 
 function RateLimiterCounter(options) {
     if (!(this instanceof RateLimiterCounter)) {
@@ -90,6 +91,7 @@ function RateLimiter(options) {
     self.cycle = self.numOfBuckets;
 
     self.defaultTotalKillSwitchBuffer = options.defaultTotalKillSwitchBuffer || DEFAULT_TOTAL_KILL_SWITCH_BUFFER;
+    self.serviceKillSwitchFactor = options.serviceKillSwitchFactor || DEFAULT_SERVICE_KILL_SWITCH_FACTOR;
 
     self.defaultServiceRpsLimit = options.defaultServiceRpsLimit || DEFAULT_SERVICE_RPS_LIMIT;
     self.defaultTotalRpsLimit = DEFAULT_TOTAL_RPS_LIMIT;
@@ -351,7 +353,7 @@ RateLimiter.prototype.killSwitchLimitForService =
 function killSwitchLimitForService(serviceName) {
     var self = this;
     assert(self.serviceCounters[serviceName], 'Cannot find service counter for ' + serviceName);
-    return self.serviceCounters[serviceName].rpsLimit * DEFAULT_SERVICE_KILL_SWITCH_FACTOR;
+    return self.serviceCounters[serviceName].rpsLimit * self.serviceKillSwitchFactor;
 };
 
 RateLimiter.prototype.createKillSwitchServiceCounter =
@@ -517,6 +519,11 @@ function shouldKillSwitchTotalRequest(serviceName) {
     }
 
     return result;
+};
+
+RateLimiter.prototype.setServiceKillSwitchFactor = function setServiceKillSwitchFactor(factor) {
+    this.serviceKillSwitchFactor = Math.max(MIN_SERVICE_KILL_SWITCH_FACTOR,
+        factor || DEFAULT_SERVICE_KILL_SWITCH_FACTOR);
 };
 
 RateLimiter.prototype.destroy =
