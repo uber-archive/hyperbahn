@@ -496,22 +496,15 @@ function setMaximumRelayTTL(hasChanged, forceUpdate) {
 ApplicationClients.prototype.updateHyperbahnTimeouts =
 function updateHyperbahnTimeouts(hasChanged, forceUpdate) {
     var self = this;
-    if (!forceUpdate && !hasChanged['hyperbahn.timeouts']) {
-        return;
+    if (forceUpdate || hasChanged['timeouts.relayAdTimeout']) {
+        self.hyperbahnHandler.relayAdTimeout =
+            self.remoteConfig.get('timeouts.relayAdTimeout',
+                HyperbahnHandler.RELAY_AD_TIMEOUT);
     }
-
-    var hyperbahnTimeouts = self.remoteConfig.get('hyperbahn.timeouts', {});
-
-    if (hyperbahnTimeouts.relayAdTimeout !== undefined) {
-        self.hyperbahnHandler.relayAdTimeout = hyperbahnTimeouts.relayAdTimeout;
-    } else {
-        self.hyperbahnHandler.relayAdTimeout = HyperbahnHandler.RELAY_AD_TIMEOUT;
-    }
-
-    if (hyperbahnTimeouts.relayFanoutTimeout !== undefined) {
-        self.hyperbahnHandler.relayFanoutTimeout = hyperbahnTimeouts.relayFanoutTimeout;
-    } else {
-        self.hyperbahnHandler.relayFanoutTimeout = HyperbahnHandler.RELAY_FANOUT_TIMEOUT;
+    if (forceUpdate || hasChanged['hyperbahn.relayFanoutTimeout']) {
+        self.hyperbahnHandler.relayFanoutTimeout =
+            self.remoteConfig.get('timeouts.relayFanoutTimeout',
+                HyperbahnHandler.RELAY_FANOUT_TIMEOUT);
     }
 };
 
