@@ -671,6 +671,11 @@ ApplicationClients.prototype.updateKValues = function updateKValues(hasChanged, 
         }
     }
 
+    if (forceUpdate || hasChanged['iHops.services']) {
+        self.egressNodes.iHopsForServiceName = self.remoteConfig.get('iHops.services', {});
+        changed = true;
+    }
+
     if (changed) {
         self.serviceProxy.updateServiceChannels();
     }

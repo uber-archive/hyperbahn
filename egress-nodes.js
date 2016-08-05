@@ -40,6 +40,7 @@ function EgressNodes(options) {
     self.defaultKValue = options.defaultKValue;
 
     self.kValueForServiceName = {};
+    self.iHopsForServiceName = {}; // iHopsForServiceName[serviceName][i] -> hopped i
 
     // Surface the membership changed event (for use in particular by service
     // proxies).
@@ -67,6 +68,14 @@ EgressNodes.prototype.kValueFor = function kValueFor(serviceName) {
         self.defaultKValue;
 };
 
+EgressNodes.prototype.iHopsFor = function iHopsFor(serviceName) {
+    var self = this;
+    if (!self.iHopsForServiceName[serviceName]) {
+        self.iHopsForServiceName[serviceName] = {};
+    }
+    return self.iHopsForServiceName[serviceName];
+};
+
 EgressNodes.prototype.setDefaultKValue = function setDefaultKValue(kValue) {
     var self = this;
     assert(typeof kValue === 'number' && kValue > 0, 'kValue must be positive: ' + kValue);
@@ -88,9 +97,13 @@ EgressNodes.prototype.exitsFor = function exitsFor(serviceName) {
     );
 
     var k = self.kValueFor(serviceName);
+    var iHops = self.iHopsFor(serviceName);
     // Object<hostPort: String, Array<lookupKey: String>>
     var exitNodes = Object.create(null);
     for (var i = 0; i < k; i++) {
+        if (iHops[i] !== undefined) {
+            i = iHops[i];
+        }
         var shardKey = serviceName + '~' + i;
 
         // TODO ringpop will return itself if it cannot find
@@ -117,8 +130,12 @@ EgressNodes.prototype.isExitFor = function isExitFor(serviceName) {
     );
 
     var k = self.kValueFor(serviceName);
+    var iHops = self.iHopsFor(serviceName);
     var me = self.ringpop.whoami();
     for (var i = 0; i < k; i++) {
+        if (iHops[i] !== undefined) {
+            i = iHops[i];
+        }
         var shardKey = serviceName + '~' + i;
         var node = self.ringpop.lookup(shardKey);
         if (me === node) {
