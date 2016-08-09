@@ -53,7 +53,7 @@ function queryHandler(opts, req, head, body, cb) {
             exemptServices: rateLimiter.exemptServices,
             rpsLimitForServiceName: rateLimiter.rpsLimitForServiceName,
             totalRequestCounter: rateLimiter.totalRequestCounter,
-            serviceCounters: rateLimiter.counters
+            serviceCounters: rateLimiter.serviceCounters
         }
     });
 }
