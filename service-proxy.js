@@ -34,6 +34,7 @@ var IntervalScan = require('./lib/interval-scan.js');
 var RateLimiter = require('./rate_limiter.js');
 var PartialRange = require('./partial_range.js');
 var Circuits = require('./circuits.js');
+var RPSCounters = require('./rps_counters.js');
 
 var MAX_AFFINITY_AUDIT_ROUNDS = 3;
 
@@ -275,6 +276,9 @@ function ServiceDispatchHandler(options) {
         self.enableCircuits();
     }
 
+    self.rpsCounters = new RPSCounters(self.channel.timers);
+    self.rpsCounters.bootstrap();
+
     function onEgressNodesChanged() {
         setImmediate(updateServiceChannels);
     }
@@ -343,6 +347,8 @@ function handleLazily(conn, reqFrame) {
     var nextService = routingDelegate || serviceName;
 
     var callerName = reqFrame.bodyRW.lazy.readCallerNameStr(reqFrame);
+
+    self.rpsCounters.inc(callerName, nextService);
 
     if (!callerName) {
         self.channel.logger.warn(
@@ -455,6 +461,8 @@ function handleRequest(req, buildRes) {
 
     var routingDelegate = req.headers && req.headers.rd;
     var nextService = routingDelegate || req.serviceName;
+
+    self.rpsCounters.inc(req.headers.cn, nextService);
 
     if (self.isBlocked(req.headers && req.headers.cn, nextService)) {
         req.operations.popInReq(req.id);
@@ -1490,6 +1498,7 @@ function destroy() {
     self.servicePurger.stop();
     self.statEmitter.stop();
     self.rateLimiter.destroy();
+    self.rpsCounters.destroy();
 };
 
 ServiceDispatchHandler.prototype.initCircuits =
