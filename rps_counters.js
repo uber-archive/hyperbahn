@@ -21,7 +21,6 @@
 'use strict';
 
 /* eslint max-statements: [2, 40] */
-var assert = require('assert');
 var globalTimers = require('timers');
 
 module.exports = RPSCounters;
@@ -45,7 +44,7 @@ function RPSCounters(timers) {
 }
 
 RPSCounters.prototype.getCounts = function getCounts() {
-    return this.curr === this.aCounters? this.bCounters : this.aCounters;
+    return this.curr === this.aCounters ? this.bCounters : this.aCounters;
 };
 
 RPSCounters.prototype.bootstrap = function bootstrap() {
@@ -62,7 +61,7 @@ RPSCounters.prototype.destroy = function destroy() {
 };
 
 RPSCounters.prototype.inc = function inc(sourceServiceName, destServiceName) {
-    var counterName = sourceServiceName + "~~" + destServiceName;
+    var counterName = sourceServiceName + '~~' + destServiceName;
     if (!this.curr[counterName]) {
         this.aCounters[counterName] = 0;
         this.bCounters[counterName] = 0;

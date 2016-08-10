@@ -26,6 +26,7 @@ var Timer = require('time-mock');
 var allocCluster = require('./lib/test-cluster.js');
 var parallel = require('run-parallel');
 
+/* eslint max-statements: [2, 40] */
 test('rps counters', function t1(assert) {
     var timer = Timer(0);
     var counters = new RPSCounters(timer);
