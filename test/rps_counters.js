@@ -65,6 +65,8 @@ test('rps counters', function t1(assert) {
     assert.equals(counts['rtapi~~abacus'], 2);
     assert.equals(counts['rtapi~~octane'], 0);
 
+    assert.equals(counters.counterKeys.length, 2);
+
     assert.end();
 });
 

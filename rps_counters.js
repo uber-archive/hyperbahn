@@ -61,7 +61,7 @@ RPSCounters.prototype.destroy = function destroy() {
 
 RPSCounters.prototype.inc = function inc(sourceServiceName, destServiceName) {
     var counterName = sourceServiceName + '~~' + destServiceName;
-    if (!this.curr[counterName]) {
+    if (this.curr[counterName] === undefined) {
         this.aCounters[counterName] = 0;
         this.bCounters[counterName] = 0;
         this.curr[counterName] = 1;
