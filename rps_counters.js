@@ -20,7 +20,6 @@
 
 'use strict';
 
-/* eslint max-statements: [2, 40] */
 var globalTimers = require('timers');
 
 module.exports = RPSCounters;

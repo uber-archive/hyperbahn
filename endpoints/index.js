@@ -49,6 +49,8 @@ function setupEndpoints(clients, services) {
         ['rate_limiter_enable_v1', require('./rate-limiter').enableHandler],
         ['rate_limiter_total_limit_v1', require('./rate-limiter').totalLimitHandler],
 
+        ['rps_counters_v1', require('./rps_counters')],
+
         // Public entry interface
         ['set_k_v1', require('./entry_set_k')],
 
