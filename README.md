@@ -1,5 +1,7 @@
 # Hyperbahn [![Build Status](https://travis-ci.org/uber/hyperbahn.svg?branch=master)] (https://travis-ci.org/uber/hyperbahn)
 
+(**This project is no longer under active development.**)
+
 Service discovery and routing for large-scale microservice operations
 
 * IRC: `#hyperbahn` on Freenode
