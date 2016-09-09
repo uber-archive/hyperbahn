@@ -38,9 +38,9 @@
     "clients.graphite": null,
 
     "hyperbahn.ringpop.timeouts": {
-        "pingReqTimeout": 3000,
-        "pingTimeout": 500,
-        "joinTimeout": 250
+        "pingReqTimeout": 5000,
+        "pingTimeout": 1500,
+        "joinTimeout": 1000
     },
     "hyperbahn.ringpop.bootstrapFile": "/etc/hyperbahn/ringpop-v2.json",
 
