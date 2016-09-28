@@ -1,6 +1,6 @@
 {
   "name": "hyperbahn",
-  "version": "2.17.3",
+  "version": "2.17.3-ringpop-upgrade",
   "description": "Service Discovery and Routing",
   "keywords": [],
   "author": "Raynos <raynos2@gmail.com>",
@@ -34,7 +34,7 @@
     "process-reporter": "2.1.2",
     "raynos-replr": "0.2.5-port-0-support",
     "ready-signal": "1.2.0",
-    "ringpop": "10.5.0",
+    "ringpop": "10.15.0",
     "run-parallel": "1.0.0",
     "run-series": "1.1.2",
     "safe-json-parse": "4.0.0",
