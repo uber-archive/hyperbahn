@@ -27,7 +27,6 @@ var RelayHandler = require('tchannel/relay_handler');
 var EventEmitter = require('tchannel/lib/event_emitter');
 var clean = require('tchannel/lib/statsd').clean;
 var util = require('util');
-var setImmediate = require('timers').setImmediate;
 var stat = require('tchannel/stat-tags.js');
 
 var IntervalScan = require('./lib/interval-scan.js');
@@ -46,6 +45,7 @@ var DEFAULT_STATS_PERIOD = 30 * 1000; // every 30 seconds
 var DEFAULT_REAP_PEERS_PERIOD = 5 * 60 * 1000; // every 5 minutes
 var DEFAULT_PRUNE_PEERS_PERIOD = 2 * 60 * 1000; // every 2 minutes
 var DEFAULT_CONNECT_PEERS_PERIOD = 100; // every 100 ms
+var DEFAULT_MIN_UPDATE_PERIOD = 0; // no delay
 
 // our call SLA is 30 seconds currently
 var DEFAULT_DRAIN_TIMEOUT = 30 * 1000;
@@ -70,8 +70,12 @@ function ServiceDispatchHandler(options) {
     self.statsd = options.statsd;
     self.egressNodes = options.egressNodes;
     self.createdAt = self.channel.timers.now();
+    self.updatedAt = self.createdAt;
     self.logGracePeriod = options.logGracePeriod ||
         DEFAULT_LOG_GRACE_PERIOD;
+    self.minUpdatePeriod = options.minUpdatePeriod ||
+        DEFAULT_MIN_UPDATE_PERIOD;
+    self.updateScheduled = false;
     self.permissionsCache = options.permissionsCache;
     self.serviceReqDefaults = options.serviceReqDefaults || {};
 
@@ -270,6 +274,8 @@ function ServiceDispatchHandler(options) {
 
     self.destroyed = false;
 
+    self.boundUpdateServiceChannels = updateServiceChannels;
+
     self.egressNodes.changedEvent.on(onEgressNodesChanged);
 
     if (self.circuitsConfig && self.circuitsConfig.enabled) {
@@ -280,7 +286,7 @@ function ServiceDispatchHandler(options) {
     self.rpsCounters.bootstrap();
 
     function onEgressNodesChanged() {
-        setImmediate(updateServiceChannels);
+        self.requestUpdateServiceChannels();
     }
 
     function updateServiceChannels() {
@@ -1079,11 +1085,31 @@ function removeServicePeer(serviceName, hostPort) {
     }
 };
 
+ServiceDispatchHandler.prototype.requestUpdateServiceChannels =
+function requestUpdateServiceChannels() {
+    var self = this;
+
+    self.statsd.increment('service-channels.request-update');
+    if (self.updateScheduled) {
+        return;
+    }
+
+    var now = self.channel.timers.now();
+    var delay = Math.max(0, self.updatedAt + self.minUpdatePeriod - now);
+    self.channel.timers.setTimeout(self.boundUpdateServiceChannels, delay);
+    self.updateScheduled = true;
+};
+
 ServiceDispatchHandler.prototype.updateServiceChannels =
 function updateServiceChannels() {
     var self = this;
 
+    self.statsd.increment('service-channels.update');
+
+    self.updateScheduled = false;
     var now = self.channel.timers.now();
+    self.updatedAt = now;
+
     var serviceNames = Object.keys(self.channel.subChannels);
     for (var i = 0; i < serviceNames.length; i++) {
         var serviceName = serviceNames[i];

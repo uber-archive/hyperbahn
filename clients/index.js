@@ -468,6 +468,7 @@ function onRemoteConfigUpdate(changedKeys, forceUpdate) {
     self.updatePartialAffinityEnabled(hasChanged, forceUpdate);
     self.setMaximumRelayTTL(hasChanged, forceUpdate);
     self.updatePeerHeapEnabled(hasChanged, forceUpdate);
+    self.updateMinUpdatePeriod(hasChanged, forceUpdate);
 };
 
 ApplicationClients.prototype.setSocketInspector =
@@ -614,6 +615,15 @@ function updateConnectPeersPeriod(hasChanged, forceUpdate) {
     if (forceUpdate || hasChanged['peerConnecter.period']) {
         var period = self.remoteConfig.get('peerConnecter.period', 100);
         self.serviceProxy.setConnectPeersPeriod(period);
+    }
+};
+
+ApplicationClients.prototype.updateMinUpdatePeriod =
+function updateMinUpdatePeriod(hasChanged, forceUpdate) {
+    var self = this;
+    if (forceUpdate || hasChanged['minUpdate.period']) {
+        var period = self.remoteConfig.get('minUpdate.period', 0);
+        self.serviceProxy.minUpdatePeriod = period;
     }
 };
 
