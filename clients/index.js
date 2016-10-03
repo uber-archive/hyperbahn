@@ -142,7 +142,8 @@ function ApplicationClients(options) {
     });
 
     self.processReporter = ProcessReporter({
-        statsd: self.statsd
+        statsd: self.statsd,
+        handleInterval: config.get('clients.process-reporter.handle-interval')
     });
 
     // This is dead code; really really soon.

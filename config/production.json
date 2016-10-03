@@ -18,6 +18,8 @@
     },
     "clients.uncaught-exception.file": "/var/log/hyperbahn/uncaught-exception.log",
 
+    "clients.process-reporter.handle-interval": 30000,
+
     "clients.uber-statsd-client": {
         "host": "127.0.0.1",
         "port": 4744

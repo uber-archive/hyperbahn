@@ -5,6 +5,7 @@
     "clients.logtron.console": true,
     "clients.logtron.kafka": null,
     "clients.logtron.sentry": null,
+    "clients.process-reporter.handle-interval": 1000,
 
     "hyperbahn.ringpop.bootstrapFile": null
 }
