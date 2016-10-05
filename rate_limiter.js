@@ -310,6 +310,17 @@ function updateServiceLimit(serviceName, limit) {
     }
 };
 
+RateLimiter.prototype.updateDefaultServiceRpsLimit =
+function updateDefaultServiceRpsLimit(limit) {
+    var self = this;
+
+    if (limit === 0) {
+        self.defaultServiceRpsLimit = DEFAULT_SERVICE_RPS_LIMIT;
+    } else {
+        self.defaultServiceRpsLimit = limit;
+    }
+};
+
 RateLimiter.prototype.updateTotalLimit =
 function updateTotalLimit(limit) {
     var self = this;
