@@ -697,7 +697,7 @@ ApplicationClients.prototype.updateKValues = function updateKValues(hasChanged, 
     }
 
     if (changed) {
-        self.serviceProxy.updateServiceChannels();
+        self.serviceProxy.requestUpdateServiceChannels();
     }
 };
 
