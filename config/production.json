@@ -40,7 +40,7 @@
     "clients.graphite": null,
 
     "hyperbahn.ringpop.timeouts": {
-        "pingReqTimeout": 5000,
+        "pingReqTimeout": 8000,
         "pingTimeout": 1500,
         "joinTimeout": 1000
     },
