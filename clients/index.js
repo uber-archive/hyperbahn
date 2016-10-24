@@ -167,7 +167,7 @@ function ApplicationClients(options) {
         batchStats: self.batchStats,
         trace: false,
         emitConnectionMetrics: false,
-        connectionStalePeriod: 1.5 * 1000,
+        connectionStalePeriod: 10 * 1000,
         useLazyRelaying: false,
         useLazyHandling: false
     }, options.testChannelConfigOverlay));
